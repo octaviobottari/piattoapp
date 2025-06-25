@@ -3,9 +3,10 @@ services:
     name: piatto-web
     env: python
     region: oregon
-    plan: starter # 0.5 CPU, 1GB RAM, $7/month
+    plan: starter
     branch: master
     buildCommand: |
+      mkdir -p logs
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
       python manage.py migrate
@@ -17,7 +18,7 @@ services:
     disk:
       name: media
       mountPath: /app/media
-      sizeGB: 2 # $0.50/month
+      sizeGB: 2
     envVars:
       - key: DJANGO_SECRET_KEY
         generateValue: true
@@ -51,15 +52,14 @@ services:
       - key: DEFAULT_FROM_EMAIL
         value: no-reply@piattoweb.com
       - key: PYTHON_VERSION
-        value: 3.11.9 # Fixed from 3.11
+        value: 3.11.9
   - type: redis
     name: piatto-redis
     region: oregon
-    plan: free # Switch to starter ($7/month) for production
-    ipAllowList: [] # Allow internal access
-
+    plan: free
+    ipAllowList: []
 databases:
   - name: piatto-db
     databaseName: piatto
     region: oregon
-    plan: free # Switch to starter ($7/month) for production
+    plan: free

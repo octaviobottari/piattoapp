@@ -1,0 +1,66 @@
+services:
+  - type: web
+    name: piatto-web
+    env: python
+    region: oregon
+    plan: starter # 0.5 CPU, 1GB RAM
+    branch: main
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+    startCommand: daphne -b 0.0.0.0 -p $PORT piatto.asgi:application
+    domains:
+      - piattoweb.com
+      - www.piattoweb.com
+    autoDeploy: true
+    disk:
+      name: media
+      mountPath: /app/media
+      sizeGB: 2
+    envVars:
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DJANGO_DEBUG
+        value: False
+      - key: DJANGO_ALLOWED_HOSTS
+        value: piattoweb.com,www.piattoweb.com
+      - key: CSRF_TRUSTED_ORIGINS
+        value: https://piattoweb.com,https://www.piattoweb.com
+      - key: DATABASE_URL
+        fromDatabase:
+          name: piatto-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: piatto-redis
+          property: connectionString
+      - key: MEDIA_ROOT
+        value: /app/media
+      - key: MP_ACCESS_TOKEN
+        value: your-mercado-pago-token
+      - key: EMAIL_HOST
+        value: smtp.gmail.com
+      - key: EMAIL_PORT
+        value: 587
+      - key: EMAIL_HOST_USER
+        value: your-gmail-address
+      - key: EMAIL_HOST_PASSWORD
+        value: your-gmail-app-password
+      - key: DEFAULT_FROM_EMAIL
+        value: no-reply@piattoweb.com
+      - key: PYTHON_VERSION
+        value: 3.11
+
+databases:
+  - name: piatto-db
+    databaseName: piatto
+    region: oregon
+    plan: free # Switch to starter ($7/month) for production
+
+  - type: redis
+    name: piatto-redis
+    region: oregon
+    plan: free # Switch to starter ($7/month) for production
+    ipAllowList: []

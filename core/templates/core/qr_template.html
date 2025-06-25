@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR - {{ restaurant.name }}</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #fff;
+            font-family: Arial, sans-serif;
+        }
+        .qr-container {
+            text-align: center;
+            background-color: #f85c2b;
+            padding: 20px;
+            border-radius: 10px;
+            width: 300px;
+            height: 500px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        .qr-text {
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .qr-image {
+            background-color: white;
+            width: 200px;
+            height: 200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .qr-image img {
+            max-width: 180px;
+            max-height: 180px;
+        }
+        .qr-footer {
+            color: white;
+            font-size: 18px;
+            margin-top: 20px;
+        }
+        .qr-footer a {
+            color: #ccc;
+            text-decoration: none;
+        }
+        .qr-footer a:hover {
+            text-decoration: underline;
+        }
+        .logo {
+            font-size: 30px;
+            font-weight: bold;
+            color: #f85c2b;
+            margin-bottom: 10px;
+        }
+        .slogan {
+            color: #ccc;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="qr-container">
+        <div class="qr-text">Escanea y pedí desde tu celular</div>
+        <div class="qr-image">
+            {% if restaurant.qr_image %}
+                <img src="{{ restaurant.qr_image.url }}" alt="QR Code for {{ restaurant.name }}">
+            {% else %}
+                <p>Generando QR...</p>
+            {% endif %}
+        </div>
+        <div class="qr-footer">
+            <div class="logo">=Piatto</div>
+            <div class="slogan">Tu negocio, en piloto automático.</div>
+            <div><a href="{{ restaurant.url }}" target="_blank">piattoweb.com/{{ restaurant.name|lower|replace:' ':'-' }}</a></div>
+        </div>
+    </div>
+</body>
+</html>

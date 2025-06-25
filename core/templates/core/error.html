@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Error</title>
+<div class="container mt-4">
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Error</h4>
+        <p>{{ error }}</p>
+        <hr>
+        <p class="mb-0">Por favor, contacta al administrador o configura tu restaurante para continuar.</p>
+    </div>
+</div>
+{% endblock %}

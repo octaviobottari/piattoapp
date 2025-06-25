@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="alert alert-danger" role="alert">
+        <h4 class="alert-heading">Error de Verificación CSRF</h4>
+        <p>{{ mensaje }}</p>
+        <hr>
+        <p class="mb-0">Por favor, refresca la página e intenta de nuevo. Si el problema persiste, contacta al soporte.</p>
+    </div>
+    {% if reason %}
+    <p><strong>Detalles técnicos:</strong> {{ reason }}</p>
+    {% endif %}
+    <a href="javascript:window.location.reload();" class="btn btn-primary">Refrescar Página</a>
+</div>
+{% endblock %}

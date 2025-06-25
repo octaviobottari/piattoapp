@@ -1,0 +1,132 @@
+{% load humanize %}
+
+{% if pendientes_only %}
+  {% if pedidos_pendientes %}
+    {% for pedido in pedidos_pendientes %}
+    <div class="order-card mb-3" data-pedido-id="{{ pedido.id }}">
+      <div class="order-info">
+        <div class="order-header">#{{ pedido.numero_pedido|default:"Sin número" }} - {{ pedido.fecha|date:"d/m/Y H:i" }}</div>
+        <div class="order-name">{{ pedido.cliente|default:"Sin nombre" }}</div>
+        <a href="#" class="order-phone" data-pedido-id="{{ pedido.id }}" data-telefono="{{ pedido.telefono|default:"" }}">{{ pedido.telefono|default:"Sin teléfono" }}</a>
+        <div class="order-address">
+          <i class="fas fa-map-marker-alt"></i> {{ pedido.direccion|default:"Retiro en local" }}
+        </div>
+      </div>
+      <div class="order-actions text-end">
+        <div class="icon-group mb-2">
+          <a href="{% url 'imprimir_ticket' pedido.id %}" class="text-decoration-none print-link" target="_blank">
+            <i class="fas fa-print"></i>
+          </a>
+          <div class="dropdown d-inline-block">
+            <i class="fas fa-check icon-check dropdown-toggle" data-bs-toggle="dropdown"></i>
+            <ul class="dropdown-menu">
+              {% for value, label in tiempos_estimados %}
+              <li>
+                <a class="dropdown-item aceptar-pedido" href="#" data-pedido-id="{{ pedido.id }}" data-tiempo="{{ value }}">{{ label }}</a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div class="dropdown d-inline-block">
+            <i class="fas fa-times icon-cross dropdown-toggle" data-bs-toggle="dropdown"></i>
+            <ul class="dropdown-menu">
+              {% for value, label in motivos_cancelacion %}
+              <li>
+                <a class="dropdown-item rechazar-pedido" href="#" data-pedido-id="{{ pedido.id }}" data-motivo="{{ value }}">{{ label }}</a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+        <div class="order-price">${{ pedido.total|floatformat:2 }}</div>
+        <div class="order-method">{{ pedido.get_metodo_pago_display|default:"Sin método" }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-center">No hay pedidos pendientes en hacer.</p>
+  {% endif %}
+{% endif %}
+
+{% if en_preparacion_only %}
+  {% if pedidos_en_preparacion %}
+    {% for pedido in pedidos_en_preparacion %}
+    <div class="order-card mb-3" data-pedido-id="{{ pedido.id }}">
+      <div class="order-info">
+        <div class="order-header">#{{ pedido.numero_pedido|default:"Sin número" }} - {{ pedido.fecha|date:"d/m/Y H:i" }}</div>
+        <div class="order-name">{{ pedido.cliente|default:"Sin nombre" }}</div>
+        <a href="#" class="order-phone" data-pedido-id="{{ pedido.id }}" data-telefono="{{ pedido.telefono|default:"" }}"><i class="fab fa-whatsapp me-1"></i>{{ pedido.telefono|default:"Sin teléfono" }}</a>
+        <div class="order-address">
+          <i class="fas fa-map-marker-alt"></i> {{ pedido.direccion|default:"Retiro en local" }}
+        </div>
+      </div>
+      <div class="order-actions text-end">
+        <div class="icon-group mb-2">
+          <a href="{% url 'imprimir_ticket' pedido.id %}" class="text-decoration-none print-link" target="_blank">
+            <i class="fas fa-print"></i>
+          </a>
+          <i class="fa-solid fa-forward icon-forward mover-a-listo" data-pedido-id="{{ pedido.id }}" title="Mover a Listos para Entregar"></i>
+          <div class="dropdown d-inline-block">
+            <i class="fas fa-times icon-cross dropdown-toggle" data-bs-toggle="dropdown"></i>
+            <ul class="dropdown-menu">
+              {% for value, label in motivos_cancelacion %}
+              <li>
+                <a class="dropdown-item rechazar-pedido" href="#" data-pedido-id="{{ pedido.id }}" data-motivo="{{ value }}">{{ label }}</a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+        <div class="order-price">${{ pedido.total|floatformat:2 }}</div>
+        <div class="order-method">{{ pedido.get_metodo_pago_display|default:"Sin método" }}</div>
+        <div class="order-timing">{{ pedido.get_tiempo_estimado_display|default:"Sin tiempo estimado" }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-center">No hay más pedidos en preparación.</p>
+  {% endif %}
+{% endif %}
+
+{% if listos_only %}
+  {% if pedidos_listos %}
+    {% for pedido in pedidos_listos %}
+    <div class="order-card mb-3" data-pedido-id="{{ pedido.id }}">
+      <div class="order-info">
+        <div class="order-header">#{{ pedido.numero_pedido|default:"Sin número" }} - {{ pedido.fecha|date:"d/m/Y H:i" }}</div>
+        <div class="order-name">{{ pedido.cliente|default:"Sin nombre" }}</div>
+        <a href="#" class="order-phone" data-pedido-id="{{ pedido.id }}" data-telefono="{{ pedido.telefono|default:"" }}"><i class="fab fa-whatsapp me-2"></i>{{ pedido.telefono|default:"Sin teléfono" }}</a>
+        <div class="order-address">
+          <i class="fas fa-map-marker-alt"></i> {{ pedido.direccion|default:"Retiro en local" }}
+        </div>
+      </div>
+      <div class="order-actions text-end">
+        <div class="icon-group mb-2">
+          <a href="{% url 'imprimir_ticket' pedido.id %}" class="text-decoration-none print-link" target="_blank">
+            <i class="fas fa-print"></i>
+          </a>
+          {% if pedido.direccion != "Retiro en local" %}
+          <i class="fas fa-motorcycle icon-motorcycle marcar-en-entrega" data-pedido-id="{{ pedido.id }}" title="Marcar como En Entrega"></i>
+          {% else %}
+          <i class="fas fa-save icon-save archivar-pedido" data-pedido-id="{{ pedido.id }}" title="Archivar Pedido"></i>
+          {% endif %}
+          <div class="dropdown d-inline-block">
+            <i class="fas fa-times icon-cross dropdown-toggle" data-bs-toggle="dropdown"></i>
+            <ul class="dropdown-menu">
+              {% for value, label in motivos_cancelacion %}
+              <li>
+                <a class="dropdown-item rechazar-pedido" href="#" data-pedido-id="{{ pedido.id }}" data-motivo="{{ value }}">{{ label }}</a>
+              </li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+        <div class="order-price">${{ pedido.total|floatformat:2 }}</div>
+        <div class="order-method">{{ pedido.get_metodo_pago_display|default:"Sin método" }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  {% else %}
+    <p class="text-center">No hay más pedidos listos para entregar.</p>
+  {% endif %}
+{% endif %}

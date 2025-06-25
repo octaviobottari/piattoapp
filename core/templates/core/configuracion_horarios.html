@@ -1,0 +1,1241 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load dict_filters %}
+
+{% block extra_head %}
+<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Configuración de Horarios</title>
+<style>
+    /* Contenedor general */
+   /* Contenedor general */
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+/* Títulos */
+h2.mb-4 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #343a40;
+}
+
+/* Tarjetas */
+.card {
+    border: none;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.75rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+.card-header {
+    background-color: #f85c2b;
+    color: #ffffff;
+    border-radius: 10px 10px 0 0;
+    padding: 1rem 1.25rem;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.card-body {
+    padding: 1.75rem;
+}
+
+/* Slider de tres posiciones */
+.custom-slider-container {
+    display: flex;
+    align-items: center;
+    position: relative;
+    width: 240px;
+    height: 38px;
+    background-color: #e9ecef;
+    border-radius: 19px;
+    padding: 4px;
+    box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: background-color 0.3s ease;
+}
+.custom-slider {
+    display: none;
+}
+.slider-labels {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+    z-index: 1;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+.slider-label {
+    flex: 1;
+    text-align: center;
+    padding: 9px 0;
+    color: #343a40;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.3s ease, transform 0.2s ease;
+}
+.slider-label:hover {
+    color: #f85c2b;
+    transform: scale(1.05);
+}
+.slider-indicator {
+    position: absolute;
+    top: 4px;
+    bottom: 4px;
+    width: 33.33%;
+    background-color: #f85c2b;
+    border-radius: 15px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    transition: transform 0.3s ease;
+    z-index: 0;
+}
+.custom-slider-container.cerrado .slider-indicator {
+    transform: translateX(0%);
+}
+.custom-slider-container.automatico .slider-indicator {
+    transform: translateX(100%);
+}
+.custom-slider-container.abierto .slider-indicator {
+    transform: translateX(200%);
+}
+.custom-slider-container.cerrado .slider-label:nth-child(1),
+.custom-slider-container.automatico .slider-label:nth-child(2),
+.custom-slider-container.abierto .slider-label:nth-child(3) {
+    color: #ffffff;
+    font-weight: 600;
+}
+.custom-slider-container.cerrado .slider-label:nth-child(2),
+.custom-slider-container.cerrado .slider-label:nth-child(3),
+.custom-slider-container.automatico .slider-label:nth-child(1),
+.custom-slider-container.automatico .slider-label:nth-child(3),
+.custom-slider-container.abierto .slider-label:nth-child(1),
+.custom-slider-container.abierto .slider-label:nth-child(2) {
+    color: #6c757d;
+}
+
+/* Mensaje de estado */
+#estado-local {
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-left: 1rem;
+    color: #343a40;
+}
+
+/* Alertas */
+.alert-container .alert {
+    margin-top: 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    padding: 0.75rem 1.25rem;
+    animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.alert-success {
+    background-color: #e6f4ea;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-color: #bee5eb;
+}
+
+/* Selectores de hora */
+.hora-select, .minuto-select {
+    width: 75px;
+    padding: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    border: 1px solid #ced4da;
+    background-color: #ffffff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.hora-select:focus, .minuto-select:focus {
+    border-color: #f85c2b;
+    box-shadow: 0 0 0 2px rgba(248, 92, 43, 0.2);
+    outline: none;
+}
+
+/* Tabla de horarios */
+.table {
+    background-color: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+.table thead {
+    background-color: #f1f3f5;
+    color: #343a40;
+}
+.table th, .table td {
+    vertical-align: middle;
+    padding: 0.85rem;
+    border-color: #e9ecef;
+}
+.table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+.table tbody tr:hover {
+    background-color: #e9ecef;
+}
+.horario-row {
+    margin-bottom: 0.75rem;
+}
+.form-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #343a40;
+    margin-bottom: 0.3rem;
+}
+
+/* Botones */
+.btn {
+    border-radius: 8px;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-primary, .btn-success, .btn-danger {
+    background-color: #f85c2b;
+    border: none;
+    color: #ffffff;
+}
+.btn-primary:hover, .btn-success:hover, .btn-danger:hover {
+    background-color: #d94a1f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.btn-secondary {
+    background-color: #6c757d;
+    border: none;
+    color: #ffffff;
+}
+.btn-secondary:hover {
+    background-color: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+/* Formulario de demora */
+.form-check-label {
+    font-size: 0.9rem;
+    color: #343a40;
+}
+.form-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+    .container {
+        padding: 1.5rem 1rem;
+    }
+    .custom-slider-container {
+        width: 200px;
+        height: 34px;
+    }
+    .slider-labels {
+        font-size: 0.8rem;
+    }
+    .hora-select, .minuto-select {
+        width: 65px;
+        font-size: 0.85rem;
+    }
+    .table th, .table td {
+        padding: 0.6rem;
+        font-size: 0.85rem;
+    }
+    .horario-row .col-5 {
+        flex: 0 0 48%;
+        max-width: 48%;
+    }
+    .horario-row .col-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-top: 0.75rem;
+        text-align: center;
+    }
+    .btn {
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+    #estado-local {
+        margin-left: 0;
+        margin-top: 0.75rem;
+        display: block;
+        font-size: 0.85rem;
+    }
+}
+@media (max-width: 576px) {
+    .horario-row .col-5 {
+        flex: 0 0 100%;
+        max-width: 100%;
+        margin-bottom: 0.5rem;
+    }
+    .custom-slider-container {
+        width: 180px;
+        height: 32px;
+    }
+    .card-body {
+        padding: 1.25rem;
+    }
+    h2.mb-4 {
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h2 class="mb-4">Configuración de Horarios y Demora - {{ restaurante.nombre_local }}</h2>
+
+
+    <!-- Estado del Local y Slider -->
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: {{ restaurante.color_principal }}; color: white;">
+            <h5 class="mb-0">Estado del Local</h5>
+        </div>
+        <div class="card-body">
+            <p id="estado-texto">
+                Según los horarios establecidos, tu local
+                <span id="estado-actual" class="{% if restaurante.esta_abierto %}text-success{% else %}text-danger{% endif %}">
+                    {% if restaurante.esta_abierto %}
+                        está abierto
+                    {% else %}
+                        está cerrado
+                    {% endif %}
+                </span>.
+            </p>
+            <div class="d-flex align-items-center">
+                <label for="estado-control-slider">Control de Estado:</label>
+                <div class="custom-slider-container ms-3 {% if restaurante.estado_control == 'cerrado' %}cerrado{% elif restaurante.estado_control == 'abierto' %}abierto{% else %}automatico{% endif %}" id="custom-slider-container">
+                    <select id="estado-control-slider" class="custom-slider" name="estado_control">
+                        <option value="cerrado" {% if restaurante.estado_control == 'cerrado' %}selected{% endif %}>Cerrado</option>
+                        <option value="automatico" {% if restaurante.estado_control == 'automatico' %}selected{% endif %}>Automático</option>
+                        <option value="abierto" {% if restaurante.estado_control == 'abierto' %}selected{% endif %}>Abierto</option>
+                    </select>
+                    <div class="slider-labels">
+                        <span class="slider-label" data-value="cerrado">Cerrado</span>
+                        <span class="slider-label" data-value="automatico">Automático</span>
+                        <span class="slider-label" data-value="abierto">Abierto</span>
+                    </div>
+                    <div class="slider-indicator"></div>
+                </div>
+                <span id="estado-local">
+                    {% if restaurante.estado_control == 'cerrado' %}
+                        Cerrado manualmente
+                    {% elif restaurante.estado_control == 'abierto' %}
+                        Abierto manualmente
+                    {% else %}
+                        Automático (según horarios)
+                    {% endif %}
+                </span>
+                <button type="button" class="btn btn-primary btn-sm ms-3" id="guardar-slider">Guardar</button>
+            </div>
+            <div id="slider-message" class="alert-container"></div>
+        </div>
+    </div>
+
+    <!-- Formulario para Demora -->
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: {{ restaurante.color_principal }}; color: white;">
+            <h5 class="mb-0">Configuración de Demora</h5>
+        </div>
+        <div class="card-body">
+            <form id="demora-form">
+                {% csrf_token %}
+                <div class="mb-3 form-check">
+                    {{ demora_form.tiene_demora }}
+                    <label class="form-check-label" for="{{ demora_form.tiene_demora.id_for_label }}">
+                        ¿Hay demora en los pedidos?
+                    </label>
+                </div>
+                <div class="mb-3">
+                    <label for="{{ demora_form.tiempo_demora.id_for_label }}" class="form-label">
+                        Tiempo estimado de demora
+                    </label>
+                    {{ demora_form.tiempo_demora }}
+                    <small class="form-text text-muted">Ejemplo: "15-30 minutos". Dejar en blanco si no hay demora.</small>
+                </div>
+                <button type="button" class="btn btn-primary" id="guardar-demora">Guardar Demora</button>
+            </form>
+            <div id="demora-actual" class="mt-3">
+                <p>
+                    Estado actual de demora: 
+                    <span id="demora-texto">
+                        {% if restaurante.tiene_demora and restaurante.tiempo_demora %}
+                            Hay demora de {{ restaurante.tiempo_demora }}.
+                        {% else %}
+                            No hay demora.
+                        {% endif %}
+                    </span>
+                </p>
+            </div>
+            <div id="demora-message" class="alert-container"></div>
+        </div>
+    </div>
+
+    <!-- Horarios por Día de la Semana -->
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: {{ restaurante.color_principal }}; color: white;">
+            <h5 class="mb-0">Horarios de Apertura y Cierre</h5>
+        </div>
+        <div class="card-body">
+            <!-- Asegurarse de que el management_form se renderice -->
+            <div class="management-form">
+                {{ formset.management_form }}
+            </div>
+            <div class="table-responsive">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Día</th>
+                            <th>Horarios</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dia, dia_nombre in dias_semana %}
+                        <tr>
+                            <td>{{ dia_nombre }}</td>
+                            <td>
+                                <div class="horarios-dia" data-dia="{{ dia }}">
+                                    {% for form in formset %}
+                                        {% with dia_semana=form.initial.dia_semana|default:form.dia_semana.value %}
+                                            {% if dia_semana|add:"0" == dia %}
+                                                <div class="row mb-2 horario-row" data-horario-id="{{ form.id.value|default_if_none:'' }}">
+                                                    <div class="col-5">
+                                                        <label class="form-label">Apertura</label>
+                                                        <div class="d-flex">
+                                                            <select name="{{ form.hora_apertura_hora.html_name }}" class="form-select hora-select">
+                                                                {% for hour in horas %}
+                                                                    <option value="{{ hour }}" {% if form.hora_apertura_hora.value == hour %}selected{% endif %}>{{ hour }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                            <select name="{{ form.hora_apertura_minuto.html_name }}" class="form-select minuto-select">
+                                                                {% for minute in minutos %}
+                                                                    <option value="{{ minute }}" {% if form.hora_apertura_minuto.value == minute %}selected{% endif %}>{{ minute }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        {{ form.hora_apertura }}
+                                                    </div>
+                                                    <div class="col-5">
+                                                        <label class="form-label">Cierre</label>
+                                                        <div class="d-flex">
+                                                            <select name="{{ form.hora_cierre_hora.html_name }}" class="form-select hora-select">
+                                                                {% for hour in horas %}
+                                                                    <option value="{{ hour }}" {% if form.hora_cierre_hora.value == hour %}selected{% endif %}>{{ hour }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                            <select name="{{ form.hora_cierre_minuto.html_name }}" class="form-select minuto-select">
+                                                                {% for minute in minutos %}
+                                                                    <option value="{{ minute }}" {% if form.hora_cierre_minuto.value == minute %}selected{% endif %}>{{ minute }}</option>
+                                                                {% endfor %}
+                                                            </select>
+                                                        </div>
+                                                        {{ form.hora_cierre }}
+                                                    </div>
+                                                    <div class="col-2 d-flex align-items-end">
+                                                        {{ form.dia_semana }}
+                                                        {{ form.id }}
+                                                        <button type="button" class="btn btn-danger btn-sm eliminar-horario" style="margin-left:-20px;">Eliminar</button>
+                                                    </div>
+                                                </div>
+                                            {% endif %}
+                                        {% endwith %}
+                                    {% empty %}
+                                        <!-- Fallback rendering -->
+                                        {% for horario in horarios_por_dia|get_item:dia %}
+                                            <div class="row mb-2 horario-row">
+                                                <div class="col-5">
+                                                    <label class="form-label">Apertura</label>
+                                                    <p>{{ horario.hora_apertura }}</p>
+                                                </div>
+                                                <div class="col-5">
+                                                    <label class="form-label">Cierre</label>
+                                                    <p>{{ horario.hora_cierre }}</p>
+                                                </div>
+                                            </div>
+                                        {% endfor %}
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td>
+                                <button type="button" class="btn btn-success btn-sm agregar-horario" data-dia="{{ dia }}">Añadir Horario</button>
+                                <button type="button" class="btn btn-primary btn-sm guardar-horario" data-dia="{{ dia }}">Guardar Horario</button>
+                                <div class="alert-container" id="message-{{ dia }}"></div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Botón general para guardar todo (opcional) -->
+    <form method="POST" id="config-form">
+        <a href="{% url 'panel' %}" class="btn btn-secondary">Volver al Panel</a>
+    </form>
+</div>
+
+<script>
+    // Definir los días de la semana directamente en JavaScript
+    const diasSemana = [
+        {value: 0, label: 'Lunes'},
+        {value: 1, label: 'Martes'},
+        {value: 2, label: 'Miércoles'},
+        {value: 3, label: 'Jueves'},
+        {value: 4, label: 'Viernes'},
+        {value: 5, label: 'Sábado'},
+        {value: 6, label: 'Domingo'}
+    ];
+    
+    // Definir las opciones de horas y minutos desde el contexto
+    const horas = {{ horas|safe }};
+    const minutos = {{ minutos|safe }};
+    
+    // Obtener el token CSRF de una función reutilizable
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    
+    const csrftoken = getCookie('csrftoken');
+    
+    // Función para mostrar mensajes de éxito/error
+    function mostrarMensaje(contenedorId, mensaje, tipo) {
+        const contenedor = document.getElementById(contenedorId);
+        contenedor.innerHTML = `<div class="alert alert-${tipo} alert-dismissible fade show" role="alert">
+            ${mensaje}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>`;
+    }
+    
+    // Código para manejar los botones, el slider y los horarios
+    document.addEventListener('DOMContentLoaded', function() {
+        // Depuración: Verificar que los botones de añadir horario existan
+        const agregarBotones = document.querySelectorAll('.agregar-horario');
+        console.log('Botones de añadir horario encontrados:', agregarBotones.length);
+    
+        // Depuración: Verificar que el management form exista
+        const managementForm = document.querySelector('.management-form');
+        console.log('Management form encontrado:', managementForm);
+    
+        // Depuración: Mostrar el contenido del management form
+        console.log('Contenido del management form:', managementForm.innerHTML);
+    
+        // Cambiar el selector para buscar el id correcto
+        const totalForms = document.querySelector('#id_horarios-TOTAL_FORMS');
+        console.log('Campo TOTAL_FORMS encontrado:', totalForms);
+        if (!totalForms) {
+            console.error('Error: No se encontró el campo TOTAL_FORMS. Asegúrate de que {{ formset.management_form }} esté renderizado correctamente.');
+            return;
+        }
+    
+        // Depuración: Verificar que el contenedor empty_form exista
+        const emptyFormDiv = document.querySelector('#empty_form');
+        console.log('Contenedor empty_form encontrado:', emptyFormDiv);
+        if (!emptyFormDiv) {
+            console.error('Error: No se encontró el contenedor #empty_form.');
+            return;
+        }
+    
+        // Función para actualizar las opciones de cierre basadas en la hora de apertura
+        function actualizarOpcionesCierre(row) {
+            const horaAperturaSelect = row.querySelector('select[name$="hora_apertura_hora"]');
+            const minutoAperturaSelect = row.querySelector('select[name$="hora_apertura_minuto"]');
+            const horaCierreSelect = row.querySelector('select[name$="hora_cierre_hora"]');
+            const minutoCierreSelect = row.querySelector('select[name$="hora_cierre_minuto"]');
+
+            function actualizar() {
+                const horaApertura = parseInt(horaAperturaSelect.value);
+                const minutoApertura = parseInt(minutoAperturaSelect.value);
+
+                // Guardar el valor actual del cierre para intentar restaurarlo si es posible
+                let horaCierreActual = horaCierreSelect.value;
+                let minutoCierreActual = minutoCierreSelect.value;
+
+                // Limpiar y repoblar las opciones de hora de cierre
+                horaCierreSelect.innerHTML = '';
+                minutoCierreSelect.innerHTML = '';
+
+                // Añadir horas posteriores a la hora de apertura (excluding the opening hour itself)
+                for (let hour = horaApertura + 1; hour < 24; hour++) {
+                    const option = document.createElement('option');
+                    option.value = hour.toString().padStart(2, '0');
+                    option.textContent = option.value;
+                    horaCierreSelect.appendChild(option);
+                }
+
+                // Añadir opciones de minutos
+                for (const minute of minutos) {
+                    const option = document.createElement('option');
+                    option.value = minute;
+                    option.textContent = minute;
+                    minutoCierreSelect.appendChild(option);
+                }
+
+                // Restaurar la hora de cierre si es válida, otherwise select the first available hour
+                if (horaCierreSelect.options.length > 0) {
+                    if (parseInt(horaCierreActual) > horaApertura) {
+                        horaCierreSelect.value = horaCierreActual;
+                    } else {
+                        horaCierreSelect.value = horaCierreSelect.options[0].value; // First available hour
+                    }
+                } else {
+                    // If no hours are available (e.g., opening at 23:00), disable the closing time
+                    horaCierreSelect.disabled = true;
+                    minutoCierreSelect.disabled = true;
+                    return;
+                }
+
+                // Adjust minutes based on the selected closing hour
+                if (parseInt(horaCierreSelect.value) === horaApertura) {
+                    const minutosDisponibles = minutos.filter(min => parseInt(min) > minutoApertura);
+                    minutoCierreSelect.innerHTML = '';
+                    for (const minute of minutosDisponibles) {
+                        const option = document.createElement('option');
+                        option.value = minute;
+                        option.textContent = minute;
+                        minutoCierreSelect.appendChild(option);
+                    }
+                    if (minutosDisponibles.length > 0) {
+                        if (parseInt(minutoCierreActual) > minutoApertura) {
+                            minutoCierreSelect.value = minutoCierreActual;
+                        } else {
+                            minutoCierreSelect.value = minutosDisponibles[0];
+                        }
+                    }
+                } else {
+                    // Restore all minute options
+                    minutoCierreSelect.innerHTML = '';
+                    for (const minute of minutos) {
+                        const option = document.createElement('option');
+                        option.value = minute;
+                        option.textContent = minute;
+                        minutoCierreSelect.appendChild(option);
+                    }
+                    minutoCierreSelect.value = minutoCierreActual || minutos[0];
+                }
+
+                // Actualizar los campos ocultos
+                actualizarCamposHorarios(row);
+            }
+
+            horaAperturaSelect.addEventListener('change', actualizar);
+            minutoAperturaSelect.addEventListener('change', actualizar);
+            horaCierreSelect.addEventListener('change', () => {
+                const horaApertura = parseInt(horaAperturaSelect.value);
+                const minutoApertura = parseInt(minutoAperturaSelect.value);
+                if (parseInt(horaCierreSelect.value) === horaApertura) {
+                    const minutosDisponibles = minutos.filter(min => parseInt(min) > minutoApertura);
+                    minutoCierreSelect.innerHTML = '';
+                    for (const minute of minutosDisponibles) {
+                        const option = document.createElement('option');
+                        option.value = minute;
+                        option.textContent = minute;
+                        minutoCierreSelect.appendChild(option);
+                    }
+                    if (minutosDisponibles.length > 0) {
+                        minutoCierreSelect.value = minutosDisponibles[0];
+                    }
+                } else {
+                    minutoCierreSelect.innerHTML = '';
+                    for (const minute of minutos) {
+                        const option = document.createElement('option');
+                        option.value = minute;
+                        option.textContent = minute;
+                        minutoCierreSelect.appendChild(option);
+                    }
+                }
+                actualizarCamposHorarios(row);
+            });
+            minutoCierreSelect.addEventListener('change', () => actualizarCamposHorarios(row));
+
+            // Inicializar
+            actualizar();
+        }
+
+        // Actualizar los campos ocultos de hora_apertura y hora_cierre cuando cambian los dropdowns
+        function actualizarCamposHorarios(row) {
+            const horaAperturaHora = row.querySelector('select[name$="hora_apertura_hora"]');
+            const horaAperturaMinuto = row.querySelector('select[name$="hora_apertura_minuto"]');
+            const horaCierreHora = row.querySelector('select[name$="hora_cierre_hora"]');
+            const horaCierreMinuto = row.querySelector('select[name$="hora_cierre_minuto"]');
+            const horaAperturaInput = row.querySelector('input[name$="hora_apertura"]');
+            const horaCierreInput = row.querySelector('input[name$="hora_cierre"]');
+    
+            function actualizar() {
+                if (horaAperturaHora && horaAperturaMinuto && horaAperturaInput) {
+                    horaAperturaInput.value = `${horaAperturaHora.value}:${horaAperturaMinuto.value}:00`;
+                }
+                if (horaCierreHora && horaCierreMinuto && horaCierreInput) {
+                    horaCierreInput.value = `${horaCierreHora.value}:${horaCierreMinuto.value}:00`;
+                }
+            }
+    
+            actualizar();
+        }
+    
+        // Inicializar los campos existentes
+        document.querySelectorAll('.horario-row').forEach(row => {
+            actualizarCamposHorarios(row);
+            actualizarOpcionesCierre(row);
+        });
+    
+        // Función para actualizar la tabla de horarios dinámicamente después de guardar
+        function actualizarHorariosDia(dia, horarios) {
+            const container = document.querySelector(`.horarios-dia[data-dia="${dia}"]`);
+            if (!container) {
+                console.error('No se encontró el contenedor para el día:', dia);
+                return;
+            }
+
+            // Limpiar los horarios actuales
+            container.innerHTML = '';
+
+            // Ajustar TOTAL_FORMS según la cantidad de horarios
+            const currentTotal = parseInt(totalForms.value);
+            totalForms.value = currentTotal + horarios.length;
+
+            // Añadir cada horario como un formulario editable
+            horarios.forEach((horario, index) => {
+                const formIdx = currentTotal + index;
+                const newForm = document.createElement('div');
+                newForm.classList.add('row', 'mb-2', 'horario-row');
+                newForm.setAttribute('data-horario-id', horario.id);
+
+                // Extraer hora y minutos para los dropdowns
+                const [aperturaHora, aperturaMinuto] = horario.hora_apertura.split(':');
+                const [cierreHora, cierreMinuto] = horario.hora_cierre.split(':');
+
+                // Generar opciones de horas y minutos dinámicamente
+                const opcionesHorasApertura = horas.map(hora => 
+                    `<option value="${hora}" ${aperturaHora === hora ? 'selected' : ''}>${hora}</option>`
+                ).join('');
+                const opcionesMinutosApertura = minutos.map(minuto => 
+                    `<option value="${minuto}" ${aperturaMinuto === minuto ? 'selected' : ''}>${minuto}</option>`
+                ).join('');
+
+                // Para el cierre, inicialmente poblamos todas las horas; actualizarOpcionesCierre ajustará
+                const opcionesHorasCierre = horas.map(hora => 
+                    `<option value="${hora}" ${cierreHora === hora ? 'selected' : ''}>${hora}</option>`
+                ).join('');
+                const opcionesMinutosCierre = minutos.map(minuto => 
+                    `<option value="${minuto}" ${cierreMinuto === minuto ? 'selected' : ''}>${minuto}</option>`
+                ).join('');
+
+                newForm.innerHTML = `
+                    <div class="col-5">
+                        <label class="form-label">Apertura</label>
+                        <div class="d-flex">
+                            <select name="horarios-${formIdx}-hora_apertura_hora" class="form-select hora-select">
+                                ${opcionesHorasApertura}
+                            </select>
+                            <select name="horarios-${formIdx}-hora_apertura_minuto" class="form-select minuto-select">
+                                ${opcionesMinutosApertura}
+                            </select>
+                        </div>
+                        <input type="hidden" name="horarios-${formIdx}-hora_apertura" value="${horario.hora_apertura}">
+                    </div>
+                    <div class="col-5">
+                        <label class="form-label">Cierre</label>
+                        <div class="d-flex">
+                            <select name="horarios-${formIdx}-hora_cierre_hora" class="form-select hora-select">
+                                ${opcionesHorasCierre}
+                            </select>
+                            <select name="horarios-${formIdx}-hora_cierre_minuto" class="form-select minuto-select">
+                                ${opcionesMinutosCierre}
+                            </select>
+                        </div>
+                        <input type="hidden" name="horarios-${formIdx}-hora_cierre" value="${horario.hora_cierre}">
+                    </div>
+                    <div class="col-2 d-flex align-items-end">
+                        <input type="hidden" name="horarios-${formIdx}-dia_semana" value="${dia}">
+                        <input type="hidden" name="horarios-${formIdx}-id" value="${horario.id}">
+                        <button type="button" class="btn btn-danger btn-sm eliminar-horario" style="margin-left:-20px;">Eliminar</button>
+                    </div>
+                `;
+
+                container.appendChild(newForm);
+                actualizarCamposHorarios(newForm);
+                actualizarOpcionesCierre(newForm);
+            });
+        }
+    
+        // Función para obtener el último horario de cierre para un día
+        function obtenerUltimoCierre(dia) {
+            const container = document.querySelector(`.horarios-dia[data-dia="${dia}"]`);
+            if (!container) return null;
+
+            let ultimoCierre = null;
+            container.querySelectorAll('.horario-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const horaCierreInput = row.querySelector('input[name$="hora_cierre"]');
+                    if (horaCierreInput && horaCierreInput.value) {
+                        const cierre = horaCierreInput.value; // Formato HH:MM:SS
+                        if (!ultimoCierre || cierre > ultimoCierre) {
+                            ultimoCierre = cierre;
+                        }
+                    }
+                }
+            });
+            return ultimoCierre; // Retorna el último cierre en formato HH:MM:SS o null si no hay horarios
+        }
+    
+        // Función para ajustar las opciones de apertura basadas en el último cierre
+        function ajustarOpcionesApertura(row, ultimoCierre) {
+            const horaAperturaSelect = row.querySelector('select[name$="hora_apertura_hora"]');
+            const minutoAperturaSelect = row.querySelector('select[name$="hora_apertura_minuto"]');
+
+            if (!ultimoCierre) {
+                // Si no hay último cierre, permitir todas las horas
+                horaAperturaSelect.innerHTML = horas.map(hora => 
+                    `<option value="${hora}">${hora}</option>`
+                ).join('');
+                minutoAperturaSelect.innerHTML = minutos.map(minuto => 
+                    `<option value="${minuto}">${minuto}</option>`
+                ).join('');
+                horaAperturaSelect.value = horas[0];
+                minutoAperturaSelect.value = minutos[0];
+                actualizarCamposHorarios(row);
+                return;
+            }
+
+            const [ultimaHora, ultimoMinuto] = ultimoCierre.split(':').map(Number);
+            let horaInicial = ultimaHora;
+            let minutoInicial = ultimoMinuto;
+
+            // Incrementar el minuto para el nuevo horario
+            const minutosDisponibles = minutos.filter(min => parseInt(min) > ultimoMinuto);
+            if (minutosDisponibles.length > 0) {
+                minutoInicial = minutosDisponibles[0];
+            } else {
+                horaInicial = (ultimaHora + 1) % 24;
+                minutoInicial = minutos[0];
+            }
+
+            // Filtrar las horas disponibles (solo posteriores a la última hora de cierre)
+            const horasDisponibles = horas.filter(hora => parseInt(hora) >= horaInicial);
+            if (parseInt(horasDisponibles[0]) > horaInicial) {
+                minutoInicial = minutos[0]; // Resetear minutos si la hora cambió
+            }
+
+            // Poblar el selector de horas
+            horaAperturaSelect.innerHTML = horasDisponibles.map(hora => 
+                `<option value="${hora}">${hora}</option>`
+            ).join('');
+
+            // Poblar el selector de minutos
+            if (parseInt(horasDisponibles[0]) === ultimaHora) {
+                minutoAperturaSelect.innerHTML = minutosDisponibles.map(minuto => 
+                    `<option value="${minuto}">${minuto}</option>`
+                ).join('');
+            } else {
+                minutoAperturaSelect.innerHTML = minutos.map(minuto => 
+                    `<option value="${minuto}">${minuto}</option>`
+                ).join('');
+            }
+
+            // Establecer valores iniciales
+            horaAperturaSelect.value = horasDisponibles[0];
+            minutoAperturaSelect.value = minutoInicial;
+
+            // Actualizar el campo oculto
+            actualizarCamposHorarios(row);
+
+            // Asegurar que las opciones de cierre se ajusten
+            actualizarOpcionesCierre(row);
+        }
+    
+        // Manejar añadir nuevos horarios
+        agregarBotones.forEach(button => {
+            button.addEventListener('click', function() {
+                console.log('Botón de añadir horario clickeado para el día:', this.dataset.dia);
+    
+                const dia = this.dataset.dia;
+                const container = document.querySelector(`.horarios-dia[data-dia="${dia}"]`);
+                if (!container) {
+                    console.error('No se encontró el contenedor para el día:', dia);
+                    return;
+                }
+    
+                const formIdx = parseInt(totalForms.value);
+                console.log('Índice del nuevo formulario:', formIdx);
+    
+                // Clonar el formulario vacío del formset
+                const emptyForm = emptyFormDiv.innerHTML
+                    .replace(/form-__prefix__/g, `horarios-${formIdx}`)
+                    .replace('style="display: none;"', '');
+                const newForm = document.createElement('div');
+                newForm.classList.add('row', 'mb-2', 'horario-row');
+                newForm.innerHTML = emptyForm;
+    
+                // Establecer el día de la semana
+                const diaSemanaInput = newForm.querySelector('input[name$="dia_semana"]');
+                if (diaSemanaInput) {
+                    diaSemanaInput.value = dia;
+                } else {
+                    console.error('No se encontró el input dia_semana en el nuevo formulario');
+                }
+    
+                // Añadir el nuevo formulario al contenedor
+                container.appendChild(newForm);
+                console.log('Nuevo formulario añadido para el día:', dia);
+    
+                // Incrementar el contador de formularios
+                totalForms.value = formIdx + 1;
+                console.log('TOTAL_FORMS actualizado a:', totalForms.value);
+    
+                // Obtener el último horario de cierre para este día
+                const ultimoCierre = obtenerUltimoCierre(dia);
+                console.log('Último cierre para el día', dia, ':', ultimoCierre);
+    
+                // Ajustar las opciones de apertura basadas en el último cierre
+                ajustarOpcionesApertura(newForm, ultimoCierre);
+            });
+        });
+    
+        // Función para recolectar horarios visibles
+        function recolectarHorariosVisibles(container) {
+            const horarios = [];
+            const horariosUnicos = new Set();
+            container.querySelectorAll('.horario-row').forEach(row => {
+                if (row.style.display !== 'none') {
+                    const horaAperturaInput = row.querySelector('input[name$="hora_apertura"]');
+                    const horaCierreInput = row.querySelector('input[name$="hora_cierre"]');
+                    const horaApertura = horaAperturaInput ? horaAperturaInput.value : '';
+                    const horaCierre = horaCierreInput ? horaCierreInput.value : '';
+                    if (horaApertura && horaCierre) {
+                        const horaAperturaHHMM = horaApertura.split(':').slice(0, 2).join(':');
+                        const horaCierreHHMM = horaCierre.split(':').slice(0, 2).join(':');
+                        const horarioKey = `${horaAperturaHHMM}-${horaCierreHHMM}`;
+                        if (!horariosUnicos.has(horarioKey)) {
+                            horariosUnicos.add(horarioKey);
+                            horarios.push({
+                                hora_apertura: horaAperturaHHMM,
+                                hora_cierre: horaCierreHHMM
+                            });
+                        }
+                    } else {
+                        console.warn('Horario incompleto, no se incluirá:', { horaApertura, horaCierre });
+                    }
+                }
+            });
+            return horarios;
+        }
+    
+        // Función para guardar horarios por día (extraída para reutilización)
+        function guardarHorariosDia(dia, button, esEliminacion = false) {
+            console.log('Iniciando guardado de horarios para el día:', dia, 'Es eliminación:', esEliminacion);
+            // Deshabilitar el botón para evitar múltiples clics
+            if (button) {
+                button.disabled = true;
+                console.log('Botón "Guardar Horario" deshabilitado para el día:', dia);
+            }
+    
+            const container = document.querySelector(`.horarios-dia[data-dia="${dia}"]`);
+            if (!container) {
+                console.error('No se encontró el contenedor .horarios-dia para el día:', dia);
+                if (button) button.disabled = false;
+                return;
+            }
+    
+            const horarios = recolectarHorariosVisibles(container);
+            console.log('Enviando horarios para el día', dia, ':', horarios);
+    
+            const formData = new FormData();
+            formData.append('dia', dia);
+            formData.append('horarios', JSON.stringify(horarios));
+            formData.append('csrfmiddlewaretoken', csrftoken);
+    
+            fetch("{% url 'guardar_horarios_dia' %}", {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                console.log('Respuesta del servidor para el día', dia, ':', response);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Datos recibidos para el día', dia, ':', data);
+                if (data.success) {
+                    // Mostrar mensaje según si es eliminación o guardado
+                    if (esEliminacion && horarios.length === 0) {
+                        mostrarMensaje(`message-${dia}`, 'Horario eliminado correctamente.', 'success');
+                    } else if (esEliminacion) {
+                        mostrarMensaje(`message-${dia}`, 'Horario eliminado y horarios actualizados correctamente.', 'success');
+                    } else {
+                        mostrarMensaje(`message-${dia}`, data.message, 'success');
+                    }
+                    // Actualizar la tabla con los horarios guardados
+                    actualizarHorariosDia(dia, data.horarios);
+                    // Actualizar el estado del restaurante
+                    actualizarEstadoRestaurante();
+                } else {
+                    mostrarMensaje(`message-${dia}`, data.error || 'Error al guardar los horarios, intenta devuelta', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error al guardar horarios para el día', dia, ':', error);
+                mostrarMensaje(`message-${dia}`, 'Error al guardar los horarios: ' + error.message, 'danger');
+            })
+            .finally(() => {
+                // Rehabilitar el botón después de la solicitud
+                if (button) {
+                    button.disabled = false;
+                    console.log('Botón "Guardar Horario" rehabilitado para el día:', dia);
+                }
+            });
+        }
+    
+        // Manejar eliminación de horarios con delegación de eventos
+        document.querySelector('tbody').addEventListener('click', function(e) {
+            const eliminarBtn = e.target.closest('.eliminar-horario');
+            if (eliminarBtn) {
+                console.log('Botón de eliminar horario clickeado');
+                const row = eliminarBtn.closest('.horario-row');
+                if (!row) {
+                    console.error('No se encontró la fila .horario-row');
+                    return;
+                }
+                // Simplemente ocultar la fila
+                row.style.display = 'none';
+                console.log('Horario ocultado, preparando para guardar');
+                const diaContainer = row.closest('.horarios-dia');
+                if (!diaContainer) {
+                    console.error('No se encontró el contenedor .horarios-dia');
+                    return;
+                }
+                const dia = diaContainer.dataset.dia;
+                console.log('Día para guardar después de eliminación:', dia);
+                // Buscar el botón "Guardar Horario" para pasarlo a la función
+                const guardarButton = document.querySelector(`.guardar-horario[data-dia="${dia}"]`);
+                if (!guardarButton) {
+                    console.error('No se encontró el botón "Guardar Horario" para el día:', dia);
+                    return;
+                }
+                guardarHorariosDia(dia, guardarButton, true); // Indicar que es una eliminación
+            }
+        });
+    
+        // Manejar guardar horarios por día
+        document.querySelectorAll('.guardar-horario').forEach(button => {
+            button.addEventListener('click', function() {
+                const dia = this.dataset.dia;
+                console.log('Botón "Guardar Horario" clickeado para el día:', dia);
+                guardarHorariosDia(dia, this, false); // Indicar que no es una eliminación
+            });
+        });
+    
+        // Manejar guardar demora
+        document.getElementById('guardar-demora').addEventListener('click', function() {
+            const form = document.getElementById('demora-form');
+            const formData = new FormData(form);
+    
+            fetch("{% url 'guardar_demora' %}", {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensaje('demora-message', data.message, 'success');
+                    // Actualizar la visualización de la demora
+                    const demoraTexto = document.getElementById('demora-texto');
+                    if (data.tiene_demora && data.tiempo_demora) {
+                        demoraTexto.textContent = `Hay demora de ${data.tiempo_demora}.`;
+                    } else {
+                        demoraTexto.textContent = 'No hay demora.';
+                    }
+                } else {
+                    mostrarMensaje('demora-message', data.error || 'Error al guardar la demora', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error al guardar demora:', error);
+                mostrarMensaje('demora-message', 'Error al guardar la demora', 'danger');
+            });
+        });
+    
+        // Función para actualizar el estado del restaurante dinámicamente
+        function actualizarEstadoRestaurante() {
+            fetch("{% url 'toggle_cerrado_manualmente' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrftoken
+                },
+                body: `estado_control=${document.getElementById('estado-control-slider').value}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const estadoTexto = document.getElementById('estado-actual');
+                    estadoTexto.textContent = data.esta_abierto ? 'está abierto' : 'está cerrado';
+                    estadoTexto.className = data.esta_abierto ? 'text-success' : 'text-danger';
+                }
+            })
+            .catch(error => {
+                console.error('Error al actualizar el estado del restaurante:', error);
+            });
+        }
+    
+        // Manejar el slider de estado
+        const slider = document.getElementById('estado-control-slider');
+        const estadoLocal = document.getElementById('estado-local');
+        const sliderContainer = document.getElementById('custom-slider-container');
+        const labels = document.querySelectorAll('.slider-label');
+        let sliderChanged = false;
+    
+        function actualizarEstadoTexto() {
+            const valor = slider.value;
+            if (valor === 'cerrado') {
+                estadoLocal.textContent = 'Cerrado manualmente';
+                estadoLocal.className = 'text-danger';
+            } else if (valor === 'abierto') {
+                estadoLocal.textContent = 'Abierto manualmente';
+                estadoLocal.className = 'text-success';
+            } else {
+                estadoLocal.textContent = 'Automático (según horarios)';
+                estadoLocal.className = 'text-primary';
+            }
+            // Actualizar la clase del contenedor para el estilo visual
+            sliderContainer.className = `custom-slider-container ms-3 ${valor}`;
+        }
+    
+        // Hacer las etiquetas clickeables para cambiar el estado
+        labels.forEach(label => {
+            label.addEventListener('click', function() {
+                const value = this.getAttribute('data-value');
+                slider.value = value;
+                sliderChanged = true;
+                actualizarEstadoTexto();
+                // Disparar manualmente el evento change para mantener compatibilidad
+                const event = new Event('change');
+                slider.dispatchEvent(event);
+            });
+        });
+    
+        slider.addEventListener('change', function() {
+            sliderChanged = true;
+            actualizarEstadoTexto();
+        });
+    
+        // Inicializar el texto del estado al cargar la página
+        actualizarEstadoTexto();
+    
+        document.getElementById('guardar-slider').addEventListener('click', function() {
+            if (!sliderChanged) {
+                mostrarMensaje('slider-message', 'No se han realizado cambios', 'info');
+                return;
+            }
+    
+            const estadoControl = slider.value;
+            fetch("{% url 'toggle_cerrado_manualmente' %}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrftoken
+                },
+                body: `estado_control=${estadoControl}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    mostrarMensaje('slider-message', 'Estado del local actualizado correctamente', 'success');
+                    sliderChanged = false;
+                    // Actualizar el estado del restaurante
+                    const estadoTexto = document.getElementById('estado-actual');
+                    estadoTexto.textContent = data.esta_abierto ? 'está abierto' : 'está cerrado';
+                    estadoTexto.className = data.esta_abierto ? 'text-success' : 'text-danger';
+                } else {
+                    mostrarMensaje('slider-message', 'Error al actualizar el estado del local', 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('Error al cambiar el estado:', error);
+                mostrarMensaje('slider-message', 'Error al actualizar el estado del local', 'danger');
+            });
+        });
+    });
+</script>
+
+<!-- Plantilla vacía para nuevos formularios -->
+<div id="empty_form" style="display: none;">
+    <div class="row mb-2 horario-row">
+        <div class="col-5">
+            <label class="form-label">Apertura</label>
+            <div class="d-flex">
+                <select name="form-__prefix__-hora_apertura_hora" class="form-select hora-select">
+                    {% for hour in horas %}
+                        <option value="{{ hour }}">{{ hour }}</option>
+                    {% endfor %}
+                </select>
+                <select name="form-__prefix__-hora_apertura_minuto" class="form-select minuto-select">
+                    {% for minute in minutos %}
+                        <option value="{{ minute }}">{{ minute }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <input type="hidden" name="form-__prefix__-hora_apertura">
+        </div>
+        <div class="col-5">
+            <label class="form-label">Cierre</label>
+            <div class="d-flex">
+                <select name="form-__prefix__-hora_cierre_hora" class="form-select hora-select">
+                    {% for hour in horas %}
+                        <option value="{{ hour }}">{{ hour }}</option>
+                    {% endfor %}
+                </select>
+                <select name="form-__prefix__-hora_cierre_minuto" class="form-select minuto-select">
+                    {% for minute in minutos %}
+                        <option value="{{ minute }}">{{ minute }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <input type="hidden" name="form-__prefix__-hora_cierre">
+        </div>
+        <div class="col-2 d-flex align-items-end">
+            <input type="hidden" name="form-__prefix__-dia_semana" value="">
+            <input type="hidden" name="form-__prefix__-id">
+            <button type="button" class="btn btn-danger btn-sm eliminar-horario" style="margin-left:-20px;">Eliminar</button>
+        </div>
+    </div>
+</div>
+{% endblock %}

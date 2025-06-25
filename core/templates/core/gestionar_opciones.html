@@ -1,0 +1,1029 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load custom_filters %}
+{% load l10n %}
+
+{% block content %}
+
+<style>
+  .bg-primary {
+    background-color: #f85c2b !important;
+  }
+  .text-primary {
+    color: #f85c2b !important;
+  }
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    overflow: visible !important;
+  }
+  .categoria-container {
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    background-color: #fff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .categoria-container:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 12px rgba(0, 0, 0, 0.2);
+  }
+  .categoria-container.hidden {
+    display: none;
+  }
+  .categoria-container.blank .action-icons {
+    display: none;
+  }
+  .categoria-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+  }
+  .categoria-header h4 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #333;
+  }
+  .opcion-form {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    background-color: #f9f9f9;
+  }
+  .opcion-form.empty .action-icons {
+    display: none;
+  }
+  .opcion-form.hidden {
+    display: none;
+  }
+  .form-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #555;
+    margin-bottom: 0.25rem;
+  }
+  .form-control, .form-check-input {
+    font-size: 0.9rem;
+    border-radius: 0.5rem;
+    padding: 0.5rem;
+  }
+  .form-check {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .form-check-label {
+    font-size: 0.9rem;
+    color: #555;
+  }
+  .form-error {
+    color: #ff5e5e;
+    font-size: 0.8rem;
+    margin-top: 0.25rem;
+  }
+  .action-btns {
+    margin-top: 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+  }
+  .btn-primary, .btn-success {
+    background-color: #f85c2b;
+    border: none;
+    border-radius: 9999px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+  }
+  .btn-primary:hover, .btn-success:hover {
+    background-color: #e04b1f;
+  }
+  .btn-secondary {
+    background-color: #6c757d;
+    border: none;
+    border-radius: 9999px;
+    padding: 0.75rem 1.5rem;
+    font-weight: 600;
+    font-size: 0.9rem;
+    transition: background-color 0.3s;
+  }
+  .btn-secondary:hover {
+    background-color: #5a6268;
+  }
+  .btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+  .action-icons i {
+    font-size: 1.2rem;
+    cursor: pointer;
+    color: #ff5e5e;
+    transition: transform 0.3s, color 0.3s;
+  }
+  .action-icons i:hover {
+    transform: translateY(-5px);
+    color: #cc4a4a;
+  }
+  .descuento-display {
+    color: #32cd89;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+  }
+  .descuento-display input {
+    border: none;
+    background: transparent;
+    color: #32cd89;
+    font-weight: 600;
+    width: 60px;
+    padding: 0;
+  }
+  .debug {
+    background-color: #ffe6e6;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+    border-radius: 0.5rem;
+    border: 1px solid #ff9999;
+  }
+  .alert {
+    border-radius: 0.5rem;
+    margin-top: 1rem;
+    font-size: 0.9rem;
+  }
+  .toast {
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+  }
+  .toast.text-bg-success {
+    background-color: #32cd89 !important;
+  }
+  .toast.text-bg-danger {
+    background-color: #ff5e5e !important;
+  }
+  @media (max-width: 576px) {
+    .container {
+      padding: 1rem;
+    }
+    .categoria-container {
+      padding: 1rem;
+    }
+    .categoria-header h4 {
+      font-size: 1.1rem;
+    }
+    .opcion-form {
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .opcion-form > div {
+      flex: 1 1 100%;
+      min-width: 0;
+    }
+    .form-check {
+      flex: 1 1 100%;
+    }
+    .action-btns {
+      flex-direction: column;
+    }
+    .btn-primary, .btn-success, .btn-secondary {
+      width: 100%;
+      padding: 0.65rem;
+      font-size: 0.85rem;
+    }
+  }
+</style>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmar Eliminación</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        ¿Estás seguro de que querés eliminar <span id="deleteItemName"></span>?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Sí</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+  <div id="toastGuardado" class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">Cambios guardados correctamente.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+  <div id="toastError" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">Error al procesar los cambios. Revisa los errores abajo.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+
+<div class="container mt-3">
+  <h2 class="order-header" style="font-size: 1.5rem; color: #333;">Gestionar Opciones para {{ producto.nombre }}</h2>
+  <a href="{% url 'mi_menu' %}" class="btn btn-secondary btn-sm mb-2">Volver al Menú</a>
+
+  <!-- Form Errors -->
+  {% if categoria_formset.errors or opcion_formsets %}
+    <div class="alert alert-danger">
+      <p>Errores en el formulario:</p>
+      <ul>
+        {% for form in categoria_formset %}
+          {% for field, errors in form.errors.items %}
+            <li>Categoría {{ form.instance.nombre|default:"Nueva" }} ({{ field }}): {{ errors }}</li>
+          {% endfor %}
+        {% endfor %}
+        {% for fs in opcion_formsets %}
+          {% for form in fs.formset %}
+            {% for field, errors in form.errors.items %}
+              <li>Opción en Categoría {{ fs.categoria_id }} ({{ field }}): {{ errors }}</li>
+            {% endfor %}
+            {% for error in fs.formset.non_form_errors %}
+              <li>Opción en Categoría {{ fs.categoria_id }}: {{ error }}</li>
+            {% endfor %}
+          {% endfor %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="POST" action="{% url 'gestionar_opciones_producto' producto.id %}" id="opciones-form">
+    {% csrf_token %}
+    {{ categoria_formset.management_form }}
+
+    <!-- Debug Output -->
+    <div class="debug">
+      <p>Formsets cargados: {{ opcion_formsets|length }}</p>
+      <p>Categorías: {% for form in categoria_formset %}{{ form.instance.nombre|default:"Nueva" }} (ID: {{ form.instance.id|default:"N/A" }}), {% endfor %}</p>
+      <p>Formsets: {% for formset in opcion_formsets %}Categoria ID {{ formset.categoria_id }}, Opciones: {{ formset.formset.forms|length }}; {% endfor %}</p>
+      <p>Discount Percentage: {{ discount_percentage }}</p>
+    </div>
+
+    <!-- Categoría Containers -->
+    <div id="categoria-containers">
+      {% for form in categoria_formset %}
+        <div class="categoria-container {% if not form.instance.pk and not form.nombre.value %}blank{% endif %}" data-form-index="{{ forloop.counter0 }}">
+          <div class="categoria-header">
+            {% if form.instance.pk %}
+              <h4>{{ form.instance.nombre }}</h4>
+            {% else %}
+              <h4>Nueva Categoría</h4>
+            {% endif %}
+            <div class="action-icons">
+              <i class="fa-solid fa-trash icon-cross remove-categoria" title="Eliminar Categoría" data-item-name="{{ form.instance.nombre|default:'esta categoría' }}" data-item-type="categoria"></i>
+            </div>
+          </div>
+
+          <!-- Hidden Fields -->
+          {{ form.id }}
+          <input type="hidden" name="{{ form.prefix }}-DELETE" value="" id="id_{{ form.prefix }}-DELETE">
+
+          <!-- Nombre de la Categoría -->
+          <div class="mb-2">
+            <label class="form-label" for="{{ form.nombre.id_for_label }}">Nombre</label>
+            {{ form.nombre }}
+            {% if form.nombre.errors %}
+              <div class="form-error">
+                {% for error in form.nombre.errors %}
+                  {{ error }}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Máximo de Selecciones -->
+          <div class="mb-2">
+            <label class="form-label" for="{{ form.max_selecciones.id_for_label }}">Máximo de Selecciones (1-100)</label>
+            {{ form.max_selecciones }}
+            {% if form.max_selecciones.errors %}
+              <div class="form-error">
+                {% for error in form.max_selecciones.errors %}
+                  {{ error }}
+                {% endfor %}
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Opciones de la Categoría -->
+          <div class="opcion-section">
+            <h5 style="font-size: 1rem; margin: 1rem 0; color: #555;">Opciones</h5>
+            {% if form.instance.pk %}
+              {% for formset in opcion_formsets %}
+                {% if formset.categoria_id == form.instance.id %}
+                  {{ formset.formset.management_form }}
+                  <div id="opcion-forms-{{ formset.categoria_id }}">
+                    {% for opcion_form in formset.formset %}
+                      <div class="opcion-form {% if not opcion_form.instance.pk and not opcion_form.nombre.value %}empty{% endif %}" data-form-index="{{ forloop.counter0 }}">
+                        <!-- Hidden Fields -->
+                        {{ opcion_form.id }}
+                        <input type="hidden" name="{{ opcion_form.prefix }}-DELETE" value="" id="id_{{ opcion_form.prefix }}-DELETE">
+
+                        <div style="flex: 2;">
+                          <label class="form-label" for="{{ opcion_form.nombre.id_for_label }}">Nombre</label>
+                          {{ opcion_form.nombre }}
+                          {% if opcion_form.nombre.errors %}
+                            <div class="form-error">
+                              {% for error in opcion_form.nombre.errors %}
+                                {{ error }}
+                              {% endfor %}
+                            </div>
+                          {% endif %}
+                        </div>
+                        <div style="flex: 1;">
+                          <label class="form-label" for="{{ opcion_form.original_price.id_for_label }}">Precio Original</label>
+                          <div class="input-group">
+                            <input type="text" class="form-control original-price" name="{{ opcion_form.prefix }}-original_price" id="{{ opcion_form.original_price.id_for_label }}" value="{{ opcion_form.original_price.value|default_if_none:''|floatformat:2|localize }}">
+                            <span class="input-group-text descuento-display" style="display: {% if opcion_form.tiene_descuento.value and producto.tiene_descuento and producto.discount_percentage %}inline-flex{% else %}none{% endif %};">Descuento: <input class="form-control precio-adicional-display" value="{% if opcion_form.tiene_descuento.value and producto.tiene_descuento and producto.discount_percentage %}{{ opcion_form.original_price.value|multiply:discount_factor|floatformat:2 }}{% endif %}" readonly></span>
+                          </div>
+                          {% if opcion_form.original_price.errors %}
+                            <div class="form-error">
+                              {% for error in opcion_form.original_price.errors %}
+                                {{ error }}
+                              {% endfor %}
+                            </div>
+                          {% endif %}
+                        </div>
+                        <div class="form-check" style="flex: 0.5;">
+                          <label class="form-check-label" for="{{ opcion_form.agotado.id_for_label }}">
+                            {{ opcion_form.agotado }}
+                            Agotado
+                          </label>
+                        </div>
+                        <div class="form-check" style="flex: 0.5;">
+                          <label class="form-check-label" for="{{ opcion_form.tiene_descuento.id_for_label }}">
+                            {{ opcion_form.tiene_descuento }}
+                            Aplica Descuento del Producto
+                          </label>
+                        </div>
+                        <div class="action-icons">
+                          <i class="fa-solid fa-trash icon-cross remove-opcion" title="Eliminar Opción" data-item-name="{{ opcion_form.nombre.value|default:'esta opción' }}" data-item-type="opcion"></i>
+                        </div>
+                      </div>
+                    {% empty %}
+                      <p style="font-size: 0.9rem; color: #666;">No hay opciones para esta categoría.</p>
+                    {% endfor %}
+                  </div>
+                  <button type="button" class="btn btn-primary btn-sm mt-2 add-opcion" data-categoria-id="{{ formset.categoria_id }}">+ Agregar Opción</button>
+                {% endif %}
+              {% empty %}
+                <p style="font-size: 0.9rem; color: #666;">No se encontraron formsets para esta categoría.</p>
+              {% endfor %}
+            {% else %}
+              <p style="font-size: 0.9rem; color: #666;">Guarde la categoría para agregar opciones.</p>
+            {% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <!-- Default blank category -->
+        <div class="categoria-container blank" data-form-index="0">
+          <div class="categoria-header">
+            <h4>Nueva Categoría</h4>
+            <div class="action-icons">
+              <i class="fa-solid fa-trash icon-cross remove-categoria" title="Eliminar Categoría" data-item-name="esta categoría" data-item-type="categoria"></i>
+            </div>
+          </div>
+          <input type="hidden" name="categoria-0-id" id="id_categoria-0-id">
+          <input type="hidden" name="categoria-0-DELETE" value="" id="id_categoria-0-DELETE">
+          <div class="mb-2">
+            <label class="form-label" for="id_categoria-0-nombre">Nombre</label>
+            <input type="text" name="categoria-0-nombre" class="form-control" id="id_categoria-0-nombre">
+          </div>
+          <div class="mb-2">
+            <label class="form-label" for="id_categoria-0-max_selecciones">Máximo de Selecciones (1-100)</label>
+            <input type="number" name="categoria-0-max_selecciones" class="form-control" id="id_categoria-0-max_selecciones" min="1" max="100">
+          </div>
+          <div class="opcion-section">
+            <h5 style="font-size: 1rem; margin: 1rem 0; color: #555;">Opciones</h5>
+            <p style="font-size: 0.9rem; color: #666;">Guarde la categoría para agregar opciones.</p>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-btns">
+      <button type="button" class="btn btn-primary add-categoria">+ Agregar Categoría</button>
+      <button type="submit" class="btn btn-success">Guardar Todo</button>
+    </div>
+  </form>
+
+  <!-- Hidden template for new option forms -->
+  <div id="opcion-form-template" style="display: none;">
+    <div class="opcion-form empty" data-form-index="0">
+      <input type="hidden" name="opcion-TEMP-0-id" id="id_opcion-TEMP-0-id" value="">
+      <input type="hidden" name="opcion-TEMP-0-DELETE" id="id_opcion-TEMP-0-DELETE" value="">
+      <div style="flex: 2;">
+        <label class="form-label" for="id_opcion-TEMP-0-nombre">Nombre</label>
+        <input type="text" class="form-control" name="opcion-TEMP-0-nombre" id="id_opcion-TEMP-0-nombre">
+      </div>
+      <div style="flex: 1;">
+        <label class="form-label" for="id_opcion-TEMP-0-original_price">Precio Original</label>
+        <div class="input-group">
+          <input type="text" class="form-control original-price" name="opcion-TEMP-0-original_price" id="id_opcion-TEMP-0-original_price">
+          <span class="input-group-text descuento-display" style="display: none;">Descuento: <input class="form-control precio-adicional-display" value="" readonly></span>
+        </div>
+      </div>
+      <div class="form-check" style="flex: 0.5;">
+        <label class="form-check-label" for="id_opcion-TEMP-0-agotado">
+          <input type="checkbox" class="form-check-input" name="opcion-TEMP-0-agotado" id="id_opcion-TEMP-0-agotado">
+          Agotado
+        </label>
+      </div>
+      <div class="form-check" style="flex: 0.5;">
+        <label class="form-check-label" for="id_opcion-TEMP-0-tiene_descuento">
+          <input type="checkbox" class="form-check-input tiene-descuento" name="opcion-TEMP-0-tiene_descuento" id="id_opcion-TEMP-0-tiene_descuento">
+          Aplica Descuento del Producto
+        </label>
+      </div>
+      <div class="action-icons">
+        <i class="fa-solid fa-trash icon-cross remove-opcion" title="Eliminar Opción" data-item-name="esta opción" data-item-type="opcion"></i>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Ensure discount_percentage is formatted with a period for JavaScript
+  const DISCOUNT_PERCENTAGE = parseFloat('{{ discount_percentage|floatformat:2|unlocalize }}') || 0;
+  const DISCOUNT_FACTOR = DISCOUNT_PERCENTAGE > 0 ? (100 - DISCOUNT_PERCENTAGE) / 100 : 1;
+
+  function normalizeDecimal(value) {
+    if (typeof value === 'string') {
+      return value.replace(',', '.');
+    }
+    return value;
+  }
+
+  function formatDecimal(value) {
+    if (isNaN(value) || value === '') return '';
+    return parseFloat(value).toFixed(2).replace('.', ',');
+  }
+
+  function showToast(toastId) {
+    const toast = new bootstrap.Toast(document.getElementById(toastId));
+    toast.show();
+  }
+
+  function updateDescuentoDisplay(opcionForm) {
+    const originalPriceInput = opcionForm.querySelector('.original-price');
+    const tieneDescuentoCheckbox = opcionForm.querySelector('.tiene-descuento');
+    const descuentoDisplay = opcionForm.querySelector('.descuento-display');
+    const descuentoDisplayInput = descuentoDisplay?.querySelector('.precio-adicional-display');
+    const deleteInput = opcionForm.querySelector('input[name$="-DELETE"]');
+
+    if (!originalPriceInput || !tieneDescuentoCheckbox || !descuentoDisplay || !descuentoDisplayInput || !deleteInput) {
+      console.warn('Missing required inputs in opcionForm:', opcionForm);
+      return;
+    }
+
+    if (deleteInput.value === 'on') {
+      descuentoDisplayInput.value = '';
+      descuentoDisplay.style.display = 'none';
+      return;
+    }
+
+    const originalPrice = parseFloat(normalizeDecimal(originalPriceInput.value));
+    const nombreInput = opcionForm.querySelector('input[name$="-nombre"]');
+    const isEmpty = !nombreInput.value.trim() && !originalPriceInput.value.trim();
+
+    if (isEmpty || isNaN(originalPrice) || originalPrice < 0) {
+      descuentoDisplayInput.value = '';
+      descuentoDisplay.style.display = 'none';
+      return;
+    }
+
+    if (tieneDescuentoCheckbox.checked && DISCOUNT_PERCENTAGE > 0) {
+      const precioAdicional = (originalPrice * DISCOUNT_FACTOR).toFixed(2);
+      descuentoDisplay.style.display = 'inline-flex';
+      descuentoDisplayInput.value = formatDecimal(precioAdicional);
+    } else {
+      descuentoDisplay.style.display = 'none';
+      descuentoDisplayInput.value = '';
+    }
+
+    console.log('Updated descuento-display:', descuentoDisplayInput.value, 'for original_price:', originalPrice, 'tiene_descuento:', tieneDescuentoCheckbox.checked);
+  }
+
+  function attachPriceInputListeners(input) {
+    input.setAttribute('type', 'text');
+    input.addEventListener('input', function(e) {
+      let value = this.value.replace(/[^0-9,]/g, '');
+      let commaCount = (value.match(/,/g) || []).length;
+
+      if (commaCount > 1) {
+        value = value.substring(0, value.lastIndexOf(','));
+      }
+      if (value.includes(',')) {
+        const parts = value.split(',');
+        if (parts[1].length > 2) {
+          parts[1] = parts[1].substring(0, 2);
+          value = parts[0] + ',' + parts[1];
+        }
+      }
+      if (value === ',') value = '';
+      if (value.startsWith('0') && !value.startsWith('0,') && value.length > 1) {
+        value = value.substring(1);
+      }
+
+      this.value = value;
+      console.log('Price input changed:', this.value);
+      updateDescuentoDisplay(this.closest('.opcion-form'));
+      updateOptionDeleteVisibility(this.closest('.opcion-form'));
+    });
+
+    input.addEventListener('blur', function() {
+      const value = parseFloat(normalizeDecimal(this.value));
+      if (!isNaN(value)) {
+        this.value = formatDecimal(value);
+      }
+    });
+  }
+
+  function updateCategoryDeleteVisibility(container) {
+    const nombreInput = container.querySelector('input[name$="-nombre"]');
+    const actionIcons = container.querySelector('.action-icons');
+    if (nombreInput && actionIcons) {
+      const isBlank = !nombreInput.value.trim() && !container.querySelector('input[name$="-id"]')?.value;
+      container.classList.toggle('blank', isBlank);
+    }
+  }
+
+  function updateOptionDeleteVisibility(opcionForm) {
+    const nombreInput = opcionForm.querySelector('input[name$="-nombre"]');
+    const precioInput = opcionForm.querySelector('.original-price');
+    const actionIcons = opcionForm.querySelector('.action-icons');
+    if (nombreInput && precioInput && actionIcons) {
+      const isBlank = !nombreInput.value.trim() && !precioInput.value.trim() && !opcionForm.querySelector('input[name$="-id"]')?.value;
+      opcionForm.classList.toggle('empty', isBlank);
+      console.log('Option visibility updated:', { nombre: nombreInput.value, precio: precioInput.value, isBlank });
+    }
+  }
+
+  function prepareFormForSubmission(isDeletion = false) {
+    // Normalizar precios
+    document.querySelectorAll('.original-price').forEach(function(input) {
+      const value = normalizeDecimal(input.value);
+      if (!isNaN(parseFloat(value))) {
+        input.value = parseFloat(value).toFixed(2);
+      } else {
+        input.value = '';
+      }
+    });
+
+    // Manejar formularios de opciones
+    document.querySelectorAll('.opcion-form').forEach(function(form) {
+      const nombreInput = form.querySelector('input[name$="-nombre"]');
+      const precioInput = form.querySelector('.original-price');
+      const idInput = form.querySelector('input[name$="-id"]');
+      const deleteInput = form.querySelector('input[name$="-DELETE"]');
+      const isEmpty = !nombreInput.value.trim() && !precioInput.value.trim() && !idInput?.value;
+
+      if (isEmpty && !isDeletion) {
+        // Marcar formularios vacíos como DELETE solo si no es una eliminación explícita
+        if (deleteInput) {
+          deleteInput.value = 'on';
+          form.style.display = 'none';
+          console.log('Marked empty option form as DELETE:', form);
+        }
+      } else if (!isEmpty && deleteInput.value !== 'on') {
+        // Asegurar que opciones válidas no estén marcadas como DELETE
+        if (deleteInput) {
+          deleteInput.value = '';
+          console.log('Cleared DELETE for valid option:', nombreInput.value);
+        }
+      }
+      // No tocamos deleteInput si ya está marcado como 'on' por una eliminación explícita
+    });
+
+    // Normalizar checkboxes de tiene_descuento
+    document.querySelectorAll('.tiene-descuento').forEach(function(checkbox) {
+      const opcionForm = checkbox.closest('.opcion-form');
+      const deleteInput = opcionForm.querySelector('input[name$="-DELETE"]');
+      if (deleteInput && deleteInput.value === 'on') {
+        checkbox.checked = false;
+        console.log('Cleared tiene_descuento for deleted option');
+      }
+    });
+
+    // Normalizar categorías vacías
+    document.querySelectorAll('.categoria-container').forEach(function(container) {
+      const nombreInput = container.querySelector('input[name$="-nombre"]');
+      const idInput = container.querySelector('input[name$="-id"]');
+      const deleteInput = container.querySelector('input[name$="-DELETE"]');
+      const isEmpty = !nombreInput.value.trim() && !idInput?.value;
+
+      if (isEmpty && !isDeletion) {
+        if (deleteInput) {
+          deleteInput.value = 'on';
+          container.style.display = 'none';
+          console.log('Marked empty category as DELETE:', container);
+        }
+      } else if (!isEmpty && deleteInput.value !== 'on') {
+        if (deleteInput) {
+          deleteInput.value = '';
+          console.log('Cleared DELETE for valid category:', nombreInput.value);
+        }
+      }
+    });
+  }
+
+  function postSubmitCleanup() {
+    document.querySelectorAll('.opcion-form').forEach(function(form) {
+      const deleteInput = form.querySelector('input[name$="-DELETE"]');
+      if (deleteInput && deleteInput.value === 'on') {
+        form.style.display = 'none';
+      }
+    });
+    document.querySelectorAll('.categoria-container').forEach(function(container) {
+      const deleteInput = container.querySelector('input[name$="-DELETE"]');
+      if (deleteInput && deleteInput.value === 'on') {
+        container.style.display = 'none';
+      }
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Initialize price input listeners
+    document.querySelectorAll('.original-price').forEach(function(input) {
+      attachPriceInputListeners(input);
+      const value = parseFloat(normalizeDecimal(input.value));
+      if (!isNaN(value)) {
+        input.value = formatDecimal(value);
+      }
+    });
+
+    // Update descuento display and delete visibility for existing forms
+    document.querySelectorAll('.opcion-form').forEach(function(opcionForm) {
+      updateDescuentoDisplay(opcionForm);
+      updateOptionDeleteVisibility(opcionForm);
+    });
+
+    document.querySelectorAll('.categoria-container').forEach(function(container) {
+      updateCategoryDeleteVisibility(container);
+    });
+
+    // Handle input changes
+    document.addEventListener('input', function(event) {
+      if (event.target.name.endsWith('-nombre')) {
+        const opcionForm = event.target.closest('.opcion-form');
+        if (opcionForm) {
+          updateDescuentoDisplay(opcionForm);
+          updateOptionDeleteVisibility(opcionForm);
+        }
+        const container = event.target.closest('.categoria-container');
+        if (container) {
+          updateCategoryDeleteVisibility(container);
+        }
+      }
+    });
+
+    // Handle tiene_descuento and agotado checkbox changes
+    let isAutoSubmitting = false;
+    document.addEventListener('change', function(event) {
+      if (event.target.classList.contains('tiene-descuento') || event.target.name.endsWith('-agotado')) {
+        const opcionForm = event.target.closest('.opcion-form');
+        if (opcionForm) {
+          if (event.target.classList.contains('tiene-descuento')) {
+            updateDescuentoDisplay(opcionForm);
+            console.log('Auto-submitting form due to tiene_descuento change for:', opcionForm.querySelector('input[name$="-nombre"]')?.value);
+          } else {
+            console.log('Auto-submitting form due to agotado change for:', opcionForm.querySelector('input[name$="-nombre"]')?.value);
+          }
+          const form = document.getElementById('opciones-form');
+          isAutoSubmitting = true;
+          prepareFormForSubmission();
+          form.submit();
+        }
+      }
+    });
+
+    // Initialize Bootstrap modal
+    const confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+    let pendingDeleteElement = null;
+
+    // Handle delete actions with modal
+    document.getElementById('categoria-containers').addEventListener('click', function(event) {
+      if (event.target.classList.contains('remove-categoria') || event.target.classList.contains('remove-opcion')) {
+        event.preventDefault();
+        pendingDeleteElement = event.target;
+        const itemName = event.target.getAttribute('data-item-name');
+        document.getElementById('deleteItemName').textContent = itemName;
+        confirmDeleteModal.show();
+      }
+    });
+
+    // Handle modal confirmation
+    document.getElementById('confirmDeleteBtn').addEventListener('click', function() {
+      if (!pendingDeleteElement) {
+        console.error('No pending delete element');
+        confirmDeleteModal.hide();
+        return;
+      }
+
+      let shouldSubmit = false;
+
+      if (pendingDeleteElement.classList.contains('remove-categoria')) {
+        const container = pendingDeleteElement.closest('.categoria-container');
+        if (!container) {
+          console.error('No categoria-container found');
+          confirmDeleteModal.hide();
+          return;
+        }
+        const deleteInput = container.querySelector('input[name$="-DELETE"]');
+        if (deleteInput) {
+          console.log('Marking category for deletion:', container.querySelector('input[name$="-nombre"]')?.value);
+          deleteInput.value = 'on';
+          container.querySelectorAll('.opcion-form').forEach(function(opcionForm) {
+            const opcionDeleteInput = opcionForm.querySelector('input[name$="-DELETE"]');
+            if (opcionDeleteInput) {
+              opcionDeleteInput.value = 'on';
+              opcionForm.style.display = 'none';
+            }
+          });
+          container.style.display = 'none';
+          shouldSubmit = true;
+        } else {
+          console.error('No DELETE input found in categoria-container', container);
+        }
+      } else if (pendingDeleteElement.classList.contains('remove-opcion')) {
+        const form = pendingDeleteElement.closest('.opcion-form');
+        if (!form) {
+          console.error('No opcion-form found');
+          confirmDeleteModal.hide();
+          return;
+        }
+        const deleteInput = form.querySelector('input[name$="-DELETE"]');
+        if (deleteInput) {
+          console.log('Marking option for deletion:', form.querySelector('input[name$="-nombre"]')?.value);
+          deleteInput.value = 'on';
+          form.style.display = 'none';
+          shouldSubmit = true;
+        } else {
+          console.error('No DELETE input found in opcion-form', form);
+        }
+      }
+
+      if (shouldSubmit) {
+        const form = document.getElementById('opciones-form');
+        console.log('Preparing to submit form after deletion');
+        isAutoSubmitting = true;
+        prepareFormForSubmission(true); // Indicar que es una eliminación
+        console.log('Form data before submission:');
+        const formData = new FormData(form);
+        for (let [key, value] of formData) {
+          console.log(`${key}: ${value}`);
+        }
+        form.submit();
+      }
+
+      confirmDeleteModal.hide();
+      pendingDeleteElement = null;
+    });
+
+    // Clear pending delete on modal close
+    document.getElementById('confirmDeleteModal').addEventListener('hidden.bs.modal', function() {
+      pendingDeleteElement = null;
+    });
+
+    // Add new category
+    document.querySelector('.add-categoria').addEventListener('click', function() {
+      console.log('Add category clicked');
+      const container = document.getElementById('categoria-containers');
+      const totalForms = document.querySelector('#id_categoria-TOTAL_FORMS');
+      let formCount = parseInt(totalForms.value) || 0;
+
+      const template = document.createElement('div');
+      template.className = 'categoria-container blank';
+      template.setAttribute('data-form-index', formCount);
+      template.innerHTML = `
+        <div class="categoria-header">
+          <h4>Nueva Categoría</h4>
+          <div class="action-icons">
+            <i class="fa-solid fa-trash icon-cross remove-categoria" title="Eliminar Categoría" data-item-name="esta categoría" data-item-type="categoria"></i>
+          </div>
+        </div>
+        <input type="hidden" name="categoria-${formCount}-id" id="id_categoria-${formCount}-id">
+        <input type="hidden" name="categoria-${formCount}-DELETE" value="" id="id_categoria-${formCount}-DELETE">
+        <div class="mb-2">
+          <label class="form-label" for="id_categoria-${formCount}-nombre">Nombre</label>
+          <input type="text" name="categoria-${formCount}-nombre" class="form-control" id="id_categoria-${formCount}-nombre">
+        </div>
+        <div class="mb-2">
+          <label class="form-label" for="id_categoria-${formCount}-max_selecciones">Máximo de Selecciones (1-100)</label>
+          <input type="number" name="categoria-${formCount}-max_selecciones" class="form-control" id="id_categoria-${formCount}-max_selecciones" min="1" max="100">
+        </div>
+        <div class="opcion-section">
+          <h5 style="font-size: 1rem; margin: 1rem 0; color: #555;">Opciones</h5>
+          <p style="font-size: 0.9rem; color: #666;">Guarde la categoría para agregar opciones.</p>
+        </div>
+      `;
+
+      container.appendChild(template);
+      totalForms.value = formCount + 1;
+      updateCategoriaFormCount();
+
+      template.querySelector('input[name$="-nombre"]').addEventListener('input', function() {
+        updateCategoryDeleteVisibility(template);
+      });
+
+      console.log('Added new category, TOTAL_FORMS:', totalForms.value);
+    });
+
+    // Update category form count
+    function updateCategoriaFormCount() {
+      const container = document.getElementById('categoria-containers');
+      const totalForms = document.querySelector('#id_categoria-TOTAL_FORMS');
+      const forms = container.querySelectorAll('.categoria-container:not(.hidden)');
+
+      forms.forEach(function(form, index) {
+        form.setAttribute('data-form-index', index);
+        form.querySelectorAll('[name], [id]').forEach(function(element) {
+          if (element.name) {
+            element.name = element.name.replace(/categoria-\d+-/, `categoria-${index}-`);
+          }
+          if (element.id) {
+            element.id = element.id.replace(/id_categoria-\d+-/, `id_categoria-${index}-`);
+          }
+        });
+        form.querySelectorAll('label[for]').forEach(function(label) {
+          const oldFor = label.getAttribute('for');
+          label.setAttribute('for', oldFor.replace(/id_categoria-\d+-/, `id_categoria-${index}-`));
+        });
+        updateCategoryDeleteVisibility(form);
+      });
+
+      totalForms.value = forms.length;
+      console.log('Set categoria TOTAL_FORMS to:', totalForms.value);
+    }
+
+    // Add new option
+    document.querySelectorAll('.add-opcion').forEach(function(button) {
+      button.addEventListener('click', function() {
+        console.log('Add option clicked for categoria:', this.getAttribute('data-categoria-id'));
+        const categoriaId = this.getAttribute('data-categoria-id');
+        const formContainer = document.getElementById(`opcion-forms-${categoriaId}`);
+        if (!formContainer) {
+          console.error(`No form container found for categoriaId: ${categoriaId}`);
+          return;
+        }
+        const totalForms = document.querySelector(`#id_opcion-${categoriaId}-TOTAL_FORMS`);
+        if (!totalForms) {
+          console.error(`No TOTAL_FORMS input found for categoriaId: ${categoriaId}`);
+          return;
+        }
+        let formCount = parseInt(totalForms.value) || 0;
+
+        const template = document.getElementById('opcion-form-template').querySelector('.opcion-form');
+        if (!template) {
+          console.error('No template form found');
+          return;
+        }
+
+        const newForm = template.cloneNode(true);
+        newForm.setAttribute('data-form-index', formCount);
+        newForm.classList.add('empty');
+
+        newForm.querySelectorAll('[name], [id]').forEach(function(element) {
+          if (element.name) {
+            element.name = element.name.replace('opcion-TEMP-0-', `opcion-${categoriaId}-${formCount}-`);
+          }
+          if (element.id) {
+            element.id = element.id.replace('id_opcion-TEMP-0-', `id_opcion-${categoriaId}-${formCount}-`);
+          }
+          if (element.type !== 'hidden' && element.type !== 'checkbox') {
+            element.value = '';
+          }
+          if (element.type === 'checkbox') {
+            element.checked = false;
+          }
+          if (element.name.endsWith('-DELETE')) {
+            element.value = '';
+          }
+        });
+        newForm.querySelectorAll('label[for]').forEach(function(label) {
+          const oldFor = label.getAttribute('for');
+          label.setAttribute('for', oldFor.replace('id_opcion-TEMP-0-', `id_opcion-${categoriaId}-${formCount}-`));
+        });
+        newForm.querySelectorAll('.form-error').forEach(function(error) {
+          error.remove();
+        });
+
+        formContainer.appendChild(newForm);
+        totalForms.value = formCount + 1;
+        updateOpcionFormCount(categoriaId);
+        updateDescuentoDisplay(newForm);
+        updateOptionDeleteVisibility(newForm);
+
+        newForm.querySelectorAll('.original-price').forEach(function(input) {
+          attachPriceInputListeners(input);
+        });
+
+        newForm.querySelector('input[name$="-nombre"]').addEventListener('input', function() {
+          updateOptionDeleteVisibility(newForm);
+          updateDescuentoDisplay(newForm);
+        });
+
+        console.log(`Added new option for categoria ${categoriaId}, TOTAL_FORMS:`, totalForms.value);
+      });
+    });
+
+    // Update option form count
+    function updateOpcionFormCount(categoriaId) {
+      const formContainer = document.getElementById(`opcion-forms-${categoriaId}`);
+      if (!formContainer) {
+        console.warn(`No form container found for categoriaId: ${categoriaId}`);
+        return;
+      }
+      const totalForms = document.querySelector(`#id_opcion-${categoriaId}-TOTAL_FORMS`);
+      if (!totalForms) {
+        console.warn(`No TOTAL_FORMS input found for categoriaId: ${categoriaId}`);
+        return;
+      }
+      const forms = formContainer.querySelectorAll('.opcion-form:not(.hidden)');
+
+      forms.forEach(function(form, index) {
+        form.setAttribute('data-form-index', index);
+        form.querySelectorAll('[name], [id]').forEach(function(element) {
+          if (element.name) {
+            element.name = element.name.replace(/opcion-\d+-\d+-/, `opcion-${categoriaId}-${index}-`);
+          }
+          if (element.id) {
+            element.id = element.id.replace(/id_opcion-\d+-\d+-/, `id_opcion-${categoriaId}-${index}-`);
+          }
+        });
+        form.querySelectorAll('label[for]').forEach(function(label) {
+          const oldFor = label.getAttribute('for');
+          label.setAttribute('for', oldFor.replace(/id_opcion-\d+-\d+-/, `id_opcion-${categoriaId}-${index}-`));
+        });
+        updateOptionDeleteVisibility(form);
+      });
+
+      totalForms.value = forms.length;
+      console.log(`Set TOTAL_FORMS for categoria ${categoriaId} to:`, totalForms.value, 'Forms count:', forms.length);
+    }
+
+    // Clean form before submission
+    document.getElementById('opciones-form').addEventListener('submit', function(event) {
+      prepareFormForSubmission();
+      console.log('Form submission triggered, isAutoSubmitting:', isAutoSubmitting);
+      const formData = new FormData(this);
+      console.log('Form data:');
+      for (let [key, value] of formData) {
+        console.log(`${key}: ${value}`);
+      }
+      isAutoSubmitting = false;
+    });
+
+    // Show toasts based on messages
+    {% if messages %}
+      {% for message in messages %}
+        {% if message.tags %}
+          {% if 'success' in message.tags %}
+            showToast('toastGuardado');
+          {% elif 'error' in message.tags %}
+            showToast('toastError');
+          {% endif %}
+        {% endif %}
+      {% endfor %}
+    {% endif %}
+
+    // Initialize option form counts
+    document.querySelectorAll('[id^="opcion-forms-"]').forEach(function(container) {
+      const categoriaId = container.id.replace('opcion-forms-', '');
+      updateOpcionFormCount(categoriaId);
+    });
+
+    // Apply post-submit cleanup
+    postSubmitCleanup();
+
+    // Log initial state for debugging
+    console.log('Initial DISCOUNT_PERCENTAGE:', DISCOUNT_PERCENTAGE);
+    console.log('Initial DISCOUNT_FACTOR:', DISCOUNT_FACTOR);
+    console.log('Initial categoria TOTAL_FORMS:', document.querySelector('#id_categoria-TOTAL_FORMS')?.value);
+    document.querySelectorAll('[id^="id_opcion-"][id$="-TOTAL_FORMS"]').forEach(function(totalForms) {
+      console.log(`Initial opción TOTAL_FORMS for categoria ${totalForms.id.replace('id_opcion-', '').replace('-TOTAL_FORMS', '')}:`, totalForms.value);
+    });
+  });
+</script>
+{% endblock %}

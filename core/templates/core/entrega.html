@@ -1,0 +1,84 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Pedidos en entrega</title>
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Pedidos en Entrega</h2>
+    <a href="{% url 'lista_pedidos' %}" class="btn btn-primary">Volver a Pedidos Activos</a>
+  </div>
+  
+  <div class="row">
+    {% for pedido in pedidos %}
+    <div class="col-md-4 mb-4">
+      <div class="card" data-pedido-id="{{ pedido.id }}">
+        <div class="card-header">
+          Pedido #{{ pedido.numero_pedido }} - {{ pedido.fecha|date:"d/m/Y H:i" }}
+        </div>
+        <div class="card-body">
+          <h5 class="card-title">{{ pedido.cliente }}</h5>
+          <p class="card-text">
+            <strong>Total:</strong> ${{ pedido.total }}<br>
+            <strong>Teléfono:</strong> {{ pedido.telefono }}<br>
+            <strong>Dirección:</strong> {{ pedido.direccion }}<br>
+            <strong>Aclaraciones:</strong> {{ pedido.aclaraciones|default:"-" }}
+          </p>
+          <h6>Productos:</h6>
+          <ul>
+            {% for item in pedido.items.all %}
+            <li>{{ item.cantidad }}x {{ item.nombre_producto }} - ${{ item.subtotal }}</li>
+            {% endfor %}
+          </ul>
+          <div class="countdown-entrega" data-pedido-id="{{ pedido.id }}" data-fecha-entrega="{{ pedido.fecha_en_entrega|date:'c' }}"></div>
+        </div>
+      </div>
+    </div>
+    {% empty %}
+    <div class="col-12 text-center">
+      <p>No hay pedidos en entrega.</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+  $('.countdown-entrega').each(function() {
+    const pedidoId = $(this).data('pedido-id');
+    const fechaEntrega = new Date($(this).data('fecha-entrega'));
+    const limite = new Date(fechaEntrega.getTime() + 1 * 60 * 60 * 1000); // 1 hora después
+
+    const updateCountdown = () => {
+      const now = new Date();
+      const diff = limite - now;
+
+      if (diff <= 0) {
+        $.ajax({
+          url: `/panel/pedidos/${pedidoId}/archivar/`,
+          method: 'POST',
+          success: function(response) {
+            if (response.success) {
+              $(`.card[data-pedido-id="${pedidoId}"]`).remove();
+            }
+          },
+          error: function(xhr) {
+            console.error('Error al archivar el pedido:', xhr.status, xhr.statusText, xhr.responseText);
+          }
+        });
+        return;
+      }
+
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      $(this).text(`Se archivará en ${minutes}m ${seconds}s`);
+    };
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+  });
+});
+</script>
+{% endblock %}

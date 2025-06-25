@@ -1,0 +1,152 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Todos los pedidos</title>
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Todos los Pedidos Archivados</h2>
+    <a href="{% url 'lista_pedidos' %}" class="btn btn-primary">Volver a Pedidos Activos</a>
+  </div>
+  
+  <table class="table table-striped">
+    <thead>
+      <tr>
+        <th># Pedido</th>
+        <th>Cliente</th>
+        <th>Fecha</th>
+        <th>Total</th>
+        <th>Estado</th>
+        <th>Dirección</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for pedido in pedidos %}
+      <tr class="pedido-row" data-pedido-id="{{ pedido.id }}">
+        <td>#{{ pedido.numero_pedido }}</td>
+        <td>{{ pedido.cliente }}</td>
+        <td>{{ pedido.fecha|date:"d/m/Y H:i" }}</td>
+        <td>${{ pedido.total }}</td>
+        <td>{{ pedido.get_estado_display }}</td>
+        <td>{{ pedido.direccion|default:"Retiro en local" }}</td>
+      </tr>
+      {% empty %}
+      <tr>
+        <td colspan="6" class="text-center">No hay pedidos archivados.</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<!-- Modal para ver detalles del pedido -->
+<div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalPedidoTitle"></h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <h5>Información del Cliente</h5>
+            <p><strong>Nombre:</strong> <span id="modalCliente"></span></p>
+            <p><strong>Teléfono:</strong> <span id="modalTelefono"></span></p>
+            <p><strong>Dirección:</strong> <span id="modalDireccion"></span></p>
+            <p><strong>Aclaraciones:</strong> <span id="modalAclaraciones"></span></p>
+          </div>
+          <div class="col-md-6">
+            <h5>Detalles del Pedido</h5>
+            <p><strong>Fecha:</strong> <span id="modalFecha"></span></p>
+            <p><strong>Método pago:</strong> <span id="modalMetodoPago"></span></p>
+            <p><strong>Estado:</strong> <span id="modalEstado"></span></p>
+            <p><strong>Tiempo Estimado:</strong> <span id="modalTiempoEstimado"></span></p>
+            <p><strong>Costo Envío:</strong> $<span id="modalCostoEnvio"></span></p>
+            <p><strong>Descuento:</strong> $<span id="modalDescuento"></span></p>
+            <p><strong>Total:</strong> $<span id="modalTotal"></span></p>
+          </div>
+        </div>
+        <hr>
+        <h5>Productos</h5>
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th>Producto</th>
+              <th>Cantidad</th>
+              <th>Precio Unitario</th>
+              <th>Subtotal</th>
+              <th>Opciones</th>
+            </tr>
+          </thead>
+          <tbody id="modalProductos">
+          </tbody>
+        </table>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script>
+$(document).ready(function() {
+  console.log('jQuery is loaded:', typeof $ !== 'undefined');
+  $('.pedido-row').on('click', function() {
+    const pedidoId = $(this).data('pedido-id');
+    console.log('Fetching pedido with ID:', pedidoId);
+    
+    $.get(`/panel/pedidos/${pedidoId}/json/`, (pedido) => {
+      console.log("JSON recibido:", pedido);
+      
+      const fechaFormatted = pedido.fecha_creacion 
+        ? new Date(pedido.fecha_creacion).toLocaleString('es-AR', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          }) 
+        : 'Sin fecha';
+
+      $('#modalPedidoTitle').text(`Pedido #${pedido.id || 'Sin ID'}`);
+      $('#modalCliente').text(pedido.nombre_cliente || 'Sin nombre');
+      $('#modalTelefono').text(pedido.telefono_cliente || 'Sin teléfono');
+      $('#modalDireccion').text(pedido.direccion_entrega || 'Retiro en local');
+      $('#modalAclaraciones').text(pedido.aclaraciones || 'Sin aclaraciones');
+      $('#modalFecha').text(fechaFormatted);
+      $('#modalMetodoPago').text(pedido.metodo_pago || 'Sin método');
+      $('#modalEstado').text(pedido.estado || 'Sin estado');
+      $('#modalTiempoEstimado').text(pedido.tiempo_estimado || 'Sin tiempo estimado');
+      $('#modalCostoEnvio').text(parseFloat(pedido.costo_envio || 0).toFixed(2));
+      $('#modalDescuento').text(parseFloat(pedido.monto_descuento || 0).toFixed(2));
+      $('#modalTotal').text(parseFloat(pedido.total || 0).toFixed(2));
+
+      const productosHtml = pedido.items.map(item => `
+        <tr>
+          <td>${item.nombre_producto}</td>
+          <td>${item.cantidad}</td>
+          <td>$${parseFloat(item.precio_unitario).toFixed(2)}</td>
+          <td>$${parseFloat(item.subtotal).toFixed(2)}</td>
+          <td>${
+            item.opciones_seleccionadas.length > 0
+              ? `<ul>${item.opciones_seleccionadas.map(opt => `<li>${opt.nombre} (+$${parseFloat(opt.precio_adicional).toFixed(2)})</li>`).join('')}</ul>`
+              : 'Sin opciones'
+          }</td>
+        </tr>
+      `).join('');
+      $('#modalProductos').html(productosHtml);
+
+      $('#modalPedido').modal('show');
+    }).fail((xhr) => {
+      console.error("Error al obtener el pedido:", xhr.status, xhr.statusText, xhr.responseText);
+      alert('Error al cargar los detalles del pedido: ' + (xhr.responseText || 'Error en la solicitud'));
+    });
+  });
+});
+</script>
+{% endblock %}

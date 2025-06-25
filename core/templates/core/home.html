@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>Piatto - Automatización para tu negocio de comida</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito&display=swap" rel="stylesheet">
+
+  <style>
+   :root {
+  --piatto-orange: #f15a29;
+  --piatto-dark: #000;
+  --piatto-light: #F5F5EE;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background-color: var(--piatto-light);
+  color: var(--piatto-dark);
+  line-height: 1.6;
+  margin: 0;
+  overflow-x: hidden;
+  font-size: 16px;
+}
+
+.container {
+  padding-left: 15px;
+  padding-right: 15px;
+  max-width: 1320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.bg-piatto-orange {
+  background-color: var(--piatto-orange);
+}
+
+.bg-piatto-dark {
+  background-color: var(--piatto-dark);
+}
+
+.btn-piatto-white {
+  background-color: white;
+  color: var(--piatto-dark);
+  border: 1px solid var(--piatto-dark);
+  font-weight: 600;
+  font-size: 1.25rem;
+  border-radius: 50px;
+  padding: 0.5rem 1.75rem;
+  transition: all 0.3s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-piatto-white:hover {
+  background-color: #e5e5e5;
+  color: var(--piatto-dark);
+  transform: translateY(-2px);
+}
+
+.rounded-3xl {
+  border-radius: 3rem !important;
+}
+
+.feature-box {
+  border: 4.5px solid #fff;
+  border-radius: 1rem;
+  background: #f5f5f0;
+  text-align: center;
+  font-size: 0.9rem;
+  width: 180px;
+  height: 180px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+  transition: all 0.3s ease;
+}
+
+.feature-box:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.feature-box .icon-container {
+  background-color: #f5f5f0;
+  padding: 1.5rem;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.feature-box .icon-container img {
+  max-width: 80px;
+  max-height: 80px;
+  object-fit: contain;
+}
+
+.feature-box .icon-container .black-filter {
+  filter: grayscale(100%) brightness(0%);
+}
+
+.feature-box .text-container {
+  padding-bottom: 32.5px;
+  background-color: #fff;
+  flex-grow: 0;
+  display: grid;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: bold;
+  min-height: 80px;
+  max-height: 50px;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: normal;
+}
+
+.underline-link {
+  text-decoration: underline;
+  color: white;
+  cursor: pointer;
+  transition: color 0.3s ease;
+}
+
+.underline-link:hover {
+  color: #e5e5e5;
+  text-decoration: underline;
+}
+
+.check-icon {
+  color: white;
+  margin-right: 0.5rem;
+}
+
+.info-list li {
+  margin-bottom: 0.75rem;
+  position: relative;
+  padding-left: 1.75rem;
+  font-size: 1rem;
+}
+
+.info-list li::before {
+  content: "\f058";
+  font-family: "Font Awesome 6 Free";
+  font-weight: 900;
+  position: absolute;
+  left: 0;
+  color: white;
+}
+
+.wave-shape {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 140px;
+  pointer-events: none;
+  margin-bottom: -75px;
+}
+
+.wave-shape-cta {
+  position: absolute;
+  left: 0;
+  width: 100%;
+  height: 300px;
+  pointer-events: none;
+  margin-bottom: -75px;
+}
+
+.wave-bottom {
+  bottom: 0;
+}
+
+.wave-top {
+  top: 0;
+}
+
+.form-control {
+  border-radius: 0.5rem;
+  font-weight: 500;
+  padding: 0.75rem 1rem;
+  border: 1px solid #ced4da;
+  font-size: 1rem;
+}
+
+.form-control:focus {
+  border-color: var(--piatto-orange);
+  box-shadow: 0 0 0 0.25rem rgba(241, 90, 41, 0.25);
+}
+
+footer {
+  background-color: #333333;
+  padding: 5rem 0;
+  color: white;
+  position: relative;
+  overflow: hidden;
+  border-radius: 100% / 40% 40% 0 0;
+  border: 3px solid #333333;
+}
+
+.hero-img {
+  width: 280px;
+  max-width: 100%;
+  height: auto;
+  border-radius: 1.5rem;
+}
+
+.dashboard-img {
+  max-width: 100%;
+  height: auto;
+  position: absolute;
+  bottom: -120px; /* Adjusted to position from the bottom */
+  right: -50px; /* Adjusted to position from the right */
+  z-index: 1;
+}
+
+.section-title {
+  position: relative;
+  display: inline-block;
+}
+
+.section-title::after {
+  content: "";
+  position: absolute;
+  bottom: -10px;
+  left: 0;
+  width: 50px;
+  height: 3px;
+  background-color: var(--piatto-orange);
+}
+
+.pb-5 {
+  padding-bottom: 9rem !important;
+}
+
+.pt-5 {
+  padding-top: 9rem !important;
+}
+
+.py-5 {
+  padding-top: 3rem !important;
+  padding-bottom: 10rem !important;
+}
+
+.info-section-narrow {
+  position: relative;
+  overflow: visible;
+}
+
+.info-section-narrow .container {
+  max-width: 1070px;
+}
+
+.hero-title {
+  white-space: nowrap;
+}
+
+.hero-title br + * {
+  display: block;
+}
+
+.features-row {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin: 0 auto;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.features-title {
+  text-align: center;
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(2rem, 8vw, 3rem);
+  font-weight: 700;
+  color: var(--piatto-dark);
+  margin-bottom: 1rem;
+}
+
+.features-subtitle {
+  text-align: center;
+  font-family: 'Nunito', sans-serif;
+  font-size: clamp(1rem, 4vw, 1.5rem);
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+h2 {
+  font-weight: 700;
+  font-size: clamp(1.5rem, 8vw, 3rem);
+  font-family: 'Montserrat', sans-serif !important;
+}
+
+.step-number {
+  font-size: clamp(1rem, 3vw, 1.25rem);
+  font-weight: 700;
+  color: #f15a29;
+  text-transform: uppercase;
+  margin-bottom: 0.25rem;
+  font-family: 'Nunito', sans-serif;
+}
+
+h3 {
+  font-weight: 700;
+  font-size: clamp(1rem, 3vw, 1.5rem);
+  margin-bottom: 0.5rem;
+  font-family: 'Montserrat', sans-serif !important;
+}
+
+h3 strong {
+  font-weight: 700;
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+}
+
+p {
+  font-size: clamp(0.875rem, 2.5vw, 1.25rem);
+  line-height: 1.5;
+  margin-bottom: 0;
+  font-family: 'Nunito', sans-serif;
+}
+
+.circle-img {
+  width: clamp(120px, 20vw, 160px);
+  height: clamp(120px, 20vw, 160px);
+  border-radius: 50%;
+  border: 4px solid white;
+  box-shadow: 0 8px 15px rgb(0 0 0 / 0.1);
+  object-fit: cover;
+  margin-bottom: 1.5rem;
+}
+
+.footer-bottom {
+  font-size: 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  font-weight: 400;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.footer-bottom > div:first-child {
+  margin-top: 1.5rem;
+}
+
+.social-icons a {
+  font-size: clamp(1.2rem, 4vw, 1.5rem);
+  transition: transform 0.3s ease;
+}
+
+.social-icons a:hover {
+  transform: scale(1.2);
+}
+
+.badge-custom {
+  background-color: white;
+  color: #f15a29;
+  font-weight: 700;
+  font-size: clamp(0.75rem, 2vw, 1rem);
+  border: 2.5px solid #f15a29;
+  border-radius: 50px;
+  padding: 0.5rem 1.2rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  margin-bottom: 0.5rem;
+}
+
+.badge-custom:hover {
+  background-color: #ffece5;
+  transform: translateY(-2px);
+}
+
+/* Hero Section */
+.hero-img {
+  max-width: 100%;
+  height: auto;
+  margin-left: 0;
+}
+
+/* CTA Section */
+.cta-section {
+  padding: 8rem 0;
+  position: relative;
+  overflow: hidden;
+  background-color: var(--piatto-orange);
+  color: white;
+  min-height: 850px;
+}
+
+.cta-container {
+  height: 100%;
+  display: flex;
+  align-items: center;
+}
+
+.cta-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 15px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 2rem;
+}
+
+.cta-text h5 {
+  font-family: 'Montserrat', sans-serif;
+  font-size: clamp(1.5rem, 6vw, 2.5rem);
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+}
+
+.cta-image img {
+  max-width: 100%;
+  height: auto;
+  border: 5.5px solid #fff;
+  border-radius: 6%;
+}
+
+/* Media Queries */
+@media (max-width: 576px) {
+  .hero-img {
+    margin-left: 0;
+    width: 60%;
+    padding-bottom: 100px;
+  }
+  .feature-box {
+    width: 170px;
+    height: 170px;
+  }
+  .feature-box .icon-container {
+    padding: 1rem;
+  }
+  .feature-box .icon-container img {
+    max-width: 80px;
+    max-height: 80px;
+  }
+  .feature-box .text-container {
+    padding: 0.5rem;
+    font-size: 14px;
+    min-height: 40px;
+    max-height: 40px;
+  }
+      .cta-section {
+        min-height: 1380px;
+        padding: 3rem 0;
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+        padding-top: 150px;
+    }
+
+  .cta-container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+    width: 100%; /* Ensure full width */
+  }
+  .cta-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    gap: 1.5rem; /* Adjusted for tighter mobile layout */
+    width: 100%; /* Ensure full width */
+  }
+  .cta-text h5 {
+    margin-top: 20px; /* Lower the heading by 20px */
+    font-size: clamp(1.5rem, 6vw, 2rem); /* Increased size for better visibility */
+    width: 100%; /* Ensure it stays within orange background */
+    padding: 0 15px; /* Add padding to keep text within bounds */
+    box-sizing: border-box; /* Include padding in width */
+    text-align: center; /* Reinforce centering */
+  }
+  .cta-image {
+    max-width: 50%; /* Reduced size for mobile */
+    margin: 1rem auto; /* Center the image */
+    display: block; /* Ensure centering */
+  }
+  .cta-image img {
+    max-width: 100%; /* Ensure image scales within container */
+    height: auto;
+    border: 5.5px solid #fff;
+    border-radius: 6%;
+  }
+  .cta-section p {
+    min-height: 60px; /* Ensure paragraph visibility */
+    font-size: clamp(1rem, 2.5vw, 1.125rem); /* Maintain requested font size */
+    margin-top: 1.5rem; /* Increased to prevent overlap with wave SVGs */
+    padding: 0 15px; /* Add padding to keep text within bounds */
+    text-align: center; /* Reinforce centering */
+    width: 100%; /* Ensure full width */
+  }
+  .d-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center; /* Center badges */
+    gap: 1rem; /* Adjusted for mobile */
+    width: 100%; /* Ensure full width */
+  }
+  .btn-piatto-white {
+    margin: 1rem auto; /* Center the button */
+    display: block; /* Ensure centering */
+    width: fit-content; /* Adjust button width */
+  }
+  .circle-img {
+    width: clamp(180px, 40vw, 180px);
+    height: clamp(180px, 40vw, 180px);
+  }
+  .dashboard-img {
+    position: absolute;
+    bottom: -60px; /* Adjusted for bottom positioning */
+    right: 41px;
+    max-width: 80%;
+  }
+}
+
+@media (min-width: 577px) and (max-width: 767px) {
+  .feature-box {
+    width: 140px;
+    height: 140px;
+  }
+  .feature-box .icon-container img {
+    max-width: 50px;
+    max-height: 50px;
+  }
+  .feature-box .text-container {
+    font-size: 0.85rem;
+  }
+  .cta-section {
+    min-height: 500px;
+  }
+  .cta-text h5 {
+    font-size: 2rem;
+  }
+  .cta-image img {
+    max-width: 80%;
+  }
+  .dashboard-img {
+    position: absolute;
+    bottom: -100px; /* Adjusted for bottom positioning */
+    right: -30px;
+    max-width: 90%;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 991px) {
+  .hero-img {
+    width: 80%;
+  }
+  .dashboard-img {
+    position: absolute;
+    bottom: -100px; /* Adjusted for bottom positioning */
+    right: -40px;
+    max-width: 100%;
+  }
+  .cta-section {
+    min-height: 560px;
+  }
+  .cta-text h5 {
+    font-size: 2.5rem;
+  }
+  .cta-image img {
+    max-width: 90%;
+  }
+}
+
+@media (min-width: 992px) and (max-width: 1199px) {
+  .hero-img {
+    width: 90%;
+  }
+  .dashboard-img {
+    position: absolute;
+    bottom: -110px; /* Adjusted for bottom positioning */
+    right: -50px;
+    max-width: 100%;
+  }
+  .cta-image img {
+    max-width: 100%;
+  }
+}
+
+@media (min-width: 1200px) {
+  .hero-img {
+    width: 280px;
+  }
+  .dashboard-img {
+    position: absolute;
+    bottom: 30px; /* Adjusted for bottom positioning */
+    right: 20px;
+    max-width: 350px;
+  }
+  .cta-image img {
+    max-width: 420px;
+  }
+}
+  </style>
+</head>
+<body>
+  <!-- Hero Section -->
+  <section class="position-relative bg-piatto-orange pb-8 overflow-hidden" style="padding-top: 70px;">
+    <div class="container px-4 px-lg-5" style="padding-bottom: 170px;">
+      <div class="row align-items-center">
+        <div class="col-12 col-lg-6 text-center text-lg-start text-white mb-5 mb-lg-0">
+          <div class="d-flex align-items-center justify-content-center justify-content-lg-start mb-4">
+            <img src="{{ MEDIA_URL }}/media/images/piatto-logo.png" 
+                 alt="Piatto logo" 
+                 width="410" 
+                 height="107" 
+                 class="img-fluid">
+          </div>
+          <h2 class="fw-bold mb-4 display-5 hero-title">
+            Tu negocio,<br>en piloto automático.
+          </h2>
+          <button class="btn btn-piatto-white mt-3 d-inline-flex align-items-center fw-semibold">
+            Quiero empezar <i class="fas fa-chevron-right ms-2"></i>
+          </button>
+        </div>
+        <div class="col-12 col-lg-6 text-center">
+          <img src="{{ MEDIA_URL }}/media/images/celular.png"
+               alt="Interfaz de la app Piatto en móvil"
+               class="hero-img">
+        </div>
+      </div>
+    </div>
+    <svg class="wave-shape-cta wave-bottom" fill="none" preserveAspectRatio="none" viewBox="0 0 1440 180" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: -100px;">
+      <path d="M0 0C-190 130 490 0 610 0C960 0 1500 150 1440 0V120H0V0Z" fill="#F5F5EE"></path>
+    </svg>
+  </section>
+
+  <!-- Features Section -->
+  <section class="py-5">
+    <div class="container px-4 px-lg-5">
+      <div class="text-center mb-5">
+        <h3 class="features-title">
+          Automatizá tu negocio y<br>multiplicá tus ventas
+        </h3>
+        <p class="features-subtitle">
+          <span>Sin errores, más ventas,</span><br>más tiempo libre.
+        </p>
+      </div>
+      <div class="features-row">
+        <div class="feature-box">
+          <div class="icon-container">
+            <img src="{{ MEDIA_URL }}/media/images/whatsapp.png" alt="Menú Digital">
+          </div>
+          <div class="text-container">
+            Respuestas por WhatsApp
+          </div>
+        </div>
+        <div class="feature-box">
+          <div class="icon-container">
+            <img src="{{ MEDIA_URL }}/media/images/mercado-pago.png" alt="MercadoPago">
+          </div>
+          <div class="text-container">
+            Pagos sin pasar alias
+          </div>
+        </div>
+        <div class="feature-box">
+          <div class="icon-container">
+            <img src="{{ MEDIA_URL }}/media/images/menu-digital.png" alt="Menú Digital">
+          </div>
+          <div class="text-container">
+            Menú digital fácil de usar
+          </div>
+        </div>
+        <div class="feature-box">
+          <div class="icon-container">
+            <img src="{{ MEDIA_URL }}/media/images/descuento.png" alt="Descuentos">
+          </div>
+          <div class="text-container">
+            Descuentos personalizados
+          </div>
+        </div>
+        <div class="feature-box">
+          <div class="icon-container">
+            <img src="{{ MEDIA_URL }}/media/images/calendario.png" alt="Menú Digital">
+          </div>
+          <div class="text-container">
+            Horarios inteligentes
+          </div>
+        </div>
+        <div class="feature-box">
+          <div class="icon-container">
+            <img src="{{ MEDIA_URL }}/media/images/sin-comisiones.png" alt="Sin Comisiones" class="black-filter">
+          </div>
+          <div class="text-container">
+            Sin comisiones
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Getting Started Section -->
+  <section class="container py-5">
+    <h2 class="text-center fw-bold mb-5">
+      Comenzar a usar Piatto<br>
+      es muy fácil...
+    </h2>
+    <div class="row justify-content-center text-start">
+      <div class="col-12 col-sm-6 col-md-4 d-flex flex-column align-items-center px-3 mb-4 mb-md-0">
+        <img alt="Dueño de restaurante mirando opciones en su tablet" class="circle-img" src="{{ MEDIA_URL }}/media/images/paso-1.jpg" />
+        <p class="step-number w-100">PASO 1</p>
+        <h3 class="w-100"><strong>Te suscribís a Piatto</strong></h3>
+        <p class="w-100">
+          Contratás nuestro único plan mensual y nos encargamos de crear tu tienda digital sin que tengas que hacer nada técnico.
+        </p>
+      </div>
+      <div class="col-12 col-sm-6 col-md-4 d-flex flex-column align-items-center px-3 mb-4 mb-md-0">
+        <img alt="Persona trabajando en computadora mientras revisa su tienda digital" class="circle-img" src="{{ MEDIA_URL }}/media/images/paso-2.png" />
+        <p class="step-number w-100">PASO 2</p>
+        <h3 class="w-100"><strong>Armamos tu tienda</strong></h3>
+        <p class="w-100">
+          Diseñamos tu página personalizada con tu logo, menú, medios de pago y todo lo necesario para que puedas recibir pedidos online.
+        </p>
+      </div>
+      <div class="col-12 col-sm-6 col-md-4 d-flex flex-column align-items-center px-3">
+        <img alt="Dueña de restaurante mostrando su celular con la tienda activa" class="circle-img" src="{{ MEDIA_URL }}/media/images/paso-3.png" />
+        <p class="step-number w-100">PASO 3</p>
+        <h3 class="w-100"><strong>Compartís tu link</strong></h3>
+        <p class="w-100">
+          Te damos un link del tipo <strong>piattoweb.com/turestaurante</strong> para que lo compartas en Instagram, WhatsApp o donde quieras. ¡Listo! Ya estás vendiendo.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Info Section -->
+  <section class="py-5 info-section-narrow">
+    <div class="container px-4 px-lg-5">
+      <div class="bg-piatto-orange rounded-3xl p-4 p-lg-5 text-white overflow-hidden" style="border: 5.5px solid #fff;">
+        <div class="text-center mb-5">
+          <h4 class="fw-bold display-6" style="font-size: clamp(2rem, 8vw, 3rem); font-family: 'Montserrat', sans-serif !important;">
+            Piatto facilita tu éxito
+          </h4>
+          <p class="fs-5" style="font-size: clamp(1rem, 4vw, 1.5rem);">
+            Dale visibilidad a tu negocio. Aprobá pedidos
+            <a href="#" class="underline-link">y olvidate del resto.</a>
+          </p>
+        </div>
+        <div class="row align-items-center">
+          <div class="col-12 col-lg-10">
+            <ul class="list-unstyled info-list fs-6">
+              <li>Vos decidís qué pedidos aceptar desde tu panel. <a href="#" class="underline-link">Sin llamadas, sin chats confusos.</a></li>
+              <li>El cliente recibe una confirmación clara <a href="#" class="underline-link">sin que tengas que escribir nada.</a></li>
+              <li><a href="#" class="underline-link">Tu menú se oculta fuera del horario.</a> Sin confusión ni mensajes fuera de turno.</li>
+              <li><a href="#" class="underline-link">Agregá, quitá o actualizá platos y precios</a> fácilmente desde tu panel.</li>
+              <li>El cliente elige del menú, ve precios y totales. Todo claro desde el principio.</li>
+              <li>Se genera el link, se cobra, y se confirma, <a href="#" class="underline-link">todo sin que vos tengas que hacer nada.</a></li>
+              <li><a href="#" class="underline-link">Logo, fotos y banners</a> para que tu negocio se vea profesional.</li>
+              <li><a href="#" class="underline-link">Organizate con pedidos impresos</a>. Nada de olvidos: todo claro y a la vista.</li>
+            </ul>
+          </div>
+          <div class="col-12 col-lg-6 text-center">
+            <img src="{{ MEDIA_URL }}/media/images/pantalla.png" alt="Dashboard Piatto" class="dashboard-img">
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="cta-section position-relative overflow-hidden">
+    <div class="container px-4 px-lg-5" style="height: 560px;">
+      <div class="row align-items-center">
+        <div class="col-12 col-lg-6 text-white mb-4 mb-lg-0">
+          <h5 class="fw-bold" style="font-family: 'Montserrat', sans-serif !important; font-size: clamp(2rem, 8vw, 3rem);">
+            Hecho para que<br>
+            vendas más y<br>
+            trabajes menos.
+          </h5>
+          <img src="{{ MEDIA_URL }}/media/images/piatto-menu.png"
+               alt="Menu Piatto"
+               style="width: 100%; max-width: 420px; height: auto; border: 5.5px solid #fff; border-radius: 6%;">
+        </div>
+        <div class="col-12 col-lg-6 text-white d-flex flex-column align-items-center align-items-lg-start">
+          <div class="d-grid gap-2" style="grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); max-width: 520px;">
+            <div class="badge-custom"><i class="fas fa-shield-alt"></i> Plataforma 100% segura</div>
+            <div class="badge-custom"><i class="fas fa-mobile-alt"></i> Apto para cualquier celular</div>
+            <div class="badge-custom"><i class="fas fa-clock"></i> Ahorra tiempo cada día</div>
+            <div class="badge-custom"><i class="fas fa-chart-line"></i> Optimizado para vender más</div>
+            <div class="badge-custom"><i class="fas fa-robot"></i> Automatización total</div>
+            <div class="badge-custom"><i class="fas fa-lock"></i> Datos y pagos protegidos</div>
+            <div class="badge-custom"><i class="fas fa-percent"></i> Sin comisiones ocultas</div>
+            <div class="badge-custom"><i class="fas fa-plug"></i> Instalación fácil y rápida</div>
+          </div>
+          <p class="fs-5 mt-4" style="font-size: 1.25rem;">
+            Hablanos por WhatsApp haciendo click <a href="#" class="underline-link">acá</a>!
+          </p>
+          <button class="btn btn-piatto-white fw-semibold px-4 py-2 mt-2">
+            Probalo ahora
+          </button>
+        </div>
+      </div>
+    </div>
+    <svg class="wave-shape wave-top" fill="none" preserveAspectRatio="none" viewBox="0 0 1440 120" xmlns="http://www.w3.org/2000/svg">
+      <path d="M0 120C240 0 480 120 720 120C960 120 1800 0 1840 120V0H0V120Z" fill="#F5F5EE"></path>
+    </svg>
+    <svg class="wave-shape-cta wave-bottom" fill="none" preserveAspectRatio="none" viewBox="0 0 1440 180" xmlns="http://www.w3.org/2000/svg" style="margin-bottom: -100px;">
+      <path d="M0 0C-190 130 490 0 610 0C960 0 1500 150 1440 0V120H0V0Z" fill="#F5F5EE"></path>
+    </svg>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-[#2a2a2a] pt-6 pb-4 px-6 sm:px-10 overflow-hidden" style="border-radius: 100% / 40% 40% 0 0; border: 3px solid #333333;">
+    <div class="max-w-7xl mx-auto">
+      <div class="container content d-flex flex-column justify-content-start align-items-start gap-3">
+        <div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-3">
+          <div>
+            <img src="{{ MEDIA_URL }}/media/images/piatto-logo.png" alt="Piatto logo" style="width: 157px; height: 35px;">
+          </div>
+          <div class="social-icons d-flex">
+            <a href="#" class="text-white me-2"><i class="fab fa-whatsapp"></i></a>
+            <a href="#" class="text-white me-2"><i class="fab fa-instagram"></i></a>
+            <a href="#" class="text-white"><i class="fab fa-linkedin-in"></i></a>
+          </div>
+        </div>
+        <div class="footer-text" style="font-size: 0.875rem; max-width: 300px; line-height: 1.25rem;">
+          La solución todo-en-uno<br>para gestionar tu negocio de<br>comida sin complicaciones.
+        </div>
+      </div>
+      <hr class="footer-divider" style="border-color: rgba(255, 255, 255, 0.5); margin-top: 1.5rem; margin-bottom: 1.5rem;" />
+      <div class="container footer-bottom">
+        <div>
+          © 2025 Piatto. Todos los derechos reservados.
+        </div>
+        <div class="footer-right text-end mt-2">
+          <p>Build by</p>
+          <img src="{{ MEDIA_URL }}/media/images/code2.svg" alt="Logo" class="footer-logo" style="height: 25px;">
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js" defer></script>
+</body>
+</html>

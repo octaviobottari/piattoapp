@@ -1,0 +1,236 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Lato&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Inter font for logo-circle -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@700&display=swap" rel="stylesheet">
+    {% block extra_head %}
+    {% endblock %}
+    {% block styles %}
+    {% endblock %}
+    <style>
+        .bg-orange {
+            background-color: #f85c2b !important;
+        }
+        .nav-bg {
+            background-color: #f4f5f0 !important;
+        }
+        .icon-orange {
+            color: #f85c2b !important;
+        }
+        .btn-outline-black {
+            color: #f85c2b !important;
+            border-color: #f85c2b !important;
+            border-radius: 50rem !important;
+            font-weight: 600 !important;
+            font-size: 0.875rem !important;
+            padding: 0.5rem 1.5rem !important;
+            transition: background-color 0.3s, color 0.3s !important;
+            white-space: nowrap !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            height: 40px !important;
+            line-height: 1 !important;
+            background-color: transparent !important; /* Aseguramos que sea transparente inicialmente */
+            transform: none !important;
+        }
+        .btn-outline-black:hover {
+            background-color: #f85c2b !important;
+            color: white !important;
+        }
+        .logo-circle {
+            width: 48px;
+            height: 48px;
+            background-color: #f85c2b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-style: italic;
+            font-weight: 700;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            font-size: 1.125rem;
+            user-select: none;
+        }
+        .nav-icons > * {
+            font-size: 1.5rem;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .nav-icons > *:not(:last-child) {
+            margin-right: 2rem;
+        }
+        .nav-icons .divider {
+            width: 1px;
+            height: 32px;
+            background-color: rgba(0, 0, 0, 0.2);
+            margin-right: 2rem;
+        }
+        .nav-icons .icon-circle {
+            width: 43px;
+            height: 43px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .nav-icons > a:hover {
+            transform: translateY(-5px);
+            color: #6c757d; /* Efecto de levantamiento */
+        }
+        @media (max-width: 575.98px) {
+            .nav-icons > *:not(:last-child) {
+                margin-right: 1rem;
+            }
+            .nav-icons .divider {
+                height: 24px;
+                margin-right: 1rem;
+            }
+        }
+    </style>
+    <script>
+    window.csrftoken = "{{ csrf_token }}";
+</script>
+</head>
+<body>
+    <!-- Hidden CSRF Form -->
+    <form id="csrf-form" style="display: none;">
+        {% csrf_token %}
+    </form>
+
+    <!-- Custom Header -->
+    {% block navbar_block %}
+    <header class="d-flex align-items-center justify-content-between px-4 py-3">
+        <!-- Logo and text -->
+        <div class="d-flex align-items-center gap-3">
+            <div class="logo-circle" aria-label="Logo del restaurante">
+                {% if restaurante.logo %}
+                    <img src="{{ restaurante.logo.url }}" alt="Logo Restaurante" style="width: 100%; height: 100%; border-radius: 50%;">
+                {% else %}
+                    LOGO
+                {% endif %}
+            </div>
+            <div class="d-flex flex-column" style="font-weight: 600; font-size: 0.875rem; line-height: 1.2;">
+                <span>{{ restaurante.nombre_local|default:"Nombre Restaurante" }}</span>
+            </div>
+        </div>
+
+        <!-- Nav con fondo gris, bordes redondeados y botón dentro -->
+        <nav class="d-flex align-items-center nav-bg rounded-pill px-4 py-2 nav-icons" style="min-width: 460px;" aria-label="Navegación principal">
+            <!-- Icono personalizado piatto-icono.png -->
+            <a href="{% url 'panel' %}" class="icon-circle" aria-label="Icono Piatto">
+                <img src="{{ MEDIA_URL }}/media/images/piatto-icon.png" alt="Icono personalizado del restaurante piatto" class="img-fluid" style="max-width: 40px; max-height: 40px; margin-left: 20px;" loading="lazy">
+            </a>
+
+            <div class="divider" aria-hidden="true"></div>
+
+            <!-- Mi menú -->
+            <a href="{% url 'mi_menu' %}" class="icon-orange" title="Mi menú" aria-label="Mi menú">
+                <i class="bi bi-book"></i>
+            </a>
+
+            <!-- Pedidos -->
+            <a href="{% url 'lista_pedidos' %}" class="icon-orange" title="Pedidos" aria-label="Pedidos">
+                <i class="bi bi-clipboard-check"></i>
+            </a>
+
+            <!-- Configuración de Horarios -->
+            <a href="{% url 'configuracion_horarios' %}" class="icon-orange" title="Configuración de Horarios" aria-label="Configuración de Horarios">
+                <i class="bi bi-alarm"></i>
+            </a>
+
+            <!-- Configuraciones del Restaurante -->
+            <a href="{% url 'configuraciones' %}" class="icon-orange" title="Configuraciones del Restaurante" aria-label="Configuraciones del Restaurante">
+                <i class="bi bi-gear"></i>
+            </a>
+
+            <!-- Botón Cerrar sesión dentro del nav -->
+            <a href="{% url 'logout' %}" class="btn btn-outline-black ms-auto">
+                Cerrar sesión
+            </a>
+        </nav>
+    </header>
+    {% endblock %}
+
+    <!-- Main Content -->
+    {% block content %}
+    {% endblock %}
+
+    {% block scripts %}
+        <!-- Scripts -->
+        <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+        <script>
+    
+
+            // Actualizar la fecha y hora al cargar la página
+            document.addEventListener('DOMContentLoaded', () => {
+                updateDateTime();
+                // Actualizar cada minuto (opcional)
+                setInterval(updateDateTime, 60000);
+            });
+
+            // Función para get cookie (para CSRF)
+            function getCookie(name) {
+                console.log('getCookie called for:', name);
+                console.log('All cookies:', document.cookie);
+                let cookieValue = null;
+                if (document.cookie && document.cookie !== '') {
+                    const cookies = document.cookie.split(';');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const cookie = cookies[i].trim();
+                        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                console.log('Cookie value for', name, ':', cookieValue);
+                return cookieValue;
+            }
+
+            // Set CSRF token globally
+            let csrftoken = getCookie('csrftoken');
+            console.log('Initial csrftoken from cookie:', csrftoken);
+
+            // Fallback: Extract token from form if cookie is missing
+            if (!csrftoken) {
+                const csrfInput = document.querySelector('#csrf-form input[name="csrfmiddlewaretoken"]');
+                if (csrfInput) {
+                    csrftoken = csrfInput.value;
+                    console.log('Fallback: CSRF token extracted from form:', csrftoken);
+                } else {
+                    console.error('CSRF token not found in cookie or form');
+                }
+            }
+
+            // Set window.csrftoken
+            window.csrftoken = csrftoken;
+            console.log('window.csrftoken set to:', window.csrftoken);
+
+            // Verify token presence after DOM is loaded
+            document.addEventListener('DOMContentLoaded', () => {
+                console.log('DOM loaded, verifying CSRF token');
+                if (!window.csrftoken) {
+                    console.error('CSRF token still missing after DOM load');
+                    const csrfInput = document.querySelector('#csrf-form input[name="csrfmiddlewaretoken"]');
+                    if (csrfInput) {
+                        window.csrftoken = csrfInput.value;
+                        console.log('DOM fallback: CSRF token set to:', window.csrftoken);
+                    }
+                }
+            });
+        </script>
+    {% endblock %}
+</body>
+</html>

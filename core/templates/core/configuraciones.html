@@ -1,0 +1,646 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block extra_head %}
+<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Configuraciones</title>
+<style>
+/* Contenedor general */
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+/* Títulos */
+h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #343a40;
+    margin-bottom: 1.5rem;
+}
+h5.mb-0, h6.mt-4 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #343a40;
+}
+
+/* Tarjetas */
+.card {
+    border: none;
+    border-radius: 10px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    margin-bottom: 1.75rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+}
+.card-header {
+    background-color: #f85c2b;
+    color: #ffffff;
+    border-radius: 10px 10px 0 0;
+    padding: 1rem 1.25rem;
+}
+.card-body {
+    padding: 1.75rem;
+}
+
+/* Formularios */
+.form-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #343a40;
+    margin-bottom: 0.3rem;
+}
+.form-control, .form-control-file {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.form-control:focus, .form-control-file:focus {
+    border-color: #f85c2b;
+    box-shadow: 0 0 0 2px rgba(248, 92, 43, 0.2);
+    outline: none;
+}
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+.text-muted {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+
+/* Imagen del logo */
+.img-thumbnail {
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    max-width: 150px;
+    margin-top: 0.5rem;
+}
+
+/* Botones */
+.btn {
+    border-radius: 8px;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-success, .btn-primary, .btn-danger {
+    background-color: #f85c2b;
+    border: none;
+    color: #ffffff;
+}
+.btn-success:hover, .btn-primary:hover, .btn-danger:hover {
+    background-color: #d94a1f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+}
+
+/* Lista de códigos de descuento */
+.list-group {
+    border-radius: 8px;
+    overflow: hidden;
+}
+.list-group-item {
+    border: 1px solid #e9ecef;
+    font-size: 0.9rem;
+    color: #343a40;
+    background-color: #ffffff;
+    padding: 0.75rem 1.25rem;
+    transition: background-color 0.2s ease;
+}
+.list-group-item:hover {
+    background-color: #f8f9fa;
+}
+.list-group-item .btn-danger {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem;
+}
+
+/* Alertas */
+.alert {
+    border-radius: 8px;
+    font-size: 0.9rem;
+    padding: 0.75rem 1.25rem;
+    margin-top: 0.75rem;
+    animation: fadeIn 0.4s ease;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-8px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+.alert-success {
+    background-color: #e6f4ea;
+    color: #155724;
+    border-color: #c3e6cb;
+}
+.alert-danger {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+}
+
+/* Estilos para el QR */
+.qr-container {
+    text-align: center;
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    width: 300px;
+    height: 500px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    margin: 0 auto;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.qr-header {
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.qr-header h2 {
+    font-size: 24px;
+    font-weight: bold;
+    color: #000;
+    margin: 0;
+}
+
+.qr-header h3 {
+    font-size: 18px;
+    font-weight: normal;
+    color: #000;
+    margin: 5px 0 0 0;
+}
+
+.divider {
+    width: 100%;
+    height: 1px;
+    background-color: #e0e0e0;
+    margin: 10px 0;
+}
+
+.qr-image-container {
+    background-color: white;
+    padding: 15px;
+    margin: 15px 0;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+}
+
+.qr-code {
+    width: 200px;
+    height: 200px;
+}
+
+.qr-footer {
+    margin-top: 15px;
+    text-align: center;
+}
+
+.piatto-logo img {
+    height: 30px;
+    margin-bottom: 10px;
+}
+
+.qr-footer-text p {
+    margin: 5px 0;
+    font-size: 14px;
+    color: #666;
+}
+
+.qr-footer-text p:first-child {
+    font-weight: bold;
+}
+
+.btn-download {
+    margin-top: 20px;
+    background-color: #f85c2b;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* Responsividad */
+@media (max-width: 768px) {
+    .container {
+        padding: 1.5rem 1rem;
+    }
+    .card-body {
+        padding: 1.25rem;
+    }
+    .form-control, .form-control-file {
+        font-size: 0.85rem;
+    }
+    .form-label {
+        font-size: 0.85rem;
+    }
+    .btn {
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+    .list-group-item {
+        font-size: 0.85rem;
+        padding: 0.6rem 1rem;
+    }
+    .img-thumbnail {
+        max-width: 120px;
+    }
+    h2 {
+        font-size: 1.5rem;
+    }
+    .qr-container {
+        width: 250px;
+        height: 400px;
+    }
+    .qr-header h2 {
+        font-size: 20px;
+    }
+    .qr-header h3 {
+        font-size: 16px;
+    }
+    .qr-code {
+        width: 150px;
+        height: 150px;
+    }
+    .qr-footer-text p {
+        font-size: 12px;
+    }
+    .piatto-logo img {
+        height: 25px;
+    }
+}
+@media (max-width: 576px) {
+    .col-md-6, .col-md-4, .col-md-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    .btn {
+        font-size: 0.85rem;
+    }
+    .card-header {
+        padding: 0.75rem 1rem;
+    }
+}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="container mt-4">
+  <h2>Configuraciones del Restaurante</h2>
+
+  <!-- Formulario principal -->
+  <div class="card mb-4">
+    <div class="card-header">
+      <h5 class="mb-0">Configuración General</h5>
+    </div>
+    <div class="card-body">
+      <form method="POST" action="{% url 'configurar_restaurante' %}" enctype="multipart/form-data">
+        {% csrf_token %}
+        <!-- Costo de envío y umbral -->
+        <div class="mb-3">
+          <label class="form-label">Costo de Envío ($)</label>
+          {{ config_form.costo_envio }}
+          <small class="text-muted">Dejar vacío si no ofrece envío.</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Monto para Envío Gratis ($)</label>
+          {{ config_form.umbral_envio_gratis }}
+          <small class="text-muted">Dejar vacío si no ofrece envío gratis.</small>
+        </div>
+        <!-- Meta Tags -->
+        <h6 class="mt-4">Optimización para Buscadores (SEO)</h6>
+        <div class="mb-3">
+          <label class="form-label">Meta Título</label>
+          {{ config_form.meta_title }}
+          <small class="text-muted">Título para Google (máx. 60 caracteres).</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Meta Descripción</label>
+          {{ config_form.meta_description }}
+          <small class="text-muted">Descripción para Google (máx. 160 caracteres).</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Meta Palabras Clave</label>
+          {{ config_form.meta_keywords }}
+          <small class="text-muted">Palabras clave separadas por comas.</small>
+        </div>
+        <!-- Dirección -->
+        <div class="mb-3">
+          <label class="form-label">Dirección</label>
+          {{ config_form.direccion }}
+        </div>
+        <!-- Teléfono -->
+        <div class="mb-3">
+          <label class="form-label">Teléfono</label>
+          {{ config_form.telefono }}
+          <small class="text-muted">Incluye código de país (ej. 541123456789 sin el +).</small>
+        </div>
+        <!-- Logo -->
+        <div class="mb-3">
+          <label class="form-label">Logo</label>
+          {{ config_form.logo }}
+          {% if restaurante.logo %}
+            <img src="{{ restaurante.logo.url }}" alt="Logo" class="img-thumbnail mt-2" style="max-width: 150px;">
+          {% endif %}
+        </div>
+        <!-- Horarios Escritos -->
+        <div class="mb-3">
+          <label class="form-label">Horarios Escritos</label>
+          {{ config_form.written_schedules }}
+          <small class="text-muted">Ej. Lunes a Viernes 12:00-22:00.</small>
+        </div>
+        <!-- Redes Sociales -->
+        <h6 class="mt-4">Redes Sociales</h6>
+        <div class="mb-3">
+          <label class="form-label">Instagram (Nombre de Usuario)</label>
+          {{ config_form.instagram_username }}
+          <small class="text-muted">Ej. hvn_burger (sin @).</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Facebook (Nombre de Usuario)</label>
+          {{ config_form.facebook_username }}
+          <small class="text-muted">Ej. HVNBurger.</small>
+        </div>
+        <button type="submit" class="btn btn-success">Guardar Configuración</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Códigos de Descuento -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">Códigos de Descuento</h5>
+    </div>
+    <div class="card-body">
+      <form id="descuentoForm" class="mb-4">
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label class="form-label">Nombre del Código</label>
+            {{ descuento_form.nombre_codigo }}
+          </div>
+          <div class="col-md-4 mb-3">
+            <label class="form-label">Porcentaje</label>
+            {{ descuento_form.porcentaje }}
+          </div>
+          <div class="col-md-2 mb-3 align-self-end">
+            <button type="submit" class="btn btn-primary w-100">Añadir</button>
+          </div>
+        </div>
+      </form>
+      <div id="listaCodigos">
+        {% if request.user.codigos_descuento %}
+          <ul class="list-group">
+            {% for codigo in request.user.codigos_descuento %}
+              <li class="list-group-item d-flex justify-content-between align-items-center">
+                {{ codigo.nombre }} - {{ codigo.porcentaje }}%
+                <button class="btn btn-sm btn-danger eliminar-codigo" data-codigo="{{ codigo.nombre }}">Eliminar</button>
+              </li>
+            {% endfor %}
+          </ul>
+        {% else %}
+          <p class="text-muted">No hay códigos de descuento creados.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- QR del Local -->
+  <div class="card">
+    <div class="card-header">
+      <h5 class="mb-0">QR del Local</h5>
+    </div>
+    <div class="card-body">
+      <p class="text-muted">Escanea este código QR para acceder al menú del restaurante. Descarga un PDF para imprimir.</p>
+      <div class="qr-container" id="qrContainer">
+        <div class="qr-header">
+          <h2>Escaneá y pedí</h2>
+          <h3>desde tu celular</h3>
+        </div>
+        <h5 style="color: #f85c2b;">{{ restaurante.nombre_local }}</h5>
+        <div class="qr-image-container">
+          {% if restaurant_qr.qr_image %}
+            <img id="qrImage" src="{{ restaurant_qr.qr_image.url }}" alt="QR Code for {{ restaurant_qr.name }}" class="qr-code">
+          {% else %}
+            <p>Generando QR...</p>
+          {% endif %}
+        </div>
+        <div class="qr-footer">
+          <div class="piatto-logo">
+            <img src="{{ MEDIA_URL }}/media/images/piatto-logo-org.png" alt="Piatto Logo">
+          </div>
+          <div class="qr-footer-text">
+            <p style="color: #f85c2b;">Tu negocio, en piloto automático.</p>
+          </div>
+        </div>
+      </div>
+      <button class="btn btn-download" id="downloadPdf">Imprimir PDF</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Discount codes handling
+  document.getElementById('descuentoForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    fetch("{% url 'agregar_codigo_descuento' %}", {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}'
+      }
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.success) {
+        const listaCodigos = document.getElementById('listaCodigos');
+        const noCodigosMsg = listaCodigos.querySelector('.text-muted');
+        if (noCodigosMsg) noCodigosMsg.remove();
+        const ul = listaCodigos.querySelector('ul') || document.createElement('ul');
+        ul.classList.add('list-group');
+        const li = document.createElement('li');
+        li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+        li.innerHTML = `${data.codigo.nombre} - ${data.codigo.porcentaje}% <button class="btn btn-sm btn-danger eliminar-codigo" data-codigo="${data.codigo.nombre}">Eliminar</button>`;
+        ul.appendChild(li);
+        if (!listaCodigos.querySelector('ul')) listaCodigos.appendChild(ul);
+        document.getElementById('descuentoForm').reset();
+      } else {
+        alert('Error: ' + (data.error || 'No se pudo añadir el código.'));
+      }
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      alert('Ocurrió un error al añadir el código.');
+    });
+  });
+
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('eliminar-codigo')) {
+      const nombreCodigo = e.target.dataset.codigo;
+      if (confirm(`¿Eliminar el código ${nombreCodigo}?`)) {
+        fetch("{% url 'eliminar_codigo_descuento' %}", {
+          method: 'POST',
+          body: new URLSearchParams({ 'nombre_codigo': nombreCodigo }),
+          headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/x-www-form-urlencoded'
+          }
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            e.target.parentElement.remove();
+            const listaCodigos = document.getElementById('listaCodigos');
+            if (!listaCodigos.querySelector('li')) {
+              listaCodigos.innerHTML = '<p class="text-muted">No hay códigos de descuento creados.</p>';
+            }
+          } else {
+            alert('Error: ' + (data.error || 'No se pudo eliminar el código.'));
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          alert('Ocurrió un error al eliminar el código.');
+        });
+      }
+    }
+  });
+
+  // PDF Download Handler
+  document.getElementById('downloadPdf').addEventListener('click', function() {
+    const qrCard = document.querySelector('.card:last-child'); // Select the QR card specifically
+    const qrImage = document.getElementById('qrImage');
+    const restaurantName = "{{ restaurante.nombre_local|default:'default' }}".replace(/ /g, '-').toLowerCase();
+    const restaurantSlug = "{{ restaurante.nombre_local|default:'nombrerestaurante'|lower|slugify }}";
+
+    if (!qrImage || !qrImage.src) {
+      alert('No se encontró la imagen QR. Asegúrate de que el QR esté generado.');
+      return;
+    }
+
+    const loadImageAsDataURL = (src) => {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = "Anonymous";
+        img.onload = () => {
+          console.log(`Imagen cargada: ${src}`);
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = (err) => {
+          console.error(`Error al cargar imagen: ${src}`, err);
+          reject(new Error(`No se pudo cargar la imagen: ${src}`));
+        };
+        img.src = src;
+      });
+    };
+
+    // Ensure absolute URLs for images
+    const qrImageUrl = new URL(qrImage.src, window.location.origin).href;
+    const logoImageUrl = new URL('{{ MEDIA_URL }}/media/images/piatto-logo-org.png', window.location.origin).href;
+
+    Promise.all([
+      loadImageAsDataURL(qrImageUrl),
+      loadImageAsDataURL(logoImageUrl)
+    ]).then(([qrDataUrl, logoDataUrl]) => {
+      const element = document.createElement('div');
+      element.style.textAlign = 'center';
+      element.style.backgroundColor = 'white';
+      element.style.padding = '20px';
+      element.style.borderRadius = '10px';
+      element.style.width = '400px';
+      element.style.height = '650px';
+      element.style.display = 'flex';
+      element.style.flexDirection = 'column';
+      element.style.justifyContent = 'space-between';
+      element.style.alignItems = 'center';
+      element.style.margin = '0 auto';
+      element.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.08)';
+      element.style.fontFamily = 'Arial, sans-serif';
+
+      element.innerHTML = `
+        <div style="padding: 1.75rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
+          <div style="text-align: center; background-color: white; border-radius: 10px; width: 100%; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
+            <div style="text-align: center; margin-bottom: 15px;">
+              <h2 style="font-size: 24px; font-weight: bold; color: #000; margin: 0;">Escaneá y pedí</h2>
+              <h3 style="font-size: 18px; font-weight: normal; color: #000; margin: 5px 0 0 0;">desde tu celular</h3>
+            </div>
+            <h5 style="color: #f85c2b; margin: 10px 0;">{{ restaurante.nombre_local }}</h5>
+            <div style="background-color: white; padding: 15px; margin: 15px 0; border: 1px solid #e0e0e0; border-radius: 8px;">
+              <img src="${qrDataUrl}" style="width: 250px; height: 250px;" />
+            </div>
+            <div style="margin-top: 15px; text-align: center;">
+              <div style="margin-bottom: 10px;">
+                <img src="${logoDataUrl}" style="height: 40px;" />
+              </div>
+              <div>
+                <p style="margin: 5px 0; font-size: 14px; color: #666; font-weight: bold;">Tu negocio, en piloto automático.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      // Append to body temporarily to ensure rendering
+      document.body.appendChild(element);
+
+      html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        logging: true,
+        allowTaint: false,
+        backgroundColor: null
+      }).then(canvas => {
+        document.body.removeChild(element); // Clean up
+        const imgData = canvas.toDataURL('image/png');
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF({
+          orientation: 'portrait',
+          unit: 'mm',
+          format: 'a4'
+        });
+
+        const imgWidth = 400;
+        const imgHeight = 650;
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const ratio = Math.min(pdfWidth / (imgWidth * 0.264583), pdfHeight / (imgHeight * 0.264583)); // Convert px to mm
+        const scaledWidth = imgWidth * ratio * 0.264583 * 1;
+        const scaledHeight = imgHeight * ratio * 0.264583 * 1;
+        const x = (pdfWidth - scaledWidth) / 2;
+        const y = (pdfHeight - scaledHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
+        pdf.save(`qr-menu-${restaurantName}.pdf`);
+      }).catch(err => {
+        document.body.removeChild(element); // Clean up on error
+        console.error('Error al generar el PDF:', err);
+        alert('Error al generar el PDF. Detalles en la consola.');
+      });
+    }).catch(err => {
+      console.error('Error al cargar imágenes:', err);
+      alert(`No se pudieron cargar las imágenes para el PDF: ${err.message}`);
+    });
+  });
+</script>
+{% endblock %}

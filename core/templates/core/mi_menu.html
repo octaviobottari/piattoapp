@@ -1,0 +1,2005 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Mi menu</title>
+{% csrf_token %}
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<style>
+ /* Contenedor general */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem;
+}
+
+/* Títulos */
+h2 {
+    font-size: 1.75rem;
+    font-weight: 600;
+    color: #343a40;
+}
+h3 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #343a40;
+    margin-bottom: 0;
+}
+
+/* Tablas */
+.table {
+    background-color: #ffffff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+}
+.table thead {
+    background-color: #f85c2b;
+    color: #ffffff;
+}
+.table th, .table td {
+    vertical-align: middle;
+    padding: 0.85rem;
+    border-color: #e9ecef;
+    font-size: 0.9rem;
+}
+.table tbody tr:nth-child(even) {
+    background-color: #f8f9fa;
+}
+.table tbody tr:hover {
+    background-color: #e9ecef;
+}
+.table-responsive {
+    margin-bottom: 1.75rem;
+}
+.img-thumbnail {
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    width: 170px;
+    height: 170px;
+    object-fit: cover;
+}
+
+/* Formularios y controles */
+.form-label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #343a40;
+    margin-bottom: 0.3rem;
+}
+.form-control, .form-select {
+    border-radius: 6px;
+    border: 1px solid #ced4da;
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.form-control:focus, .form-select:focus {
+    border-color: #f85c2b;
+    box-shadow: 0 0 0 2px rgba(248, 92, 43, 0.2);
+    outline: none;
+}
+textarea.form-control {
+    resize: vertical;
+    min-height: 80px;
+}
+.form-check-label {
+    font-size: 0.9rem;
+    color: #343a40;
+}
+.form-text {
+    font-size: 0.85rem;
+    color: #6c757d;
+}
+.bg-light:disabled {
+    background-color: #e9ecef !important;
+    opacity: 0.6;
+}
+
+/* Botones */
+.btn {
+    border-radius: 8px;
+    padding: 0.6rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.btn-primary, .btn-success, .btn-danger {
+    background-color: #f85c2b;
+    border: none;
+    color: #ffffff;
+}
+.btn-primary:hover, .btn-success:hover, .btn-danger:hover {
+    background-color: #d94a1f;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.btn-secondary {
+    background-color: #6c757d;
+    border: none;
+    color: #ffffff;
+}
+.btn-secondary:hover {
+    background-color: #5a6268;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+.btn-link {
+    font-size: 0.85rem;
+    color: #f85c2b;
+    text-decoration: none;
+}
+.btn-link:hover {
+    color: #d94a1f;
+    text-decoration: underline;
+}
+
+/* Modales */
+.modal-content {
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+.modal-header {
+    background-color: #f85c2b;
+    color: #ffffff;
+    border-radius: 10px 10px 0 0;
+}
+.modal-body {
+    padding: 1.75rem;
+}
+.modal-footer {
+    padding: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+.modal-dialog-centered {
+    max-width: 600px;
+}
+#massPriceChangeModal .modal-dialog {
+    max-width: 500px;
+}
+.discount-modal .form-select {
+    margin-bottom: 1rem;
+}
+.discount-modal .price-display {
+    font-size: 1rem;
+    margin: 0.75rem 0;
+    color: #343a40;
+}
+
+/* Precios */
+.precio-con-descuento {
+    display: flex;
+    justify-content: center;
+    gap: 0.5rem;
+    align-items: center;
+}
+.precio-con-descuento .precio-original {
+    color: #999999;
+    text-decoration: line-through;
+    font-size: 0.85rem;
+}
+.precio-con-descuento .precio-descuento {
+    color: #f85c2b;
+    font-weight: 600;
+}
+.sin-descuento {
+    color: #343a40;
+    font-weight: 600;
+}
+.original-price {
+    color: #999999;
+    text-decoration: line-through;
+}
+.new-price {
+    color: #f85c2b;
+    font-weight: 600;
+}
+
+/* Íconos de acción */
+.action-icons i, .action-icons a {
+    font-size: 1.2rem;
+    margin: 0 0.5rem;
+    cursor: pointer;
+    transition: color 0.2s ease, transform 0.2s ease;
+}
+.action-icons a {
+    display: inline-block;
+    color: inherit;
+}
+.action-icons i.text-danger, .action-icons a.text-danger {
+    color: #dc3545;
+}
+.action-icons i.text-danger:hover, .action-icons a.text-danger:hover {
+    color: #b02a37;
+    transform: translateY(-3px);
+}
+.action-icons i.text-primary, .action-icons a.text-primary {
+    color: #f85c2b;
+}
+.action-icons i.text-primary:hover, .action-icons a.text-primary:hover {
+    color: #d94a1f;
+    transform: translateY(-3px);
+}
+.action-icons i.text-success, .action-icons a.text-success {
+    color: #f85c2b;
+}
+.action-icons i.text-success:hover, .action-icons a.text-success:hover {
+    color: #d94a1f;
+    transform: translateY(-3px);
+}
+.action-icons i.text-info, .action-icons a.text-info {
+    color: #17a2b8;
+}
+.action-icons i.text-info:hover, .action-icons a.text-info:hover {
+    color: #138496;
+    transform: translateY(-3px);
+}
+.action-icons i.text-warning, .action-icons a.text-warning {
+    color: #f85c2b;
+}
+.action-icons i.text-warning:hover, .action-icons a.text-warning:hover {
+    color: #d94a1f;
+    transform: translateY(-3px);
+}
+
+/* Opciones de productos */
+.opcion-form {
+    transition: all 0.3s ease;
+}
+.opciones-collapse {
+    transition: height 0.3s ease;
+}
+.opciones-list {
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin: 0.5rem 0;
+}
+.opciones-list h6 {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #343a40;
+    margin-bottom: 0.5rem;
+}
+.list-group-flush .list-group-item {
+    background-color: transparent;
+    border: none;
+    padding: 0.5rem 0;
+    font-size: 0.9rem;
+    color: #343a40;
+}
+
+/* Toasts */
+.toast {
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.toast.text-bg-danger {
+    background-color: #dc3545;
+    color: #ffffff;
+}
+.toast-body {
+    font-size: 0.9rem;
+}
+.btn-close-white {
+    filter: invert(1);
+}
+
+/* Badges */
+.badge.bg-success {
+    background-color: #f85c2b !important;
+}
+.badge.bg-danger {
+    background-color: #dc3545;
+}
+
+/* Ganancia negativa */
+.ganancia-negativa {
+    color: #dc3545;
+    font-weight: 600;
+}
+
+/* Alertas */
+.alert-info {
+    background-color: #d1ecf1;
+    color: #0c5460;
+    border-color: #bee5eb;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    padding: 0.75rem 1.25rem;
+}
+
+/* Responsividad */
+@media (max-width: 992px) {
+    .container {
+        padding: 1.5rem 1rem;
+    }
+    .table th, .table td {
+        padding: 0.6rem;
+        font-size: 0.85rem;
+    }
+    .img-thumbnail {
+        width: 120px;
+        height: 120px;
+    }
+    .action-icons i, .action-icons a {
+        font-size: 1rem;
+        margin: 0 0.3rem;
+    }
+    .btn {
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+    .modal-body {
+        padding: 1.25rem;
+    }
+}
+@media (max-width: 768px) {
+    h2 {
+        font-size: 1.5rem;
+    }
+    h3 {
+        font-size: 1.25rem;
+    }
+    .table {
+        font-size: 0.8rem;
+    }
+    .form-control, .form-select {
+        font-size: 0.85rem;
+    }
+    .form-label {
+        font-size: 0.85rem;
+    }
+    .modal-dialog {
+        max-width: 90%;
+    }
+    .d-flex.align-items-center.gap-3 {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 0.5rem;
+    }
+}
+@media (max-width: 576px) {
+    .table-responsive {
+        font-size: 0.75rem;
+    }
+    .img-thumbnail {
+        width: 80px;
+        height: 80px;
+    }
+    .action-icons i, .action-icons a {
+        font-size: 0.9rem;
+    }
+    .precio-con-descuento {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+}
+</style>
+
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+  <div id="toastEliminado" class="toast align-items-center text-bg-danger border-0" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body">Eliminado correctamente.</div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>
+  </div>
+</div>
+<!-- Other toasts (toastDescuento, toastProductoActualizado, etc.) remain unchanged -->
+
+<div class="container mt-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Mi Menú</h2>
+    <div class="d-flex align-items-center gap-3">
+      <div class="d-flex align-items-center">
+        <div class="form-check me-2">
+          <input type="checkbox" class="form-check-input" id="cashDiscountCheckbox" {% if request.user.cash_discount_enabled %}checked{% endif %}>
+          <label class="form-check-label" for="cashDiscountCheckbox">Descuento en Efectivo</label>
+        </div>
+        <select id="cashDiscountPercentage" class="form-select" style="width: 120px;" {% if not request.user.cash_discount_enabled %}disabled{% endif %}>
+          {% for i in percentage_range %}
+            <option value="{{ i }}" {% if request.user.cash_discount_percentage == i %}selected{% endif %}>{{ i }}%</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button class="btn btn-primary me-2" id="changePricesBtn" data-bs-toggle="modal" data-bs-target="#massPriceChangeModal">Cambiar Precios</button>
+      <button class="btn btn-danger me-2" id="deleteSelectedBtn">Eliminar Seleccionados</button>
+      <button class="btn btn-success me-2" data-bs-toggle="modal" data-bs-target="#nuevoProductoModal">+ Producto Rápido</button>
+      <button class="btn btn-secondary" data-bs-toggle="modal" data-bs-target="#nuevaCategoriaModal">+ Categoría</button>
+    </div>
+  </div>
+
+  {% if categorias %}
+    {% for categoria in categorias %}
+      <div class="d-flex align-items-center mt-4">
+        <h3 class="text-decoration-underline mb-0">{{ categoria.nombre }}</h3>
+        <button type="button" class="btn btn-sm btn-danger ms-2" data-bs-toggle="modal" data-bs-target="#confirmarEliminarCategoria{{ categoria.id }}">✕</button>
+        <button class="btn btn-sm btn-primary ms-1" data-bs-toggle="modal" data-bs-target="#editarCategoriaModal{{ categoria.id }}">✎</button>
+      </div>
+
+      <!-- Category deletion and edit modals unchanged -->
+      <div class="modal fade" id="confirmarEliminarCategoria{{ categoria.id }}" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content">
+            <form method="POST" action="{% url 'eliminar_categoria' categoria.id %}">
+              {% csrf_token %}
+              <div class="modal-header">
+                <h5 class="modal-title">¿Estás seguro?</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                Esta acción eliminará la categoría <strong>{{ categoria.nombre }}</strong> y moverá sus productos a "Sin categoría".
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-danger" onclick="mostrarToast('toastEliminado')">Eliminar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal fade" id="editarCategoriaModal{{ categoria.id }}" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <form method="POST" action="{% url 'editar_categoria' categoria.id %}" enctype="multipart/form-data">
+              {% csrf_token %}
+              <div class="modal-header">
+                <h5 class="modal-title">Editar Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label for="nombreCategoria{{ categoria.id }}" class="form-label">Nombre</label>
+                  <input type="text" name="nombre" id="nombreCategoria{{ categoria.id }}" class="form-control" value="{{ categoria.nombre }}" required>
+                </div>
+                <div class="mb-3">
+                  <label for="bannerCategoria{{ categoria.id }}" class="form-label">Banner (1161 x 226 px recomendado)</label>
+                  <input type="file" name="banner" id="bannerCategoria{{ categoria.id }}" class="form-control">
+                  {% if categoria.banner %}
+                    <p class="mt-2">Banner actual:</p>
+                    <img src="{{ categoria.banner.url }}" alt="Banner de {{ categoria.nombre }}" class="img-fluid" style="max-width: 100%; height: auto;">
+                    <div class="form-check mt-2">
+                      <input type="checkbox" name="eliminar_banner" class="form-check-input" id="eliminarBanner{{ categoria.id }}">
+                      <label class="form-check-label" for="eliminarBanner{{ categoria.id }}">Eliminar banner actual</label>
+                    </div>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="modal-footer">
+                <button type="submit" class="btn btn-success">Guardar</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      {% if categoria.producto_set.all %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle text-center shadow-sm border rounded mt-3">
+            <thead class="table-dark">
+              <tr>
+                <th scope="col"><input type="checkbox" class="form-check-input select-all-checkbox" data-categoria-id="{{ categoria.id }}"></th>
+                <th scope="col">Imagen</th>
+                <th scope="col">Nombre</th>
+                <th scope="col">Descripción</th>
+                <th scope="col">Precio</th>
+                <th scope="col">Costo</th>
+                <th scope="col">Ganancia Bruta</th>
+                <th scope="col">Stock</th>
+                <th scope="col">Estado</th>
+                <th scope="col">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for producto in categoria.producto_set.all %}
+                <tr data-product-id="{{ producto.id }}" data-precio-original="{{ producto.precio_original|default:producto.precio }}" data-descuento="{{ producto.discount_percentage }}">
+                  <td>
+                    <input type="checkbox" class="form-check-input product-checkbox" data-product-id="{{ producto.id }}" data-categoria-id="{{ categoria.id }}">
+                  </td>
+                  <td>
+                    {% if producto.imagen %}
+                      <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="img-thumbnail" style="width:170px; height:170px; object-fit: cover;">
+                    {% else %}
+                      <img src="https://via.placeholder.com/170.png?text=Sin+Imagen" class="img-thumbnail" style="width:170px; height:170px; object-fit: cover;">
+                    {% endif %}
+                  </td>
+                  <td class="fw-bold">
+                    {{ producto.nombre }}
+                    {% if producto.es_nuevo %}
+                      <span class="badge bg-success ms-2">Nuevo</span>
+                    {% endif %}
+                    {% if producto.opcion_categorias.exists %}
+                      <br>
+                      <button class="btn btn-link btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#opcionesProducto{{ producto.id }}" aria-expanded="false" aria-controls="opcionesProducto{{ producto.id }}">
+                        Ver Opciones
+                      </button>
+                    {% endif %}
+                  </td>
+                  <td style="max-width: 300px;">{{ producto.descripcion }}</td>
+                  <td class="fw-semibold precio-producto">
+                    {% if producto.tiene_descuento %}
+                      <div class="precio-con-descuento">
+                        <span class="precio-original">${{ producto.precio_original|floatformat:2 }}</span>
+                        <span class="precio-descuento">${{ producto.precio|floatformat:2 }}</span>
+                      </div>
+                    {% else %}
+                      <span class="sin-descuento">${{ producto.precio|floatformat:2 }}</span>
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if producto.costo_produccion %}
+                      ${{ producto.costo_produccion|floatformat:2 }}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                  <td class="ganancia-bruta">
+                    {% if producto.ganancia_bruta is not None %}
+                      {% if producto.ganancia_bruta < 0 %}
+                        <span class="ganancia-negativa">-${{ producto.ganancia_bruta_abs|floatformat:2 }}</span>
+                      {% else %}
+                        ${{ producto.ganancia_bruta|floatformat:2 }}
+                      {% endif %}
+                    {% else %}
+                      -
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if producto.stock is not None %}
+                      {{ producto.stock }} {% if producto.agotado %}(Agotado){% endif %}
+                    {% else %}
+                      Sin límite
+                    {% endif %}
+                  </td>
+                  <td>
+                    {% if producto.disponible %}
+                      Disponible
+                    {% else %}
+                      No disponible
+                    {% endif %}
+                  </td>
+                  <td class="action-icons">
+                    <i class="fa-solid fa-trash text-danger" data-bs-toggle="modal" data-bs-target="#confirmarEliminarProducto{{ producto.id }}" title="Eliminar"></i>
+                    <i class="fa-solid fa-pencil text-primary" data-bs-toggle="modal" data-bs-target="#editarProductoModal{{ producto.id }}" title="Editar"></i>
+                    <a href="{% url 'clonar_producto' producto.id %}" class="text-success" title="Clonar"><i class="fa-solid fa-clone"></i></a>
+                    <a href="{% url 'gestionar_opciones_producto' producto.id %}" class="text-info" title="Opciones"><i class="fa-solid fa-square-plus"></i></a>
+                    <i class="fa-solid fa-percent text-warning" data-bs-toggle="modal" data-bs-target="#descuentoProductoModal{{ producto.id }}" title="Descuento"></i>
+                  </td>
+                </tr>
+                {% if producto.opcion_categorias.exists %}
+                  <tr>
+                    <td colspan="10" class="p-0">
+                      <div class="collapse opciones-collapse" id="opcionesProducto{{ producto.id }}">
+                        <div class="opciones-list">
+                          <h6>Categorías de Opciones:</h6>
+                          {% for categoria_opcion in producto.opcion_categorias.all %}
+                            <h6>{{ categoria_opcion.nombre }} (Máx. {{ categoria_opcion.max_selecciones }})</h6>
+                            <ul class="list-group list-group-flush">
+                              {% for opcion in categoria_opcion.opciones.all %}
+                                <li class="list-group-item d-flex justify-content-between align-items-center">
+                                  <span>{{ opcion.nombre }} {% if opcion.descripcion %}({{ opcion.descripcion }}){% endif %}</span>
+                                  <span>
+                                    {% if opcion.tiene_descuento and opcion.precio_adicional_original %}
+                                      <span class="precio-con-descuento">
+                                        <span class="precio-original">+${{ opcion.precio_adicional_original|floatformat:2 }}</span>
+                                        <span class="precio-descuento">+${{ opcion.precio_adicional|floatformat:2 }}</span>
+                                      </span>
+                                    {% else %}
+                                      <span class="sin-descuento">+${{ opcion.precio_adicional|floatformat:2 }}</span>
+                                    {% endif %}
+                                    {% if opcion.agotado %}
+                                      <span class="badge bg-danger ms-2">Agotado</span>
+                                    {% endif %}
+                                  </span>
+                                </li>
+                              {% endfor %}
+                            </ul>
+                          {% endfor %}
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                {% endif %}
+
+                <!-- Product deletion modal unchanged -->
+                <div class="modal fade" id="confirmarEliminarProducto{{ producto.id }}" tabindex="-1">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <form method="POST" action="{% url 'eliminar_producto' producto.id %}">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                          <h5 class="modal-title">¿Eliminar producto?</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                          El producto <strong>{{ producto.nombre }}</strong> será eliminado permanentemente.
+                        </div>
+                        <div class="modal-footer">
+                          <button type="submit" class="btn btn-danger" onclick="mostrarToast('toastEliminado')">Eliminar</button>
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Edit product modal -->
+                <div class="modal fade" id="editarProductoModal{{ producto.id }}" tabindex="-1">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <form method="POST" enctype="multipart/form-data" action="{% url 'editar_producto' producto.id %}" class="edit-product-form" data-product-id="{{ producto.id }}">
+                        {% csrf_token %}
+                        <div class="modal-header">
+                          <h5 class="modal-title">Editar Producto (ID: {{ producto.id }})</h5>
+                          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                          <div class="mb-3">
+                            <label class="form-label">Nombre</label>
+                            <input type="text" name="nombre" class="form-control" value="{{ producto.nombre|default_if_none:'' }}" required>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Descripción</label>
+                            <textarea name="descripcion" class="form-control">{{ producto.descripcion|default_if_none:'' }}</textarea>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Precio</label>
+                            <input type="text" name="precio" class="form-control precio-input" inputmode="decimal" value="{% if producto.tiene_descuento %}{{ producto.precio_original|floatformat:2 }}{% else %}{{ producto.precio|floatformat:2 }}{% endif %}" required>
+                            {% if producto.tiene_descuento %}
+                              <small class="form-text text-muted">Precio actual con descuento: ${{ producto.precio|floatformat:2 }}</small>
+                            {% endif %}
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Costo de Producción (opcional)</label>
+                            <input type="text" name="costo_produccion" class="form-control precio-input" inputmode="decimal" value="{{ producto.costo_produccion|default:'0,00'|floatformat:2 }}">
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Stock (vacío para sin límite)</label>
+                            <input type="number" name="stock" class="form-control" value="{{ producto.stock|default_if_none:'' }}">
+                          </div>
+                          <div class="mb-3 form-check">
+                            <input type="checkbox" name="agotado" class="form-check-input" {% if producto.agotado %}checked{% endif %}>
+                            <label class="form-check-label">Agotado</label>
+                          </div>
+                          <div class="mb-3 form-check">
+                            <input type="checkbox" name="disponible" class="form-check-input" {% if producto.disponible %}checked{% endif %}>
+                            <label class="form-check-label">Disponible</label>
+                          </div>
+                          <div class="mb-3 form-check">
+                            <input type="checkbox" name="es_nuevo" class="form-check-input" {% if producto.es_nuevo %}checked{% endif %}>
+                            <label class="form-check-label">Nuevo</label>
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Categoría</label>
+                            <select name="categoria" class="form-control" id="id_categoria_{{ producto.id }}">
+                              <option value="">Sin categoría</option>
+                              {% for cat in categorias %}
+                                <option value="{{ cat.id }}" {% if producto.categoria == cat %}selected{% endif %}>{{ cat.nombre }}</option>
+                              {% endfor %}
+                            </select>
+                          </div>
+                          <div class="mb-3" id="nuevaCategoriaContainer{{ producto.id }}">
+                            <label class="form-label">O crear nueva categoría</label>
+                            <input type="text" name="nueva_categoria" class="form-control" id="id_nueva_categoria_{{ producto.id }}">
+                          </div>
+                          <div class="mb-3">
+                            <label class="form-label">Imagen</label>
+                            <input type="file" name="imagen" class="form-control">
+                          </div>
+                        </div>
+                        <div class="modal-footer">
+                          <button type="submit" class="btn btn-success">Guardar</button>
+                          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        </div>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Discount modal -->
+                <div class="modal fade discount-modal" id="descuentoProductoModal{{ producto.id }}" tabindex="-1">
+                  <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                      <div class="modal-header">
+                        <h5 class="modal-title">Aplicar Descuento a {{ producto.nombre }}</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                      </div>
+                      <div class="modal-body">
+                        <label for="porcentajeDescuento{{ producto.id }}" class="form-label">Seleccionar Descuento (%):</label>
+                        <select id="porcentajeDescuento{{ producto.id }}" class="form-select">
+                          <option value="0">Sin descuento</option>
+                          <option value="5">5%</option>
+                          <option value="10">10%</option>
+                          <option value="15">15%</option>
+                          <option value="20">20%</option>
+                          <option value="25">25%</option>
+                          <option value="30">30%</option>
+                          <option value="35">35%</option>
+                          <option value="40">40%</option>
+                          <option value="45">45%</option>
+                          <option value="50">50%</option>
+                          <option value="55">55%</option>
+                          <option value="60">60%</option>
+                          <option value="65">65%</option>
+                          <option value="70">70%</option>
+                          <option value="75">75%</option>
+                          <option value="80">80%</option>
+                          <option value="85">85%</option>
+                          <option value="90">90%</option>
+                        </select>
+                        <div class="price-display">
+                          <p>Precio Original: <span class="original-price">${{ producto.precio_original|default:producto.precio|floatformat:2 }}</span></p>
+                          <p>Precio con Descuento: <span class="new-price" id="nuevoPrecio{{ producto.id }}">-</span></p>
+                        </div>
+                      </div>
+                      <div class="modal-footer">
+                        <button type="button" class="btn btn-primary aplicar-descuento-btn" data-product-id="{{ producto.id }}">Aplicar Descuento</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="text-muted">No hay productos en esta categoría.</p>
+      {% endif %}
+    {% endfor %}
+  {% else %}
+    <div class="alert alert-info" role="alert">
+      No cargaste ningún producto ni categoría todavía.
+    </div>
+  {% endif %}
+
+  <!-- Products without category section unchanged, but update price formatting -->
+  {% if productos_sin_categoria %}
+    <h3 class="text-decoration-underline mt-4">Sin Categoría</h3>
+    <div class="table-responsive">
+      <table class="table table-hover align-middle text-center shadow-sm border rounded mt-3">
+        <thead class="table-dark">
+          <tr>
+            <th scope="col"><input type="checkbox" class="form-check-input select-all-checkbox" data-categoria-id="sin-categoria"></th>
+            <th scope="col">Imagen</th>
+            <th scope="col">Nombre</th>
+            <th scope="col">Descripción</th>
+            <th scope="col">Precio</th>
+            <th scope="col">Costo</th>
+            <th scope="col">Ganancia Bruta</th>
+            <th scope="col">Stock</th>
+            <th scope="col">Estado</th>
+            <th scope="col">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for producto in productos_sin_categoria %}
+            <tr data-product-id="{{ producto.id }}" data-precio-original="{{ producto.precio_original|default:producto.precio }}" data-descuento="{{ producto.discount_percentage }}">
+              <td>
+                <input type="checkbox" class="form-check-input product-checkbox" data-product-id="{{ producto.id }}" data-categoria-id="sin-categoria">
+              </td>
+              <td>
+                {% if producto.imagen %}
+                  <img src="{{ producto.imagen.url }}" alt="{{ producto.nombre }}" class="img-thumbnail" style="width:170px; height:170px; object-fit: cover;">
+                {% else %}
+                  <img src="https://via.placeholder.com/170.png?text=Sin+Imagen" class="img-thumbnail" style="width:170px; height:170px; object-fit: cover;">
+                {% endif %}
+              </td>
+              <td class="fw-bold">
+                {{ producto.nombre }}
+                {% if producto.es_nuevo %}
+                  <span class="badge bg-success ms-2">Nuevo</span>
+                {% endif %}
+                {% if producto.opcion_categorias.exists %}
+                  <br>
+                  <button class="btn btn-link btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#opcionesProducto{{ producto.id }}" aria-expanded="false" aria-controls="opcionesProducto{{ producto.id }}">
+                    Ver Opciones
+                  </button>
+                {% endif %}
+              </td>
+              <td style="max-width: 300px;">{{ producto.descripcion }}</td>
+              <td class="fw-semibold precio-producto">
+                {% if producto.tiene_descuento %}
+                  <div class="precio-con-descuento">
+                    <span class="precio-original">${{ producto.precio_original|floatformat:2 }}</span>
+                    <span class="precio-descuento">${{ producto.precio|floatformat:2 }}</span>
+                  </div>
+                {% else %}
+                  <span class="sin-descuento">${{ producto.precio|floatformat:2 }}</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if producto.costo_produccion %}
+                  ${{ producto.costo_produccion|floatformat:2 }}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td class="ganancia-bruta">
+                {% if producto.ganancia_bruta is not None %}
+                  {% if producto.ganancia_bruta < 0 %}
+                    <span class="ganancia-negativa">-${{ producto.ganancia_bruta_abs|floatformat:2 }}</span>
+                  {% else %}
+                    ${{ producto.ganancia_bruta|floatformat:2 }}
+                  {% endif %}
+                {% else %}
+                  -
+                {% endif %}
+              </td>
+              <td>
+                {% if producto.stock is not None %}
+                  {{ producto.stock }} {% if producto.agotado %}(Agotado){% endif %}
+                {% else %}
+                  Sin límite
+                {% endif %}
+              </td>
+              <td>
+                {% if producto.disponible %}
+                  Disponible
+                {% else %}
+                  No disponible
+                {% endif %}
+              </td>
+              <td class="action-icons">
+                <i class="fa-solid fa-trash text-danger" data-bs-toggle="modal" data-bs-target="#confirmarEliminarProducto{{ producto.id }}" title="Eliminar"></i>
+                <i class="fa-solid fa-pencil text-primary" data-bs-toggle="modal" data-bs-target="#editarProductoModal{{ producto.id }}" title="Editar"></i>
+                <a href="{% url 'clonar_producto' producto.id %}" class="text-success" title="Clonar"><i class="fa-solid fa-clone"></i></a>
+                <a href="{% url 'gestionar_opciones_producto' producto.id %}" class="text-info" title="Opciones"><i class="fa-solid fa-square-plus"></i></a>
+                <i class="fa-solid fa-percent text-warning" data-bs-toggle="modal" data-bs-target="#descuentoProductoModal{{ producto.id }}" title="Descuento"></i>
+              </td>
+            </tr>
+            {% if producto.opcion_categorias.exists %}
+              <tr>
+                <td colspan="10" class="p-0">
+                  <div class="collapse opciones-collapse" id="opcionesProducto{{ producto.id }}">
+                    <div class="opciones-list">
+                      <h6>Categorías de Opciones:</h6>
+                      {% for categoria_opcion in producto.opcion_categorias.all %}
+                        <h6>{{ categoria_opcion.nombre }} (Máx. {{ categoria_opcion.max_selecciones }})</h6>
+                        <ul class="list-group list-group-flush">
+                          {% for opcion in categoria_opcion.opciones.all %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                              <span>{{ opcion.nombre }} {% if opcion.descripcion %}({{ opcion.descripcion }}){% endif %}</span>
+                              <span>
+                                {% if opcion.tiene_descuento and opcion.precio_adicional_original %}
+                                  <span class="precio-con-descuento">
+                                    <span class="precio-original">+${{ opcion.precio_adicional_original|floatformat:2 }}</span>
+                                    <span class="precio-descuento">+${{ opcion.precio_adicional|floatformat:2 }}</span>
+                                  </span>
+                                {% else %}
+                                  <span class="sin-descuento">+${{ opcion.precio_adicional|floatformat:2 }}</span>
+                                {% endif %}
+                                {% if opcion.agotado %}
+                                  <span class="badge bg-danger ms-2">Agotado</span>
+                                {% endif %}
+                              </span>
+                            </li>
+                          {% endfor %}
+                        </ul>
+                      {% endfor %}
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            {% endif %}
+
+            <!-- Product deletion, edit, and discount modals unchanged -->
+            <div class="modal fade" id="confirmarEliminarProducto{{ producto.id }}" tabindex="-1">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <form method="POST" action="{% url 'eliminar_producto' producto.id %}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                      <h5 class="modal-title">¿Eliminar producto?</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      El producto <strong>{{ producto.nombre }}</strong> será eliminado permanentemente.
+                    </div>
+                    <div class="modal-footer">
+                      <button type="submit" class="btn btn-danger" onclick="mostrarToast('toastEliminado')">Eliminar</button>
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal fade" id="editarProductoModal{{ producto.id }}" tabindex="-1">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <form method="POST" enctype="multipart/form-data" action="{% url 'editar_producto' producto.id %}" class="edit-product-form" data-product-id="{{ producto.id }}">
+                    {% csrf_token %}
+                    <div class="modal-header">
+                      <h5 class="modal-title">Editar Producto (ID: {{ producto.id }})</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                      <div class="mb-3">
+                        <label class="form-label">Nombre</label>
+                        <input type="text" name="nombre" class="form-control" value="{{ producto.nombre|default_if_none:'' }}" required>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Descripción</label>
+                        <textarea name="descripcion" class="form-control">{{ producto.descripcion|default_if_none:'' }}</textarea>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Precio</label>
+                        <input type="text" name="precio" class="form-control precio-input" inputmode="decimal" value="{% if producto.tiene_descuento %}{{ producto.precio_original|floatformat:2 }}{% else %}{{ producto.precio|floatformat:2 }}{% endif %}" required>
+                        {% if producto.tiene_descuento %}
+                          <small class="form-text text-muted">Precio actual con descuento: ${{ producto.precio|floatformat:2 }}</small>
+                        {% endif %}
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Costo de Producción (opcional)</label>
+                        <input type="text" name="costo_produccion" class="form-control precio-input" inputmode="decimal" value="{{ producto.costo_produccion|default:'0,00'|floatformat:2 }}">
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Stock (vacío para sin límite)</label>
+                        <input type="number" name="stock" class="form-control" value="{{ producto.stock|default_if_none:'' }}">
+                      </div>
+                      <div class="mb-3 form-check">
+                        <input type="checkbox" name="agotado" class="form-check-input" {% if producto.agotado %}checked{% endif %}>
+                        <label class="form-check-label">Agotado</label>
+                      </div>
+                      <div class="mb-3 form-check">
+                        <input type="checkbox" name="disponible" class="form-check-input" {% if producto.disponible %}checked{% endif %}>
+                        <label class="form-check-label">Disponible</label>
+                      </div>
+                      <div class="mb-3 form-check">
+                        <input type="checkbox" name="es_nuevo" class="form-check-input" {% if producto.es_nuevo %}checked{% endif %}>
+                        <label class="form-check-label">Nuevo</label>
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Categoría</label>
+                        <select name="categoria" class="form-control" id="id_categoria_{{ producto.id }}">
+                          <option value="">Sin categoría</option>
+                          {% for cat in categorias %}
+                            <option value="{{ cat.id }}" {% if producto.categoria == cat %}selected{% endif %}>{{ cat.nombre }}</option>
+                          {% endfor %}
+                        </select>
+                      </div>
+                      <div class="mb-3" id="nuevaCategoriaContainer{{ producto.id }}">
+                        <label class="form-label">O crear nueva categoría</label>
+                        <input type="text" name="nueva_categoria" class="form-control" id="id_nueva_categoria_{{ producto.id }}">
+                      </div>
+                      <div class="mb-3">
+                        <label class="form-label">Imagen</label>
+                        <input type="file" name="imagen" class="form-control">
+                      </div>
+                    </div>
+                    <div class="modal-footer">
+                      <button type="submit" class="btn btn-success">Guardar</button>
+                      <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <div class="modal fade discount-modal" id="descuentoProductoModal{{ producto.id }}" tabindex="-1">
+              <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title">Aplicar Descuento a {{ producto.nombre }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                  </div>
+                  <div class="modal-body">
+                    <label for="porcentajeDescuento{{ producto.id }}" class="form-label">Seleccionar Descuento (%):</label>
+                    <select id="porcentajeDescuento{{ producto.id }}" class="form-select">
+                      <option value="0">Sin descuento</option>
+                      <option value="5">5%</option>
+                      <option value="10">10%</option>
+                      <option value="15">15%</option>
+                      <option value="20">20%</option>
+                      <option value="25">25%</option>
+                      <option value="30">30%</option>
+                      <option value="35">35%</option>
+                      <option value="40">40%</option>
+                      <option value="45">45%</option>
+                      <option value="50">50%</option>
+                      <option value="55">55%</option>
+                      <option value="60">60%</option>
+                      <option value="65">65%</option>
+                      <option value="70">70%</option>
+                      <option value="75">75%</option>
+                      <option value="80">80%</option>
+                      <option value="85">85%</option>
+                      <option value="90">90%</option>
+                    </select>
+                    <div class="price-display">
+                      <p>Precio Original: <span class="original-price">${{ producto.precio_original|default:producto.precio|floatformat:2 }}</span></p>
+                      <p>Precio con Descuento: <span class="new-price" id="nuevoPrecio{{ producto.id }}">-</span></p>
+                    </div>
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-primary aplicar-descuento-btn" data-product-id="{{ producto.id }}">Aplicar Descuento</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+  <!-- New category modal unchanged -->
+  <div class="modal fade" id="nuevaCategoriaModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form method="POST" action="{% url 'agregar_categoria' %}" enctype="multipart/form-data">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title">Nueva Categoría</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label for="nombre_categoria" class="form-label">Nombre de la Categoría</label>
+              <input type="text" name="nueva_categoria" id="nombre_categoria" class="form-control" required>
+            </div>
+            <div class="mb-3">
+              <label for="banner_categoria" class="form-label">Banner (1161 x 226 px recomendado)</label>
+              <input type="file" name="banner" id="banner_categoria" class="form-control">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success">Crear</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- New product modal -->
+  <div class="modal fade" id="nuevoProductoModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <form method="POST" enctype="multipart/form-data" action="{% url 'agregar_producto' %}">
+          {% csrf_token %}
+          <div class="modal-header">
+            <h5 class="modal-title">Agregar Nuevo Producto Rápido</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+          </div>
+          <div class="modal-body">
+            <div class="mb-3">
+              <label class="form-label">Categoría</label>
+              {{ form.categoria }}
+            </div>
+            <div class="mb-3" id="nuevaCategoriaContainer">
+              <label for="id_nueva_categoria" class="form-label">O crear nueva categoría</label>
+              {{ form.nueva_categoria }}
+            </div>
+            <div class="mb-3" id="bannerContainer" style="display: none;">
+              <label for="id_banner" class="form-label">Banner (1161 x 226 px recomendado)</label>
+              {{ form.banner }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Nombre</label>
+              {{ form.nombre }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Descripción</label>
+              {{ form.descripcion }}
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Precio</label>
+              <input type="text" name="precio" class="form-control precio-input" inputmode="decimal" value="{{ form.precio.value|default:'0,00'|floatformat:2 }}" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Costo de Producción (opcional)</label>
+              <input type="text" name="costo_produccion" class="form-control precio-input" inputmode="decimal" value="{{ form.costo_produccion.value|default:'0,00'|floatformat:2 }}">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Stock (vacío para sin límite)</label>
+              {{ form.stock }}
+            </div>
+            <div class="mb-3 form-check">
+              {{ form.disponible }}
+              <label class="form-check-label">Disponible</label>
+            </div>
+            <div class="mb-3 form-check">
+              {{ form.es_nuevo }}
+              <label class="form-check-label">Nuevo</label>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Imagen</label>
+              {{ form.imagen }}
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="submit" class="btn btn-success">Agregar</button>
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mass price change modal unchanged -->
+  <div class="modal fade" id="massPriceChangeModal" tabindex="-1" aria-labelledby="massPriceChangeModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="massPriceChangeModalLabel">Cambiar Precios Masivamente</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <form id="massPriceChangeForm">
+            <div class="mb-3">
+              <label for="massDiscountPercentage" class="form-label">Porcentaje de Descuento (%):</label>
+              <select id="massDiscountPercentage" class="form-select">
+                <option value="0">Sin descuento</option>
+                <option value="5">5%</option>
+                <option value="10">10%</option>
+                <option value="15">15%</option>
+                <option value="20">20%</option>
+                <option value="25">25%</option>
+                <option value="30">30%</option>
+                <option value="35">35%</option>
+                <option value="40">40%</option>
+                <option value="45">45%</option>
+                <option value="50">50%</option>
+                <option value="55">55%</option>
+                <option value="60">60%</option>
+                <option value="65">65%</option>
+                <option value="70">70%</option>
+                <option value="75">75%</option>
+                <option value="80">80%</option>
+                <option value="85">85%</option>
+                <option value="90">90%</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label for="massFixedPrice" class="form-label">Precio Fijo (opcional):</label>
+              <input type="text" id="massFixedPrice" class="form-control precio-input" inputmode="decimal" placeholder="Ej. 1500,00">
+            </div>
+            <div class="mb-3">
+              <label for="massFixedCost" class="form-label">Costo Fijo (opcional):</label>
+              <input type="text" id="massFixedCost" class="form-control precio-input" inputmode="decimal" placeholder="Ej. 500,00">
+            </div>
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" id="applyMassPriceChangeBtn">Aplicar Cambios</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+function getCsrfToken() {
+  const csrfInput = document.querySelector('input[name="csrfmiddlewaretoken"]');
+  if (!csrfInput) {
+    console.error('CSRF token not found in the document');
+    return null;
+  }
+  return csrfInput.value;
+}
+
+function mostrarToast(toastId) {
+  const toastElement = document.getElementById(toastId);
+  if (toastElement) {
+    const toast = new bootstrap.Toast(toastElement);
+    toast.show();
+  } else {
+    console.error(`Toast element with ID ${toastId} not found`);
+  }
+}
+
+function normalizeDecimal(value) {
+  if (typeof value === 'string') {
+    return value.replace(',', '.').replace(/[^0-9.]/g, '');
+  }
+  return value;
+}
+
+function formatDecimal(value) {
+  if (isNaN(value) || value === '') return '0,00';
+  return parseFloat(value).toLocaleString('es-AR', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+    useGrouping: false
+  });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  // Focus handling for modals
+  document.querySelectorAll('.modal').forEach(function(modal) {
+    modal.addEventListener('hidden.bs.modal', function(event) {
+      const triggerElement = document.activeElement;
+      if (triggerElement && triggerElement.dataset.bsToggle === 'modal') {
+        triggerElement.focus();
+      }
+    });
+  });
+
+  // Initialize price inputs
+  document.querySelectorAll('.precio-input').forEach(function(input) {
+    if (input.value) {
+      input.value = formatDecimal(normalizeDecimal(input.value));
+    }
+
+    input.addEventListener('input', function(e) {
+      let value = this.value.replace(/[^0-9,]/g, '');
+      let commaCount = (value.match(/,/g) || []).length;
+
+      if (commaCount > 1) {
+        value = value.substring(0, value.lastIndexOf(','));
+      }
+
+      if (value.includes(',')) {
+        const parts = value.split(',');
+        if (parts[1].length > 2) {
+          parts[1] = parts[1].substring(0, 2);
+          value = parts[0] + ',' + parts[1];
+        }
+      }
+
+      if (value === ',') value = '0,';
+      if (value.startsWith('0') && !value.startsWith('0,') && value.length > 1) {
+        value = value.substring(1);
+      }
+
+      this.value = value;
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if (['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab'].includes(e.key)) {
+        return;
+      }
+
+      if (e.key.length === 1 && !/[\d,]/.test(e.key)) {
+        e.preventDefault();
+        return;
+      }
+
+      const value = this.value;
+      const selectionStart = this.selectionStart;
+      const hasComma = value.includes(',');
+
+      if (e.key === ',' && hasComma) {
+        e.preventDefault();
+        return;
+      }
+
+      if (hasComma && /[\d]/.test(e.key)) {
+        const decimals = value.split(',')[1];
+        if (decimals && decimals.length >= 2 && selectionStart > value.indexOf(',')) {
+          e.preventDefault();
+        }
+      }
+    });
+
+    input.addEventListener('paste', function(e) {
+      e.preventDefault();
+      let pasteData = (e.clipboardData || window.clipboardData).getData('text');
+      pasteData = pasteData.replace(/[^0-9,]/g, '');
+      let commaCount = (pasteData.match(/,/g) || []).length;
+
+      if (commaCount > 1) {
+        pasteData = pasteData.substring(0, pasteData.lastIndexOf(',')) + pasteData.substring(pasteData.lastIndexOf(',') + 1);
+      }
+
+      if (pasteData.includes(',')) {
+        const parts = pasteData.split(',');
+        if (parts[1].length > 2) {
+          parts[1] = parts[1].substring(0, 2);
+          pasteData = parts[0] + ',' + parts[1];
+        }
+      }
+
+      if (pasteData === ',') pasteData = '0,';
+      if (pasteData.startsWith('0') && !pasteData.startsWith('0,') && pasteData.length > 1) {
+        pasteData = pasteData.substring(1);
+      }
+
+      const start = this.selectionStart;
+      const end = this.selectionEnd;
+      const textBefore = this.value.substring(0, start);
+      const textAfter = this.value.substring(end);
+      this.value = textBefore + pasteData + textAfter;
+      this.selectionStart = this.selectionEnd = start + pasteData.length;
+    });
+
+    input.addEventListener('change', function(e) {
+      this.value = formatDecimal(normalizeDecimal(this.value));
+    });
+  });
+
+  // Mass price change modal handling
+  const massDiscountPercentage = document.getElementById('massDiscountPercentage');
+  const massFixedPrice = document.getElementById('massFixedPrice');
+  const massFixedCost = document.getElementById('massFixedCost');
+
+  function updateMassPriceInputs() {
+    if (massDiscountPercentage.value !== '0') {
+      massFixedPrice.disabled = true;
+      massFixedCost.disabled = true;
+      massFixedPrice.classList.add('bg-light');
+      massFixedCost.classList.add('bg-light');
+    } else {
+      massFixedPrice.disabled = false;
+      massFixedCost.disabled = false;
+      massFixedPrice.classList.remove('bg-light');
+      massFixedCost.classList.remove('bg-light');
+    }
+  }
+
+  function updateDiscountSelect() {
+    if (massFixedPrice.value || massFixedCost.value) {
+      massDiscountPercentage.disabled = true;
+      massDiscountPercentage.classList.add('bg-light');
+    } else {
+      massDiscountPercentage.disabled = false;
+      massDiscountPercentage.classList.remove('bg-light');
+    }
+  }
+
+  if (massDiscountPercentage && massFixedPrice && massFixedCost) {
+    // Initial state
+    updateMassPriceInputs();
+    updateDiscountSelect();
+
+    // Handle discount percentage change
+    massDiscountPercentage.addEventListener('change', function() {
+      updateMassPriceInputs();
+      if (this.value !== '0') {
+        massFixedPrice.value = '';
+        massFixedCost.value = '';
+      }
+    });
+
+    // Handle fixed price or cost input
+    [massFixedPrice, massFixedCost].forEach(function(input) {
+      input.addEventListener('input', function() {
+        updateDiscountSelect();
+        if (this.value) {
+          massDiscountPercentage.value = '0';
+        }
+      });
+    });
+  }
+
+  // Form submission handling
+  document.querySelectorAll('.edit-product-form, #nuevoProductoModal form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      const precioInputs = form.querySelectorAll('.precio-input');
+      precioInputs.forEach(function(input) {
+        if (input.value) {
+          input.value = normalizeDecimal(input.value);
+        }
+      });
+
+      const stockInput = form.querySelector('input[name="stock"]');
+      if (stockInput && stockInput.value) {
+        stockInput.value = stockInput.value.replace(/[^0-9]/g, '');
+      }
+    });
+  });
+
+  // Restrict stock to integers
+  document.querySelectorAll('input[name="stock"]').forEach(function(input) {
+    input.addEventListener('input', function(e) {
+      this.value = this.value.replace(/[^0-9]/g, '');
+    });
+
+    input.addEventListener('keydown', function(e) {
+      if ((e.key.length === 1 && !/[\d]/.test(e.key)) || e.key === '.' || e.key === ',') {
+        e.preventDefault();
+      }
+    });
+  });
+
+  // Category selection for new product modal
+  const categoriaSelect = document.getElementById('id_categoria');
+  const nuevaCategoriaContainer = document.getElementById('nuevaCategoriaContainer');
+  const bannerContainer = document.getElementById('bannerContainer');
+  const nuevaCategoriaInput = document.getElementById('id_nueva_categoria');
+
+  if (categoriaSelect && nuevaCategoriaContainer && bannerContainer) {
+    if (categoriaSelect.value === '') {
+      nuevaCategoriaContainer.style.display = 'block';
+      bannerContainer.style.display = 'block';
+    } else {
+      nuevaCategoriaContainer.style.display = 'none';
+      bannerContainer.style.display = 'none';
+      nuevaCategoriaInput.value = '';
+    }
+
+    categoriaSelect.addEventListener('change', function() {
+      if (this.value === '') {
+        nuevaCategoriaContainer.style.display = 'block';
+        bannerContainer.style.display = 'block';
+        nuevaCategoriaInput.value = '';
+      } else {
+        nuevaCategoriaContainer.style.display = 'none';
+        bannerContainer.style.display = 'none';
+        nuevaCategoriaInput.value = '';
+      }
+    });
+  }
+
+  // Category selection for edit product modals
+  document.querySelectorAll('.edit-product-form').forEach(function(form) {
+    const productId = form.getAttribute('data-product-id');
+    const categoriaSelect = document.getElementById(`id_categoria_${productId}`);
+    const nuevaCategoriaContainer = document.getElementById(`nuevaCategoriaContainer${productId}`);
+    const nuevaCategoriaInput = document.getElementById(`id_nueva_categoria_${productId}`);
+
+    if (categoriaSelect && nuevaCategoriaContainer && nuevaCategoriaInput) {
+      if (categoriaSelect.value === '') {
+        nuevaCategoriaContainer.style.display = 'block';
+      } else {
+        nuevaCategoriaContainer.style.display = 'none';
+        nuevaCategoriaInput.value = '';
+      }
+
+      categoriaSelect.addEventListener('change', function() {
+        if (this.value === '') {
+          nuevaCategoriaContainer.style.display = 'block';
+          nuevaCategoriaInput.value = '';
+        } else {
+          nuevaCategoriaContainer.style.display = 'none';
+          nuevaCategoriaInput.value = '';
+        }
+      });
+    }
+  });
+
+  // Discount modal price display
+  document.querySelectorAll('.discount-modal select').forEach(function(select) {
+    const productId = select.id.replace('porcentajeDescuento', '');
+    const modal = select.closest('.discount-modal');
+    const originalPriceText = modal.querySelector('.original-price').textContent;
+    const originalPrice = parseFloat(originalPriceText.replace('$', '').replace(',', '.')) || 0;
+    const newPriceElement = document.getElementById(`nuevoPrecio${productId}`);
+
+    select.addEventListener('change', function() {
+      const porcentaje = parseInt(this.value) || 0;
+      if (porcentaje === 0) {
+        newPriceElement.textContent = `$${formatDecimal(originalPrice)}`;
+      } else {
+        const descuento = originalPrice * (porcentaje / 100);
+        const nuevoPrecio = originalPrice - descuento;
+        newPriceElement.textContent = `$${formatDecimal(nuevoPrecio)}`;
+      }
+    });
+  });
+
+  // Initialize discount modal
+  document.querySelectorAll('.discount-modal').forEach(function(modal) {
+    modal.addEventListener('show.bs.modal', function() {
+      const productId = this.id.replace('descuentoProductoModal', '');
+      const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+      let porcentajeDescuento = parseInt(row.getAttribute('data-descuento')) || 0;
+
+      const selectOptions = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90];
+      porcentajeDescuento = selectOptions.reduce((prev, curr) =>
+        Math.abs(curr - porcentajeDescuento) < Math.abs(prev - porcentajeDescuento) ? curr : prev
+      );
+
+      const select = document.getElementById(`porcentajeDescuento${productId}`);
+      select.value = porcentajeDescuento;
+
+      const originalPriceSpan = modal.querySelector('.original-price');
+      let originalPrice = parseFloat(row.getAttribute('data-precio-original').replace(',', '.')) || 0;
+      if (isNaN(originalPrice)) {
+        originalPrice = parseFloat(row.querySelector('.precio-producto').textContent.replace('$', '').replace(',', '.')) || 0;
+      }
+      originalPriceSpan.textContent = `$${formatDecimal(originalPrice)}`;
+
+      const event = new Event('change');
+      select.dispatchEvent(event);
+    });
+  });
+
+  // Apply discount
+  document.querySelectorAll('.aplicar-descuento-btn').forEach(function(button) {
+    button.addEventListener('click', function() {
+      const productId = this.getAttribute('data-product-id');
+      const porcentajeSelect = document.getElementById(`porcentajeDescuento${productId}`);
+      const porcentaje = parseInt(porcentajeSelect.value) || 0;
+      const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+      const costoProduccionText = row.querySelector('td:nth-child(6)').textContent.trim();
+      const costoProduccion = costoProduccionText !== '-' ? parseFloat(costoProduccionText.replace('$', '').replace(',', '.')) : null;
+
+      const csrfToken = getCsrfToken();
+      if (!csrfToken) {
+        alert('Error: CSRF token not found. Please refresh the page.');
+        return;
+      }
+
+      const url = `{% url 'aplicar_descuento_producto' 0 %}`.replace('0', productId);
+
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken
+        },
+        body: JSON.stringify({ discount_percentage: porcentaje })
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(errorData => {
+            throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          const precioCell = row.querySelector('.precio-producto');
+          if (data.tiene_descuento) {
+            precioCell.innerHTML = `
+              <div class="precio-con-descuento">
+                <span class="precio-original">$${formatDecimal(data.precio_original)}</span>
+                <span class="precio-descuento">$${formatDecimal(data.nuevo_precio)}</span>
+              </div>
+            `;
+            row.setAttribute('data-descuento', data.discount_percentage);
+          } else {
+            precioCell.innerHTML = `<span class="sin-descuento">$${formatDecimal(data.nuevo_precio)}</span>`;
+            row.setAttribute('data-descuento', '0');
+          }
+
+          const gananciaCell = row.querySelector('.ganancia-bruta');
+          if (costoProduccion !== null) {
+            const nuevoPrecio = parseFloat(data.nuevo_precio);
+            const nuevaGanancia = (nuevoPrecio - costoProduccion);
+            if (nuevaGanancia < 0) {
+              gananciaCell.innerHTML = `<span class="ganancia-negativa">-$${formatDecimal(Math.abs(nuevaGanancia))}</span>`;
+            } else {
+              gananciaCell.textContent = `$${formatDecimal(nuevaGanancia)}`;
+            }
+          }
+
+          row.setAttribute('data-precio-original', data.precio_original || data.nuevo_precio);
+
+          if (data.opciones_actualizadas) {
+            const opcionesCollapse = document.querySelector(`#opcionesProducto${productId}`);
+            if (opcionesCollapse) {
+              const opcionesList = opcionesCollapse.querySelector('.opciones-list');
+              opcionesList.innerHTML = '<h6>Categorías de Opciones:</h6>';
+              data.opciones_actualizadas.forEach(categoria => {
+                const categoriaHeader = document.createElement('h6');
+                categoriaHeader.textContent = `${categoria.nombre} (Máx. ${categoria.max_selecciones})`;
+                opcionesList.appendChild(categoriaHeader);
+                const ul = document.createElement('ul');
+                ul.className = 'list-group list-group-flush';
+                categoria.opciones.forEach(opcion => {
+                  const li = document.createElement('li');
+                  li.className = 'list-group-item d-flex justify-content-between align-items-center';
+                  li.innerHTML = `
+                    <span>${opcion.nombre}</span>
+                    <span>
+                      ${opcion.tiene_descuento ? `
+                        <span class="precio-con-descuento">
+                          <span class="precio-original">+$${formatDecimal(opcion.precio_adicional_original)}</span>
+                          <span class="precio-descuento">+$${formatDecimal(opcion.precio_adicional)}</span>
+                        </span>
+                      ` : `
+                        <span class="sin-descuento">+$${formatDecimal(opcion.precio_adicional)}</span>
+                      `}
+                      ${opcion.agotado ? '<span class="badge bg-danger ms-2">Agotado</span>' : ''}
+                    </span>
+                  `;
+                  ul.appendChild(li);
+                });
+                opcionesList.appendChild(ul);
+              });
+            }
+          }
+
+          const modal = document.getElementById(`descuentoProductoModal${productId}`);
+          const modalInstance = bootstrap.Modal.getInstance(modal);
+          modalInstance.hide();
+
+          mostrarToast('toastDescuento');
+        } else {
+          console.error('Error applying discount:', data.error);
+          alert(data.error || 'Error al aplicar el descuento.');
+        }
+      })
+      .catch(error => {
+        console.error('Fetch error applying discount:', error);
+        alert(`Error al aplicar el descuento: ${error.message}`);
+      });
+    });
+  });
+
+  // Edit product form submission
+  document.querySelectorAll('.edit-product-form').forEach(function(form) {
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const productId = form.getAttribute('data-product-id');
+      const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+      const formData = new FormData(form);
+
+      const precio = formData.get('precio');
+      const costoProduccion = formData.get('costo_produccion');
+      if (precio) {
+        formData.set('precio', normalizeDecimal(precio));
+      }
+      if (costoProduccion) {
+        formData.set('costo_produccion', normalizeDecimal(costoProduccion));
+      }
+
+      const csrfToken = getCsrfToken();
+      if (!csrfToken) {
+        alert('Error: CSRF token not found. Please refresh the page.');
+        return;
+      }
+
+      fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-CSRFToken': csrfToken
+        }
+      })
+      .then(response => {
+        if (!response.ok) {
+          return response.text().then(text => {
+            console.error('Server response:', text);
+            try {
+              const errorData = JSON.parse(text);
+              throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+            } catch (e) {
+              throw new Error(`Invalid JSON response: ${text}`);
+            }
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          const nombreCell = row.querySelector('td:nth-child(3)');
+          const descripcionCell = row.querySelector('td:nth-child(4)');
+          const precioCell = row.querySelector('.precio-producto');
+          const costoCell = row.querySelector('td:nth-child(6)');
+          const gananciaCell = row.querySelector('.ganancia-bruta');
+          const stockCell = row.querySelector('td:nth-child(8)');
+          const estadoCell = row.querySelector('td:nth-child(9)');
+          const imagenCell = row.querySelector('td:nth-child(2) img');
+
+          imagenCell.src = data.imagen_url;
+
+          let nombreHTML = data.nombre;
+          if (data.es_nuevo) {
+            nombreHTML += ' <span class="badge bg-success ms-2">Nuevo</span>';
+          }
+          const opcionesButton = nombreCell.querySelector('.btn-link');
+          if (opcionesButton) {
+            nombreHTML += '<br>' + opcionesButton.outerHTML;
+          }
+          nombreCell.innerHTML = nombreHTML;
+
+          descripcionCell.textContent = data.descripcion || '-';
+
+          if (data.tiene_descuento) {
+            precioCell.innerHTML = `
+              <div class="precio-con-descuento">
+                <span class="precio-original">$${formatDecimal(data.precio_original)}</span>
+                <span class="precio-descuento">$${formatDecimal(data.nuevo_precio)}</span>
+              </div>
+            `;
+            row.setAttribute('data-descuento', data.discount_percentage);
+          } else {
+            precioCell.innerHTML = `<span class="sin-descuento">$${formatDecimal(data.nuevo_precio)}</span>`;
+            row.setAttribute('data-descuento', '0');
+          }
+          row.setAttribute('data-precio-original', data.precio_original || data.nuevo_precio);
+
+          costoCell.textContent = data.costo_produccion ? `$${formatDecimal(data.costo_produccion)}` : '-';
+
+          if (data.ganancia_bruta !== null) {
+            if (parseFloat(data.ganancia_bruta) < 0) {
+              gananciaCell.innerHTML = `<span class="ganancia-negativa">-$${formatDecimal(data.ganancia_bruta_abs)}</span>`;
+            } else {
+              gananciaCell.textContent = `$${formatDecimal(data.ganancia_bruta)}`;
+            }
+          } else {
+            gananciaCell.textContent = '-';
+          }
+
+          if (data.stock !== null) {
+            stockCell.textContent = data.stock;
+            if (data.agotado) {
+              stockCell.textContent += ' (Agotado)';
+            }
+          } else {
+            stockCell.textContent = 'Sin límite';
+          }
+
+          estadoCell.textContent = data.disponible ? 'Disponible' : 'No disponible';
+
+          const modal = form.closest('.modal');
+          const modalInstance = bootstrap.Modal.getInstance(modal);
+          modalInstance.hide();
+
+          mostrarToast('toastProductoActualizado');
+        } else {
+          console.error('Error saving product:', data.errors);
+          let errorMessage = 'Error al guardar el producto. ';
+          for (let field in data.errors) {
+            errorMessage += `${field}: ${data.errors[field].join(', ')}. `;
+          }
+          alert(errorMessage);
+        }
+      })
+      .catch(error => {
+        console.error('Fetch error saving product:', error);
+        alert(`Error al guardar el producto: ${error.message}`);
+      });
+    });
+  });
+
+  // Cash discount handling
+  const cashDiscountCheckbox = document.getElementById('cashDiscountCheckbox');
+  const cashDiscountPercentage = document.getElementById('cashDiscountPercentage');
+
+  if (cashDiscountCheckbox && cashDiscountPercentage) {
+    cashDiscountCheckbox.addEventListener('change', function() {
+      cashDiscountPercentage.disabled = !this.checked;
+      updateCashDiscount();
+    });
+
+    cashDiscountPercentage.addEventListener('change', updateCashDiscount);
+
+    function updateCashDiscount() {
+      const enabled = cashDiscountCheckbox.checked;
+      const percentage = parseInt(cashDiscountPercentage.value) || 0;
+      const csrfToken = getCsrfToken();
+      if (!csrfToken) {
+        alert('Error: CSRF token not found. Please refresh the page.');
+        return;
+      }
+
+      fetch("{% url 'update_cash_discount' %}", {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'X-CSRFToken': csrfToken
+        },
+        body: `enabled=${enabled}&percentage=${percentage}`
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.success) {
+          mostrarToast('toastProductoActualizado');
+        } else {
+          console.error('Error updating cash discount:', data.error);
+          alert(data.error);
+          cashDiscountCheckbox.checked = !enabled;
+          cashDiscountPercentage.value = data.percentage || 0;
+          cashDiscountPercentage.disabled = !enabled;
+        }
+      })
+      .catch(error => {
+        console.error('Fetch error updating cash discount:', error);
+        alert('Error updating cash discount.');
+      });
+    }
+  }
+
+  // Mass price change and delete selected handling
+  const changePricesBtn = document.getElementById('changePricesBtn');
+  const applyMassPriceChangeBtn = document.getElementById('applyMassPriceChangeBtn');
+  const deleteSelectedBtn = document.getElementById('deleteSelectedBtn');
+
+  changePricesBtn.addEventListener('click', function() {
+    console.log('Change Prices button clicked');
+  });
+
+  document.querySelectorAll('.select-all-checkbox').forEach(function(checkbox) {
+    checkbox.addEventListener('change', function() {
+      const categoriaId = this.getAttribute('data-categoria-id');
+      const productCheckboxes = document.querySelectorAll(`.product-checkbox[data-categoria-id="${categoriaId}"]`);
+      productCheckboxes.forEach(function(productCheckbox) {
+        productCheckbox.checked = checkbox.checked;
+      });
+      updateChangePricesButton();
+    });
+  });
+
+  function updateChangePricesButton() {
+    const selectedProducts = document.querySelectorAll('.product-checkbox:checked');
+    changePricesBtn.disabled = selectedProducts.length === 0;
+    deleteSelectedBtn.disabled = selectedProducts.length === 0;
+  }
+
+  document.querySelectorAll('.product-checkbox').forEach(function(checkbox) {
+    checkbox.addEventListener('change', function() {
+      const categoriaId = this.getAttribute('data-categoria-id');
+      const selectAllCheckbox = document.querySelector(`.select-all-checkbox[data-categoria-id="${categoriaId}"]`);
+      const productCheckboxes = document.querySelectorAll(`.product-checkbox[data-categoria-id="${categoriaId}"]`);
+      const allChecked = Array.from(productCheckboxes).every(cb => cb.checked);
+      const someChecked = Array.from(productCheckboxes).some(cb => cb.checked);
+      if (selectAllCheckbox) {
+        selectAllCheckbox.checked = allChecked;
+        selectAllCheckbox.indeterminate = someChecked && !allChecked;
+      }
+      updateChangePricesButton();
+    });
+  });
+
+  applyMassPriceChangeBtn.addEventListener('click', function() {
+    const selectedProducts = document.querySelectorAll('.product-checkbox:checked');
+    const productIds = Array.from(selectedProducts).map(cb => cb.getAttribute('data-product-id'));
+    const discountPercentage = parseInt(document.getElementById('massDiscountPercentage').value) || 0;
+    let fixedPrice = document.getElementById('massFixedPrice').value;
+    let fixedCost = document.getElementById('massFixedCost').value;
+
+    fixedPrice = fixedPrice ? normalizeDecimal(fixedPrice) : null;
+    fixedCost = fixedCost ? normalizeDecimal(fixedCost) : null;
+
+    if (productIds.length === 0) {
+      alert('Por favor, selecciona al menos un producto.');
+      return;
+    }
+
+    const csrfToken = getCsrfToken();
+    if (!csrfToken) {
+      alert('Error: CSRF token not found. Please refresh the page.');
+      return;
+    }
+
+    fetch("{% url 'mass_price_change' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({
+        product_ids: productIds,
+        discount_percentage: discountPercentage,
+        fixed_price: fixedPrice,
+        fixed_cost: fixedCost
+      })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(errorData => {
+          throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        productIds.forEach(productId => {
+          const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+          const precioCell = row.querySelector('.precio-producto');
+          const costoCell = row.querySelector('td:nth-child(6)');
+          const gananciaCell = row.querySelector('.ganancia-bruta');
+
+          const productData = data.updated_products.find(p => p.id == productId);
+          if (productData) {
+            if (productData.tiene_descuento) {
+              precioCell.innerHTML = `
+                <div class="precio-con-descuento">
+                  <span class="precio-original">$${formatDecimal(productData.precio_original)}</span>
+                  <span class="precio-descuento">$${formatDecimal(productData.nuevo_precio)}</span>
+                </div>
+              `;
+              row.setAttribute('data-descuento', productData.discount_percentage);
+            } else {
+              precioCell.innerHTML = `<span class="sin-descuento">$${formatDecimal(productData.nuevo_precio)}</span>`;
+              row.setAttribute('data-descuento', '0');
+            }
+            row.setAttribute('data-precio-original', productData.precio_original || productData.nuevo_precio);
+
+            costoCell.textContent = productData.costo_produccion ? `$${formatDecimal(productData.costo_produccion)}` : '-';
+
+            if (productData.ganancia_bruta !== null) {
+              if (parseFloat(productData.ganancia_bruta) < 0) {
+                gananciaCell.innerHTML = `<span class="ganancia-negativa">-$${formatDecimal(productData.ganancia_bruta_abs)}</span>`;
+              } else {
+                gananciaCell.textContent = `$${formatDecimal(productData.ganancia_bruta)}`;
+              }
+            } else {
+              gananciaCell.textContent = '-';
+            }
+          }
+        });
+
+        const modal = document.getElementById('massPriceChangeModal');
+        const modalInstance = bootstrap.Modal.getInstance(modal);
+        modalInstance.hide();
+
+        mostrarToast('toastProductoActualizado');
+      } else {
+        console.error('Error applying mass price change:', data.error);
+        alert(data.error || 'Error al aplicar los cambios de precios.');
+      }
+    })
+    .catch(error => {
+      console.error('Fetch error applying mass price change:', error);
+      alert(`Error al aplicar los cambios de precios: ${error.message}`);
+    });
+  });
+
+  deleteSelectedBtn.addEventListener('click', function() {
+    const selectedProducts = document.querySelectorAll('.product-checkbox:checked');
+    const productIds = Array.from(selectedProducts).map(cb => cb.getAttribute('data-product-id'));
+
+    if (productIds.length === 0) {
+      alert('Por favor, selecciona al menos un producto para eliminar.');
+      return;
+    }
+
+    if (!confirm(`¿Estás seguro de que deseas eliminar ${productIds.length} producto(s)? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    const csrfToken = getCsrfToken();
+    if (!csrfToken) {
+      alert('Error: CSRF token not found. Please refresh the page.');
+      return;
+    }
+
+    fetch("{% url 'mass_delete_products' %}", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': csrfToken
+      },
+      body: JSON.stringify({ product_ids: productIds })
+    })
+    .then(response => {
+      if (!response.ok) {
+        return response.json().then(errorData => {
+          throw new Error(errorData.error || `HTTP error! Status: ${response.status}`);
+        });
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.success) {
+        productIds.forEach(productId => {
+          const row = document.querySelector(`tr[data-product-id="${productId}"]`);
+          if (row) {
+            row.remove();
+          }
+          const opcionesRow = document.querySelector(`tr td #opcionesProducto${productId}`);
+          if (opcionesRow) {
+            opcionesRow.closest('tr').remove();
+          }
+        });
+        updateChangePricesButton();
+        mostrarToast('toastEliminado');
+      } else {
+        console.error('Error deleting products:', data.error);
+        alert(data.error || 'Error al eliminar los productos.');
+      }
+    })
+    .catch(error => {
+      console.error('Fetch error deleting products:', error);
+      alert(`Error al eliminar los productos: ${error.message}`);
+    });
+  });
+});
+</script>
+{% endblock %}

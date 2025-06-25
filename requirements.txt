@@ -16,3 +16,4 @@ gunicorn==22.0.0
 django-extensions==3.2.3
 dj-database-url==2.2.0
 reportlab==3.6.12
+qrcode==7.4.2

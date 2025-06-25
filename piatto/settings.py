@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'widget_tweaks',
     'channels',
     'corsheaders',
+    'django_extensions',
     'core.apps.CoreConfig',
 ]
 
@@ -117,7 +118,8 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:6379')],
+            'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:80')],
+            'capacity': 20,  # Add this
         },
     },
 }
@@ -155,6 +157,11 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
+
+CORS_ALLOWED_ORIGINS = [
+    'https://piattoweb.com',
+    'https://www.piattoweb.com',
+]
 # Mercado Pago
 MERCADO_PAGO_ACCESS_TOKEN = os.getenv('MP_ACCESS_TOKEN')
 

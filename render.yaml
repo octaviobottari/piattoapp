@@ -51,8 +51,7 @@ services:
       - key: DEFAULT_FROM_EMAIL
         value: no-reply@piattoweb.com
       - key: PYTHON_VERSION
-        value: 3.11
-
+        value: 3.11.9 # Fixed from 3.11
   - type: redis
     name: piatto-redis
     region: oregon

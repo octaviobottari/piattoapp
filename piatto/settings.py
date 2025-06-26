@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Security
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'piattoweb.com,www.piattoweb.com,localhost,127.0.0.1,piatto-web.onrender.com').split(',')
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'piattoweb.com,www.piattoweb.com,localhost,127.0.0.1').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://piattoweb.com,https://www.piattoweb.com').split(',')
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_HTTPONLY = False
@@ -101,14 +101,13 @@ USE_THOUSAND_SEPARATOR = False
 
 # Static files
 STATIC_URL = '/static/'
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Development static files
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-if DEBUG:
-    STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # Production
 
 # Media files (using Render's persistent disk)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
+MEDIA_ROOT = os.getenv('MEDIA_ROOT', '/app/media')  # Updated default to match Render disk
 
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
@@ -119,7 +118,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:6379')],
+            'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:80')],
             'capacity': 20,
         },
     },
@@ -158,11 +157,11 @@ CORS_ALLOW_HEADERS = [
     'x-requested-with',
 ]
 
-
 CORS_ALLOWED_ORIGINS = [
     'https://piattoweb.com',
     'https://www.piattoweb.com',
 ]
+
 # Mercado Pago
 MERCADO_PAGO_ACCESS_TOKEN = os.getenv('MP_ACCESS_TOKEN')
 

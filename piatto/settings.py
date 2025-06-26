@@ -105,9 +105,9 @@ STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Development static file
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # Production
 
-# Media files (using Render's persistent disk)
+# Media files
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.getenv('MEDIA_ROOT', '/app/media')  # Updated default to match Render disk
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')  # Use project media folder
 
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"

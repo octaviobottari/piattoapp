@@ -1,15 +1,17 @@
-# piatto/asgi.py
 import os
 import django
+from django.conf import settings
+
+# Configurar el entorno lo primero
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'piatto.settings')
+django.setup()  # Inicializa Django explícitamente
+
 from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 from channels.auth import AuthMiddlewareStack
+import core.routing
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'piatto.settings')
-django.setup()  # Move setup before imports
-
-import core.routing  # Import after django.setup()
-
+print("Inicializando ASGI application...")
 application = ProtocolTypeRouter({
     'http': get_asgi_application(),
     'websocket': AuthMiddlewareStack(
@@ -18,3 +20,4 @@ application = ProtocolTypeRouter({
         )
     ),
 })
+print("ASGI application inicializada. Intentando conectar a Redis...")

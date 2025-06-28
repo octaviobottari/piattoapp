@@ -64,4 +64,4 @@ databases:
   - name: piatto-db
     databaseName: piatto
     region: oregon
-    plan: free
+    plan: free # Switch to starter ($7/month) for production

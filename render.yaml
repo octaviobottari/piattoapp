@@ -8,6 +8,7 @@ services:
     buildCommand: |
       mkdir -p logs
       pip install -r requirements.txt
+      rm -rf staticfiles/*
       python manage.py collectstatic --noinput
       python manage.py migrate
     startCommand: daphne -b 0.0.0.0 -p $PORT piatto.asgi:application

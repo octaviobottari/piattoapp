@@ -2,7 +2,7 @@
 {% load static humanize %}
 
 {% block styles %}
-<link rel="stylesheet" href="{% static '/css/pedidos.css' %}">
+<link rel="stylesheet" href="{% static 'css/pedidos.css' %}">
 <style>
     .product-card {
       border: 1px solid #ddd;
@@ -166,7 +166,7 @@
 </div>
 
 <!-- Elemento de audio para la notificación -->
-<audio id="notificationSound" src="{% static '/sounds/notification-bell.mp3' %}" preload="auto"></audio>
+<audio id="notificationSound" src="{% static 'sounds/notification-bell.mp3' %}" preload="auto"></audio>
 {% endblock %}
 
 {% block scripts %}

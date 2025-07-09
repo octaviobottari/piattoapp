@@ -3,8 +3,7 @@ from pathlib import Path
 import dj_database_url
 
 # Build paths
-BASE_DIR = Path(__file__).resolve().parent.parent
-
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Security
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
@@ -106,7 +105,7 @@ STATIC_URL = '/static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'  # Usar CompressedStaticFilesStorage
 # Media files (using Render's persistent disk)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = os.getenv('MEDIA_ROOT', '/app/media')  # Use persistent disk
+MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"

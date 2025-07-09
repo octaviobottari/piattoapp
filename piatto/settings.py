@@ -100,9 +100,9 @@ DECIMAL_SEPARATOR = ','
 USE_THOUSAND_SEPARATOR = False
 
 # Static files
-STATIC_URL = '/static/'
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core', 'static')]  # Point to core/static/
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core', 'static', 'piatto')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = '/static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'  # Usar CompressedStaticFilesStorage
 # Media files (using Render's persistent disk)
 MEDIA_URL = '/media/'

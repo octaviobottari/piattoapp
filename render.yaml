@@ -17,6 +17,10 @@ services:
       - piattoweb.com
       - www.piattoweb.com
     autoDeploy: true
+    disks:
+      - name: media
+        mountPath: /opt/render/project/src/media
+        sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9

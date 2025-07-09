@@ -17,3 +17,4 @@ django-extensions==3.2.3
 dj-database-url==2.2.0
 reportlab==3.6.12
 qrcode==7.4.2
+twisted[tls,http2]==25.5.0

@@ -257,7 +257,7 @@ const restaurantName = data.restaurante_nombre || '{{ restaurante.username|defau
                   let imageUrl = item.imagen_url || '';
                   if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
                     const originalFilename = item.imagen_nombre_original || 'default.png';
-imageUrl = `{{ MEDIA_URL }}/media/${restaurantName}/productos/${originalFilename}`;
+imageUrl = `{% get_media_prefix %}media/${restaurantName}/productos/${originalFilename}`;
                   }
 
                   const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (

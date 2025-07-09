@@ -4,6 +4,7 @@ import dj_database_url
 
 # Build paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
 # Security
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
@@ -11,7 +12,7 @@ ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'piattoweb.com,www.piattoweb.c
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://piattoweb.com,https://www.piattoweb.com').split(',')
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SECURE = True  # HTTPS in production
+CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_SAMESITE = 'Strict'
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
@@ -40,10 +41,10 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Mover aquí
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',  # Después de WhiteNoise
+    'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -75,7 +76,7 @@ ASGI_APPLICATION = 'piatto.asgi.application'
 # Database
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL', 'sqlite:///' + str(BASE_DIR / 'db.sqlite3')),
+        default=os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3')),
         conn_max_age=600,
     )
 }
@@ -99,11 +100,12 @@ DECIMAL_SEPARATOR = ','
 USE_THOUSAND_SEPARATOR = False
 
 # Static files
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core', 'static', 'piatto')]
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core', 'static')]
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 STATIC_URL = '/static/'
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'  # Usar CompressedStaticFilesStorage
-# Media files (using Render's persistent disk)
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
+
+# Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.getenv('MEDIA_ROOT', os.path.join(BASE_DIR, 'media'))
 
@@ -130,17 +132,17 @@ CACHES = {
         'OPTIONS': {
             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
         },
-        'TIMEOUT': 3600,  # Cache timeout: 1 hour
+        'TIMEOUT': 3600,
         'KEY_PREFIX': 'piatto_',
     }
 }
 
 # Prevent cache buildup
 CACHE_MIDDLEWARE_ALIAS = 'default'
-CACHE_MIDDLEWARE_SECONDS = 3600  # Cache pages for 1 hour
+CACHE_MIDDLEWARE_SECONDS = 3600
 CACHE_MIDDLEWARE_KEY_PREFIX = 'piatto'
 
-# CORS (disabled in production)
+# CORS
 CORS_ALLOW_ALL_ORIGINS = DEBUG
 CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 CORS_ALLOW_HEADERS = [
@@ -154,7 +156,6 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
-
 CORS_ALLOWED_ORIGINS = [
     'https://piattoweb.com',
     'https://www.piattoweb.com',
@@ -208,15 +209,15 @@ LOGGING = {
     },
 }
 
-# Security settings for production
-SECURE_SSL_REDIRECT = False  # Temporalmente para pruebas
-PREPEND_WWW = False  # Desactiva añadir "www"
+# Security settings
+SECURE_SSL_REDIRECT = False
+PREPEND_WWW = False
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
-SECURE_HSTS_SECONDS = 31536000  # 1 year
+SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 

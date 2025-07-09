@@ -442,7 +442,7 @@ textarea.form-control {
         </div>
         <div class="qr-footer">
           <div class="piatto-logo">
-            <img src="{% get_media_prefix %}media/images/piatto-logo-org.png" alt="Piatto Logo">
+            <img src="{{ MEDIA_URL }}media/images/piatto-logo-org.png" alt="Piatto Logo">
           </div>
           <div class="qr-footer-text">
             <p style="color: #f85c2b;">Tu negocio, en piloto automático.</p>
@@ -557,7 +557,7 @@ textarea.form-control {
 
     // Ensure absolute URLs for images
     const qrImageUrl = new URL(qrImage.src, window.location.origin).href;
-    const logoImageUrl = new URL('{% get_media_prefix %}media/images/piatto-logo-org.png', window.location.origin).href;
+    const logoImageUrl = new URL('{{ MEDIA_URL }}media/images/piatto-logo-org.png', window.location.origin).href;
 
     Promise.all([
       loadImageAsDataURL(qrImageUrl),

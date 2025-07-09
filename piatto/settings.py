@@ -210,7 +210,8 @@ LOGGING = {
 }
 
 # Security settings for production
-SECURE_SSL_REDIRECT = True
+SECURE_SSL_REDIRECT = False  # Temporalmente para pruebas
+PREPEND_WWW = False  # Desactiva añadir "www"
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_BROWSER_XSS_FILTER = True

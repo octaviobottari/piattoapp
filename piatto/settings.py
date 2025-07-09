@@ -41,10 +41,10 @@ INSTALLED_APPS = [
 # Middleware
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # For static file serving
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Mover aquí
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
+    'django.middleware.common.CommonMiddleware',  # Después de WhiteNoise
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -103,8 +103,7 @@ USE_THOUSAND_SEPARATOR = False
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core', 'static')]  # Point to core/static/
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'  # Production
-
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'  # Usar CompressedStaticFilesStorage
 # Media files (using Render's persistent disk)
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.getenv('MEDIA_ROOT', '/app/media')  # Use persistent disk
@@ -118,7 +117,7 @@ CHANNEL_LAYERS = {
     'default': {
         'BACKEND': 'channels_redis.core.RedisChannelLayer',
         'CONFIG': {
-            'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:80')],
+            'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:6379')],
             'capacity': 20,
         },
     },

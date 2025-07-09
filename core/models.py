@@ -427,20 +427,5 @@ class RestaurantQR(models.Model):
     url = models.URLField(max_length=200, blank=True, help_text="URL asociada al QR")
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def save(self, *args, **kwargs):
-        super().save(*args, **kwargs)
-        if not self.qr_image and self.url:
-            qr = qrcode.QRCode(version=1, box_size=10, border=4)
-            qr.add_data(self.url)
-            qr.make(fit=True)
-            img = qr.make_image(fill_color="black", back_color="white")
-            img_name = f"{self.name.replace(' ', '').lower()}_qr.png"
-            img_path = os.path.join('/app/media/qrcodes', img_name)
-            os.makedirs(os.path.dirname(img_path), exist_ok=True)
-            img.save(img_path)
-            with open(img_path, 'rb') as f:
-                self.qr_image.save(img_name, File(f), save=False)
-            super().save(*args, **kwargs)
-
     def __str__(self):
         return self.name

@@ -11,18 +11,12 @@ services:
       rm -rf staticfiles/*
       python manage.py collectstatic --noinput
       python manage.py migrate
-      mkdir -p /app/media
-      chown -R render:render /app/media
-      chmod -R 775 /app/media
+      mkdir -p /opt/render/project/src/media
     startCommand: daphne -b 0.0.0.0 -p $PORT piatto.asgi:application
     domains:
       - piattoweb.com
       - www.piattoweb.com
     autoDeploy: true
-    disk:
-      name: media
-      mountPath: /app/media
-      sizeGB: 2
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -44,7 +38,7 @@ services:
           name: piatto-redis
           property: connectionString
       - key: MEDIA_ROOT
-        value: /app/media
+        value: /opt/render/project/src/media
       - key: MEDIA_URL
         value: /media/
       - key: MP_ACCESS_TOKEN

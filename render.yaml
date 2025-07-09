@@ -11,6 +11,8 @@ services:
       rm -rf staticfiles/*
       python manage.py collectstatic --noinput
       python manage.py migrate
+      chown -R render:render /app/media
+      chmod -R 775 /app/media
     startCommand: daphne -b 0.0.0.0 -p $PORT piatto.asgi:application
     domains:
       - piattoweb.com
@@ -65,4 +67,4 @@ databases:
   - name: piatto-db
     databaseName: piatto
     region: oregon
-    plan: free # Switch to starter ($7/month) for production
+    plan: free

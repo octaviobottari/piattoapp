@@ -12,7 +12,7 @@ services:
       python manage.py collectstatic --noinput
       python manage.py migrate
       mkdir -p /opt/render/project/src/media/images
-      cp -r media/images/* /opt/render/project/src/media/images/ 2>/dev/null || true
+      cp -r src/media/images/* /opt/render/project/src/media/images/ 2>/dev/null || true
       chmod -R 755 /opt/render/project/src/media
     startCommand: daphne -b 0.0.0.0 -p $PORT piatto.asgi:application
     domains:

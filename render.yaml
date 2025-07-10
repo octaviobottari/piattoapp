@@ -11,6 +11,8 @@ services:
       rm -rf staticfiles/*
       python manage.py collectstatic --noinput
       python manage.py migrate
+      echo "Listing ~/project/src contents:"
+      ls -l ~/project/src
       echo "Listing media/images contents:"
       ls -l media/images
       mkdir -p /opt/render/project/src/media/images

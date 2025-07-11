@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'channels',
     'corsheaders',
     'django_extensions',
+    'storages',
     'core.apps.CoreConfig',
 ]
 
@@ -63,7 +64,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'django.template.context_processors.media',  
+                'django.template.context_processors.media',
             ],
         },
     },
@@ -107,8 +108,19 @@ STATIC_URL = '/static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Media files
-MEDIA_URL = '/media/'
-MEDIA_ROOT = '/opt/render/project/src/media'
+MEDIA_URL = 'https://piatto-media-2025.s3.us-east-2.amazonaws.com/media/'
+DEFAULT_FILE_STORAGE = 'storages.backends.s3boto3.S3Boto3Storage'
+
+# AWS S3 Configuration
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = 'piatto-media-2025'
+AWS_S3_REGION_NAME = 'us-east-2'
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = 'public-read'
+AWS_S3_ADDRESSING_STYLE = 'virtual'
+AWS_S3_VERIFY = True
+AWS_S3_CUSTOM_DOMAIN = 'piatto-media-2025.s3.amazonaws.com'
 
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"

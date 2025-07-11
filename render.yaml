@@ -15,8 +15,11 @@ services:
       ls -l ~/project/src
       echo "Listing media/images contents:"
       ls -l media/images
-      mkdir -p /opt/render/project/src/media/
-      cp -r cp -r ./media /opt/render/project/src/ || echo "Failed to copy media/images"
+      mkdir -p /opt/render/project/src/media/images
+      cp -r media/images/* /opt/render/project/src/media/images/ || echo "Failed to copy media/images"
+      chmod -R 755 /opt/render/project/src/media
+      echo "Listing /opt/render/project/src/media/images contents:"
+      ls -l /opt/render/project/src/media/images
     startCommand: daphne -b 0.0.0.0 -p $PORT piatto.asgi:application
     domains:
       - piattoweb.com

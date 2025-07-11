@@ -6,29 +6,15 @@ services:
     plan: starter
     branch: master
     buildCommand: |
-      mkdir -p logs
       pip install -r requirements.txt
       rm -rf staticfiles/*
       python manage.py collectstatic --noinput
       python manage.py migrate
-      echo "Listing ~/project/src contents:"
-      ls -l ~/project/src
-      echo "Listing media/images contents:"
-      ls -l media/images
-      mkdir -p /opt/render/project/src/media/images
-      cp -r media/images/* /opt/render/project/src/media/images/ || echo "Failed to copy media/images"
-      chmod -R 755 /opt/render/project/src/media
-      echo "Listing /opt/render/project/src/media/images contents:"
-      ls -l /opt/render/project/src/media/images
     startCommand: daphne -b 0.0.0.0 -p $PORT piatto.asgi:application
     domains:
       - piattoweb.com
       - www.piattoweb.com
     autoDeploy: true
-    disks:
-      - name: media
-        mountPath: /opt/render/project/src/media
-        sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
@@ -49,10 +35,10 @@ services:
           type: redis
           name: piatto-redis
           property: connectionString
-      - key: MEDIA_ROOT
-        value: /opt/render/project/src/media
-      - key: MEDIA_URL
-        value: /media/
+      - key: AWS_ACCESS_KEY_ID
+        sync: false  # Añadir manualmente en Render
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false  # Añadir manualmente en Render
       - key: MP_ACCESS_TOKEN
         value: your-mercado-pago-token
       - key: EMAIL_HOST

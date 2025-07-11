@@ -35,6 +35,7 @@ import os
 from django.conf import settings
 import io
 from django.core.files import File
+from django.core.files.base import ContentFile
 
 logger = logging.getLogger(__name__)
 
@@ -1728,9 +1729,11 @@ def csrf_failure(request, reason=""):
 def generate_qr_for_restaurant(restaurant_name):
     restaurant_qr, created = RestaurantQR.objects.get_or_create(name=restaurant_name)
     
-    # Always regenerate to ensure the latest slug and overwrite the file
+    # Generar el slug a partir de restaurant_name
     slug = restaurant_name.replace(' ', '').lower()
     qr_url = f"https://piattoweb.com/{slug}"
+    
+    # Crear el código QR
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -1739,23 +1742,18 @@ def generate_qr_for_restaurant(restaurant_name):
     )
     qr.add_data(qr_url)
     qr.make(fit=True)
-
+    
+    # Generar la imagen QR
     qr_image = qr.make_image(fill_color="black", back_color="white")
     qr_image_io = io.BytesIO()
     qr_image.save(qr_image_io, format='PNG')
+    qr_image_io.seek(0)
     
-    # Delete old QR image file if it exists
-    if restaurant_qr.qr_image:
-        old_image_path = restaurant_qr.qr_image.path
-        if os.path.exists(old_image_path):
-            os.remove(old_image_path)
-            print(f"Deleted old QR image: {old_image_path}")
-    
-    # Save new QR image, overwriting any existing file
-    restaurant_qr.qr_image.save(f"{slug}_qr.png", File(qr_image_io), save=False)
+    # Guardar en S3
+    filename = f"{slug}_qr.png"
+    restaurant_qr.qr_image.save(filename, ContentFile(qr_image_io.getvalue()), save=True)
     restaurant_qr.url = qr_url
     restaurant_qr.save()
-    print(f"QR image saved at: {restaurant_qr.qr_image.path}")  # Debug print
-
+    
+    print(f"QR image saved to S3: s3://piatto-media-2025/media/qrcodes/{filename}")
     return restaurant_qr
-

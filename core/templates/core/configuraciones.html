@@ -557,7 +557,7 @@ textarea.form-control {
 
     // Ensure absolute URLs for images
     const qrImageUrl = new URL(qrImage.src, window.location.origin).href;
-    const logoImageUrl = new URL('{{ MEDIA_URL }}media/images/piatto-logo-org.png', window.location.origin).href;
+    const logoImageUrl = new URL('{{ MEDIA_URL }}images/piatto-logo-org.png', window.location.origin).href;
 
     Promise.all([
       loadImageAsDataURL(qrImageUrl),

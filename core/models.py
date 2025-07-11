@@ -8,6 +8,7 @@ from django.urls import reverse
 from decimal import Decimal
 import uuid
 import os
+from django.core.files.storage import default_storage
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 import qrcode
@@ -160,8 +161,7 @@ class Categoria(models.Model):
 
     def delete(self, *args, **kwargs):
         if self.banner:
-            if os.path.isfile(self.banner.path):
-                os.remove(self.banner.path)
+            default_storage.delete(self.banner.name)  # Elimina el archivo en S3
         super().delete(*args, **kwargs)
 
 class Producto(models.Model):
@@ -224,8 +224,7 @@ class Producto(models.Model):
 
     def delete(self, *args, **kwargs):
         if self.imagen:
-            if os.path.isfile(self.imagen.path):
-                os.remove(self.imagen.path)
+            default_storage.delete(self.imagen.name)  # Elimina el archivo en S3
         super().delete(*args, **kwargs)
 
     @property

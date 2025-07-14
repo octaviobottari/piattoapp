@@ -119,6 +119,7 @@ AWS_STORAGE_BUCKET_NAME = 'piatto-media-2025'
 AWS_S3_REGION_NAME = 'us-east-2'
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = 'public-read'
+AWS_QUERYSTRING_AUTH = False     
 AWS_S3_ADDRESSING_STYLE = 'virtual'
 AWS_S3_VERIFY = True
 AWS_S3_CUSTOM_DOMAIN = 'piatto-media-2025.s3.us-east-2.amazonaws.com'

@@ -25,7 +25,9 @@ def get_restaurante_media_path(instance, filename):
         tipo = 'productos'
     elif tipo == 'restaurante':
         tipo = 'logos'
-    return f'{restaurante_username}/{tipo}/{filename}'
+    path = f'{restaurante_username}/{tipo}/{filename}'
+    print(f"Generated S3 key for {instance.__class__.__name__}: media/{path}")  # Depuración
+    return path
 
 class Restaurante(AbstractUser):
     ESTADO_CONTROL_CHOICES = [

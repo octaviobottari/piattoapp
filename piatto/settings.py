@@ -121,7 +121,7 @@ AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = 'public-read'
 AWS_S3_ADDRESSING_STYLE = 'virtual'
 AWS_S3_VERIFY = True
-AWS_S3_CUSTOM_DOMAIN = 'piatto-media-2025.s3.amazonaws.com'
+AWS_S3_CUSTOM_DOMAIN = 'piatto-media-2025.s3.us-east-2.amazonaws.com'
 
 # Crispy Forms
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"

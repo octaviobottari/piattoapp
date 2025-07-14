@@ -129,7 +129,7 @@
         <nav class="d-flex align-items-center nav-bg rounded-pill px-4 py-2 nav-icons" style="min-width: 460px;" aria-label="Navegación principal">
             <!-- Icono personalizado piatto-icono.png -->
             <a href="{% url 'panel' %}" class="icon-circle" aria-label="Icono Piatto">
-                <img src="{% get_media_prefix %}media/images/piatto-icon.png" alt="Icono personalizado del restaurante piatto" class="img-fluid" style="max-width: 40px; max-height: 40px; margin-left: 20px;" loading="lazy">
+                <img src="{{ MEDIA_URL }}images/piatto-icon.png" alt="Icono personalizado del restaurante piatto" class="img-fluid" style="max-width: 40px; max-height: 40px; margin-left: 20px;" loading="lazy">
             </a>
 
             <div class="divider" aria-hidden="true"></div>

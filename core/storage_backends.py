@@ -5,6 +5,6 @@ logger = logging.getLogger(__name__)
 logger.info(f"Usando almacenamiento: {settings.DEFAULT_FILE_STORAGE}")
 
 class MediaStorage(S3Boto3Storage):
-    location = ''
+    location = 'media'
     file_overwrite = False
     default_acl = 'public-read'

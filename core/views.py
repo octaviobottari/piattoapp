@@ -1361,16 +1361,28 @@ def configurar_restaurante(request):
     if request.method == 'POST':
         form = ConfigRestauranteForm(request.POST, request.FILES, instance=restaurante)
         if form.is_valid():
-            # Save form and regenerate QR if nombre_local changed
-            old_nombre_local = restaurante.nombre_local
-            form.save()
-            if old_nombre_local != form.instance.nombre_local:
-                # Delete old QR and generate new one
-                RestaurantQR.objects.filter(name=old_nombre_local).delete()
-                generate_qr_for_restaurant(form.instance.nombre_local)
-            messages.success(request, 'Configuración actualizada correctamente.')
-            return redirect('configuraciones')
+            try:
+                logger.info(f"Intentando guardar formulario para restaurante {restaurante.username}")
+                if 'logo' in request.FILES:
+                    logger.info(f"Archivo recibido: {request.FILES['logo'].name}")
+                    # Probar la subida manualmente
+                    file = request.FILES['logo']
+                    file_path = f"{restaurante.username}/logos/{file.name}"
+                    logger.info(f"Intentando subir archivo a S3: {file_path}")
+                    default_storage.save(file_path, file)
+                    logger.info(f"Archivo subido exitosamente a S3: {file_path}")
+                form.save()
+                logger.info(f"Formulario guardado para restaurante {restaurante.username}")
+                messages.success(request, 'Configuración actualizada correctamente.')
+                return redirect('configuraciones')
+            except ClientError as e:
+                logger.error(f"Error al subir archivo a S3: {str(e)}")
+                messages.error(request, f'Error al subir archivo: {str(e)}')
+            except Exception as e:
+                logger.error(f"Error inesperado al guardar formulario: {str(e)}")
+                messages.error(request, f'Error al guardar la configuración: {str(e)}')
         else:
+            logger.error(f"Errores en el formulario: {form.errors}")
             messages.error(request, 'Error al guardar la configuración. Verifica los datos.')
     else:
         form = ConfigRestauranteForm(instance=restaurante)

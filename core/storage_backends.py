@@ -6,5 +6,5 @@ logger.info(f"Usando almacenamiento: {settings.DEFAULT_FILE_STORAGE}")
 
 class MediaStorage(S3Boto3Storage):
     location = 'media'
-    file_overwrite = False
+    file_overwrite = True
     default_acl = 'public-read'

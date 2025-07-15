@@ -12,6 +12,7 @@ from django.core.files.storage import default_storage
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.core.exceptions import ValidationError
 import qrcode
+from .storage_backends import MediaStorage
 
 def get_restaurante_media_path(instance, filename):
     if isinstance(instance, Restaurante):

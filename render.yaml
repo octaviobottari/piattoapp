@@ -36,9 +36,13 @@ services:
           name: piatto-redis
           property: connectionString
       - key: AWS_ACCESS_KEY_ID
-        sync: false  # Añadir manualmente en Render
+        sync: false
       - key: AWS_SECRET_ACCESS_KEY
-        sync: false  # Añadir manualmente en Render
+        sync: false
+      - key: AWS_STORAGE_BUCKET_NAME
+        value: piatto-media-2025
+      - key: AWS_S3_REGION_NAME
+        value: us-east-2
       - key: MP_ACCESS_TOKEN
         value: your-mercado-pago-token
       - key: EMAIL_HOST

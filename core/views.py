@@ -1367,14 +1367,18 @@ def configurar_restaurante(request):
                 logger.info(f"Intentando guardar formulario para restaurante {restaurante.username}")
                 if 'logo' in request.FILES:
                     logger.info(f"Archivo recibido: {request.FILES['logo'].name}")
-                    # Probar la subida manualmente
                     file = request.FILES['logo']
                     file_path = f"{restaurante.username}/logos/{file.name}"
                     logger.info(f"Intentando subir archivo a S3: {file_path}")
-                    default_storage.save(file_path, file)
-                    logger.info(f"Archivo subido exitosamente a S3: {file_path}")
-                form.save()
+                    saved_path = default_storage.save(file_path, file)
+                    logger.info(f"Archivo subido exitosamente a S3: {saved_path}")
+                    restaurante.logo = saved_path  # Asignar la ruta al campo logo
+                    restaurante.save()
+                form.save(commit=False)  # Guardar otros campos sin cometer
+                form.instance.save()  # Guardar el objeto actualizado
                 logger.info(f"Formulario guardado para restaurante {restaurante.username}")
+                restaurante.refresh_from_db()
+                logger.info(f"URL del logo después de guardar: {restaurante.logo.url if restaurante.logo else 'No hay logo'}")
                 messages.success(request, 'Configuración actualizada correctamente.')
                 return redirect('configuraciones')
             except ClientError as e:

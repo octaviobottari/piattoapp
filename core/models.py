@@ -25,7 +25,7 @@ def get_restaurante_media_path(instance, filename):
         tipo = 'productos'
     elif tipo == 'restaurante':
         tipo = 'logos'
-    return f'media/{restaurante_username}/{tipo}/{filename}'
+    return f'{restaurante_username}/{tipo}/{filename}'  # Sin 'media/'
 
 class Restaurante(AbstractUser):
     ESTADO_CONTROL_CHOICES = [

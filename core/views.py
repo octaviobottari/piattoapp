@@ -36,6 +36,8 @@ from django.conf import settings
 import io
 from django.core.files import File
 from django.core.files.base import ContentFile
+from django.core.files.storage import default_storage  # Importar default_storage
+from botocore.exceptions import ClientError  # Importar ClientError
 
 logger = logging.getLogger(__name__)
 

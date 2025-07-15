@@ -1363,32 +1363,16 @@ def configurar_restaurante(request):
     if request.method == 'POST':
         form = ConfigRestauranteForm(request.POST, request.FILES, instance=restaurante)
         if form.is_valid():
-            try:
-                logger.info(f"Intentando guardar formulario para restaurante {restaurante.username}")
-                if 'logo' in request.FILES:
-                    logger.info(f"Archivo recibido: {request.FILES['logo'].name}")
-                    file = request.FILES['logo']
-                    file_path = f"{restaurante.username}/logos/{file.name}"
-                    logger.info(f"Intentando subir archivo a S3: {file_path}")
-                    saved_path = default_storage.save(file_path, file)
-                    logger.info(f"Archivo subido exitosamente a S3: {saved_path}")
-                    restaurante.logo = saved_path  # Asignar la ruta al campo logo
-                    restaurante.save()
-                form.save(commit=False)  # Guardar otros campos sin cometer
-                form.instance.save()  # Guardar el objeto actualizado
-                logger.info(f"Formulario guardado para restaurante {restaurante.username}")
-                restaurante.refresh_from_db()
-                logger.info(f"URL del logo después de guardar: {restaurante.logo.url if restaurante.logo else 'No hay logo'}")
-                messages.success(request, 'Configuración actualizada correctamente.')
-                return redirect('configuraciones')
-            except ClientError as e:
-                logger.error(f"Error al subir archivo a S3: {str(e)}")
-                messages.error(request, f'Error al subir archivo: {str(e)}')
-            except Exception as e:
-                logger.error(f"Error inesperado al guardar formulario: {str(e)}")
-                messages.error(request, f'Error al guardar la configuración: {str(e)}')
+            # Save form and regenerate QR if nombre_local changed
+            old_nombre_local = restaurante.nombre_local
+            form.save()
+            if old_nombre_local != form.instance.nombre_local:
+                # Delete old QR and generate new one
+                RestaurantQR.objects.filter(name=old_nombre_local).delete()
+                generate_qr_for_restaurant(form.instance.nombre_local)
+            messages.success(request, 'Configuración actualizada correctamente.')
+            return redirect('configuraciones')
         else:
-            logger.error(f"Errores en el formulario: {form.errors}")
             messages.error(request, 'Error al guardar la configuración. Verifica los datos.')
     else:
         form = ConfigRestauranteForm(instance=restaurante)
@@ -1399,6 +1383,7 @@ def configurar_restaurante(request):
         'restaurante': restaurante,
         'restaurant_qr': restaurant_qr,
     })
+
 
 
 @login_required

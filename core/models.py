@@ -149,7 +149,7 @@ class Categoria(models.Model):
     restaurante = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     nombre = models.CharField(max_length=100)
     orden = models.PositiveIntegerField(default=0)
-    banner = models.ImageField(upload_to=get_restaurante_media_path, null=True, blank=True)
+    banner = models.ImageField(upload_to=get_restaurante_media_path, null=True, blank=True, storage=MediaStorage())
 
     class Meta:
         ordering = ['orden']
@@ -173,7 +173,7 @@ class Producto(models.Model):
     precio = models.DecimalField(max_digits=10, decimal_places=2, validators=[MinValueValidator(0.00)])
     precio_original = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     tiene_descuento = models.BooleanField(default=False)
-    imagen = models.ImageField(upload_to=get_restaurante_media_path, blank=True, null=True)
+    imagen = models.ImageField(upload_to=get_restaurante_media_path, blank=True, null=True, storage=MediaStorage())
     disponible = models.BooleanField(default=True)
     stock = models.PositiveIntegerField(default=0, null=True, blank=True)
     agotado = models.BooleanField(default=False)
@@ -423,7 +423,7 @@ def get_qr_upload_path(instance, filename):
 
 class RestaurantQR(models.Model):
     name = models.CharField(max_length=100, unique=True, help_text="Nombre del restaurante")
-    qr_image = models.ImageField(upload_to=get_qr_upload_path, blank=True, null=True, help_text="Imagen del QR generada")
+    qr_image = models.ImageField(upload_to=get_qr_upload_path, blank=True, null=True, help_text="Imagen del QR generada", storage=MediaStorage())
     url = models.URLField(max_length=200, blank=True, help_text="URL asociada al QR")
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -522,9 +522,9 @@ textarea.form-control {
     }
   });
 
-  // PDF Download Handler
+ // PDF Download Handler
   document.getElementById('downloadPdf').addEventListener('click', function() {
-    const qrCard = document.querySelector('.card:last-child'); // Select the QR card specifically
+    const qrCard = document.querySelector('.card:last-child');
     const qrImage = document.getElementById('qrImage');
     const restaurantName = "{{ restaurante.nombre_local|default:'default' }}".replace(/ /g, '-').toLowerCase();
     const restaurantSlug = "{{ restaurante.nombre_local|default:'nombrerestaurante'|lower|slugify }}";
@@ -539,7 +539,7 @@ textarea.form-control {
         const img = new Image();
         img.crossOrigin = "Anonymous";
         img.onload = () => {
-          console.log(`Imagen cargada: ${src}`);
+          console.log(`Imagen cargada exitosamente: ${src}`);
           const canvas = document.createElement('canvas');
           canvas.width = img.width;
           canvas.height = img.height;
@@ -555,14 +555,28 @@ textarea.form-control {
       });
     };
 
-    // Ensure absolute URLs for images
+    // URLs absolutas para las imágenes
     const qrImageUrl = new URL(qrImage.src, window.location.origin).href;
     const logoImageUrl = new URL('{{ MEDIA_URL }}images/piatto-logo-org.png', window.location.origin).href;
 
+    console.log('Intentando cargar imágenes para PDF:', { qrImageUrl, logoImageUrl });
+
     Promise.all([
-      loadImageAsDataURL(qrImageUrl),
-      loadImageAsDataURL(logoImageUrl)
+      loadImageAsDataURL(qrImageUrl).catch(err => {
+        console.error('Error al cargar imagen QR:', err);
+        alert('No se pudo cargar la imagen QR. Intentando generar PDF sin QR.');
+        return null;
+      }),
+      loadImageAsDataURL(logoImageUrl).catch(err => {
+        console.error('Error al cargar logo de Piatto:', err);
+        return null; // Continúa sin el logo
+      })
     ]).then(([qrDataUrl, logoDataUrl]) => {
+      if (!qrDataUrl) {
+        alert('No se pudo cargar la imagen QR. No se puede generar el PDF.');
+        return;
+      }
+
       const element = document.createElement('div');
       element.style.textAlign = 'center';
       element.style.backgroundColor = 'white';
@@ -591,7 +605,7 @@ textarea.form-control {
             </div>
             <div style="margin-top: 15px; text-align: center;">
               <div style="margin-bottom: 10px;">
-                <img src="${logoDataUrl}" style="height: 40px;" />
+                ${logoDataUrl ? `<img src="${logoDataUrl}" style="height: 40px;" />` : '<p style="color: #666;">Logo no disponible</p>'}
               </div>
               <div>
                 <p style="margin: 5px 0; font-size: 14px; color: #666; font-weight: bold;">Tu negocio, en piloto automático.</p>
@@ -601,7 +615,6 @@ textarea.form-control {
         </div>
       `;
 
-      // Append to body temporarily to ensure rendering
       document.body.appendChild(element);
 
       html2canvas(element, {
@@ -609,10 +622,15 @@ textarea.form-control {
         useCORS: true,
         logging: true,
         allowTaint: false,
-        backgroundColor: null
+        backgroundColor: null,
+        onclone: (document, element) => {
+          console.log('Clonando elemento para html2canvas');
+          return true;
+        }
       }).then(canvas => {
-        document.body.removeChild(element); // Clean up
+        document.body.removeChild(element);
         const imgData = canvas.toDataURL('image/png');
+        console.log('Canvas generado, generando PDF...');
         const { jsPDF } = window.jspdf;
         const pdf = new jsPDF({
           orientation: 'portrait',
@@ -624,21 +642,22 @@ textarea.form-control {
         const imgHeight = 650;
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const ratio = Math.min(pdfWidth / (imgWidth * 0.264583), pdfHeight / (imgHeight * 0.264583)); // Convert px to mm
-        const scaledWidth = imgWidth * ratio * 0.264583 * 1;
-        const scaledHeight = imgHeight * ratio * 0.264583 * 1;
+        const ratio = Math.min(pdfWidth / (imgWidth * 0.264583), pdfHeight / (imgHeight * 0.264583));
+        const scaledWidth = imgWidth * ratio * 0.264583;
+        const scaledHeight = imgHeight * ratio * 0.264583;
         const x = (pdfWidth - scaledWidth) / 2;
         const y = (pdfHeight - scaledHeight) / 2;
 
         pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
         pdf.save(`qr-menu-${restaurantName}.pdf`);
+        console.log('PDF generado exitosamente:', `qr-menu-${restaurantName}.pdf`);
       }).catch(err => {
-        document.body.removeChild(element); // Clean up on error
+        document.body.removeChild(element);
         console.error('Error al generar el PDF:', err);
         alert('Error al generar el PDF. Detalles en la consola.');
       });
     }).catch(err => {
-      console.error('Error al cargar imágenes:', err);
+      console.error('Error al cargar imágenes para PDF:', err);
       alert(`No se pudieron cargar las imágenes para el PDF: ${err.message}`);
     });
   });

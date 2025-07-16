@@ -152,9 +152,9 @@
             El restaurante se pondrá en <br> contacto con vos de 1-5 minutos!
         </p>
         <a href="tel:{{ pedido.telefono }}" class="contact-link">
-            ¿Necesitás cambiar algo o tenés alguna duda? <br><span style="color: #10B981;">{{ pedido.telefono }}</span>
+            ¿Necesitás cambiar algo o tenés alguna duda? <br><span style="color: #10B981;">{{ restaurante.telefono }}</span>
         </a>
-        <a href="https://wa.me/54{{ pedido.telefono|urlencode }}?text={{ 'Hola, tengo una consulta sobre mi pedido #'|urlencode }}{{ pedido.numero_pedido|urlencode }}" class="whatsapp-link">
+        <a href="https://wa.me/54{{ restaurante.telefono|urlencode }}?text={{ 'Hola, tengo una consulta sobre mi pedido #'|urlencode }}{{ pedido.numero_pedido|urlencode }}" class="whatsapp-link">
             Contactar por WhatsApp
         </a>
         <a href="{% url 'restaurante_publico' restaurante.username %}" class="btn btn-primary-custom">

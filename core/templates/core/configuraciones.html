@@ -442,7 +442,7 @@ textarea.form-control {
         </div>
         <div class="qr-footer">
           <div class="piatto-logo">
-            <img src="{{ MEDIA_URL }}images/piatto-logo-org.png" alt="Piatto Logo">
+            <img src="https://piatto-media-2025.s3.us-east-2.amazonaws.com/media/images/piatto-logo-org.png" alt="Piatto Logo">
           </div>
           <div class="qr-footer-text">
             <p style="color: #f85c2b;">Tu negocio, en piloto automático.</p>
@@ -557,7 +557,7 @@ textarea.form-control {
 
     // URLs absolutas para las imágenes
     const qrImageUrl = new URL(qrImage.src, window.location.origin).href;
-    const logoImageUrl = new URL('{{ MEDIA_URL }}images/piatto-logo-org.png', window.location.origin).href;
+    const logoImageUrl = new URL('https://piatto-media-2025.s3.us-east-2.amazonaws.com/media/images/piatto-logo-org.png', window.location.origin).href;
 
     console.log('Intentando cargar imágenes para PDF:', { qrImageUrl, logoImageUrl });
 

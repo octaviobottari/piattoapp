@@ -1599,7 +1599,7 @@ def generate_qr_for_restaurant(restaurant_name):
     print(f"QR image saved to S3: s3://piatto-media-2025/media/qrcodes/{filename}")
     return restaurant_qr
 
-
+@api_view(['GET'])
 def hello(request):
     data = {
         'name': "Juan",

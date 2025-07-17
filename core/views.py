@@ -39,7 +39,7 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage  # Importar default_storage
 from botocore.exceptions import ClientError  # Importar ClientError
 from rest_framework.decorators import api_view
-from rest_framework.response import Response 
+from rest_framework.response import Response
 
 logger = logging.getLogger(__name__)
 
@@ -1601,8 +1601,12 @@ def generate_qr_for_restaurant(restaurant_name):
 
 @api_view(['GET'])
 def hello(request):
+
+    print(request.data)
+
     data = {
-        'name': "Juan",
-        'message': f"Hello Juan, your first API endpoint has been created successfully!"
+        'message': f"Webhook recibido"
     }
-    return Response(data)
+
+
+    return Response(data, status=200)

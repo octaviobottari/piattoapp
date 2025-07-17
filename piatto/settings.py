@@ -70,7 +70,6 @@ TEMPLATES = [
         },
     },
 ]
-
 # URLs
 ROOT_URLCONF = 'piatto.urls'
 WSGI_APPLICATION = 'piatto.wsgi.application'

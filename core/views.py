@@ -98,7 +98,6 @@ def panel_view(request):
     ).order_by('-fecha')[:5]
     
     return render(request, 'core/panel.html', {
-        'restaurante': restaurante,
         'pedidos_recientes': pedidos_recientes
     })
 

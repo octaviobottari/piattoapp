@@ -38,6 +38,8 @@ from django.core.files import File
 from django.core.files.base import ContentFile
 from django.core.files.storage import default_storage  # Importar default_storage
 from botocore.exceptions import ClientError  # Importar ClientError
+from rest_framework.decorators import api_view
+from rest_framework.response import Response 
 
 logger = logging.getLogger(__name__)
 
@@ -1596,3 +1598,11 @@ def generate_qr_for_restaurant(restaurant_name):
     
     print(f"QR image saved to S3: s3://piatto-media-2025/media/qrcodes/{filename}")
     return restaurant_qr
+
+
+def hello(request):
+    data = {
+        'name': "Juan",
+        'message': f"Hello Juan, your first API endpoint has been created successfully!"
+    }
+    return Response(data)

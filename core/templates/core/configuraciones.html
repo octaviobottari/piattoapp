@@ -435,14 +435,14 @@ textarea.form-control {
         <h5 style="color: #f85c2b;">{{ restaurante.nombre_local }}</h5>
         <div class="qr-image-container">
           {% if restaurant_qr.qr_image %}
-            <img id="qrImage" src="{{ restaurant_qr.qr_image.url }}" alt="QR Code for {{ restaurant_qr.name }}" class="qr-code">
+            <img id="qrImage" src="{{ restaurant_qr.qr_image.url }}" alt="QR Code for {{ restaurant_qr.name }}" class="qr-code" crossorigin="anonymous">
           {% else %}
             <p>Generando QR...</p>
           {% endif %}
         </div>
         <div class="qr-footer">
           <div class="piatto-logo">
-            <img src="https://piatto-media-2025.s3.us-east-2.amazonaws.com/media/images/piatto-logo-org.png" alt="Piatto Logo">
+            <img src="https://piatto-media-2025.s3.us-east-2.amazonaws.com/media/images/piatto-logo-org.png" alt="Piatto Logo" crossorigin="anonymous">
           </div>
           <div class="qr-footer-text">
             <p style="color: #f85c2b;">Tu negocio, en piloto automático.</p>

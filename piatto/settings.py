@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'storages',
     'core.apps.CoreConfig',
+    'rest_framework'
 ]
 
 # Middleware

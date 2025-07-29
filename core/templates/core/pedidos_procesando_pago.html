@@ -1,0 +1,733 @@
+{% extends 'base.html' %}
+{% load static humanize %}
+
+{% block styles %}
+<link rel="stylesheet" href="{% static 'css/pedidos.css' %}">
+
+<style>
+    .product-card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .product-image {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .product-name {
+      font-weight: bold;
+      margin-top: 5px;
+    }
+    .product-detail {
+      font-size: 14px;
+    }
+    .product-options {
+      margin-top: 5px;
+    }
+    .product-options ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+
+    .timer{
+        color: #de0000;
+    }
+    .btn{
+      font-family: 'Nunito', sans-serif !important;
+    }
+    .btn-primary{
+    border-color: #fff;
+    border-radius: 50rem;
+    border: solid 4px;
+    }
+
+    .btn-primary:hover{
+      border-color: #fff;
+    }
+  </style>
+{% endblock %}
+
+{% block content %}
+<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Procesando Pagos</title>
+<meta name="restaurante-id" content="{{ restaurante.id|default_if_none:'' }}">
+
+<div class="container mt-4 p-4 bg-light">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Pedidos Procesando Pago</h2>
+    <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'lista_pedidos' %}" class="btn btn-primary">Volver a Gestión de Pedidos</a>
+      <div class="form-check form-switch">
+        <input class="form-check-input" type="checkbox" id="soundToggle" role="switch">
+        <label class="form-check-label" for="soundToggle">Notificaciones de Sonido</label>
+      </div>
+    </div>
+  </div>
+
+  <div class="row">
+    <!-- Pedidos Procesando Pago -->
+    <div class="col-md-6 mb-4">
+      <h4 class="text-center mb-3">Procesando Pago</h4>
+      <div class="order-column" id="procesando_pago" data-estado="procesando_pago">
+        {% include 'core/pedidos_procesando_pago_columnas.html' with pedidos_procesando=pedidos_procesando procesando_pago_only=True %}
+      </div>
+    </div>
+
+    <!-- Pedidos con Error en Pago -->
+    <div class="col-md-6 mb-4">
+      <h4 class="text-center mb-3">Error en Pago</h4>
+      <div class="order-column" id="error_pago" data-estado="error_pago">
+        {% include 'core/pedidos_procesando_pago_columnas.html' with pedidos_error=pedidos_error error_pago_only=True %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para ver detalles del pedido -->
+<div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title" id="modalPedidoTitle">Cargando...</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row mb-3">
+          <div class="col-md-6">
+            <h5>Información del Cliente</h5>
+            <p><strong>Nombre:</strong> <span id="modalCliente"></span></p>
+            <p><strong>Teléfono:</strong> <span id="modalTelefono"></span></p>
+            <p><strong>Dirección:</strong> <span id="modalDireccion"></span></p>
+            <p><strong>Aclaraciones:</strong> <span id="modalAclaraciones"></span></p>
+          </div>
+          <div class="col-md-6">
+            <h5>Detalles del Pedido</h5>
+            <p><strong>Fecha:</strong> <span id="modalFecha"></span></p>
+            <p><strong>Método de Pago:</strong> <span id="modalMetodoPago"></span></p>
+            <p><strong>Estado:</strong> <span id="modalEstado"></span></p>
+            <p><strong>Tiempo Estimado:</strong> <span id="modalTiempoEstimado"></span></p>
+            <p id="modalErrorPagoContainer" style="display: none;"><strong>Error de Pago:</strong> <span id="modalErrorPago"></span></p>
+            <p><strong>Subtotal:</strong> $<span id="modalSubtotal"></span></p>
+            <p id="modalDescuentoEfectivoContainer"><strong>Descuento Efectivo:</strong> $<span id="modalDescuentoEfectivo"></span></p>
+            <p id="modalDescuentoCodigoContainer"><strong>Descuento Código:</strong> $<span id="modalDescuentoCodigo"></span></p>
+            <p><strong>Subtotal con Descuentos incluídos:</strong> $<span id="modalDescuentoTotal"></span></p>
+            <p><strong>Costo Envío:</strong> $<span id="modalCostoEnvio"></span></p>
+            <p><strong>Total:</strong> $<span id="modalTotal"></span></p>
+          </div>
+        </div>
+        <hr>
+        <h5>Productos</h5>
+        <div class="product-grid" id="modalProductos"></div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para WhatsApp -->
+<div class="modal fade" id="modalWhatsApp" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="modalWhatsAppTitle">Confirmación por WhatsApp</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p id="whatsappMessage" style="white-space: pre-wrap;"></p>
+        <div class="text-center mt-3">
+          <a id="whatsappLink" href="#" target="_blank" class="btn btn-success">
+            <i class="fab fa-whatsapp me-2"></i>Ir al chat
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para activar sonido -->
+<div class="modal fade" id="modalActivarSonido" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-md">
+    <div class="modal-content">
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title">Activar Notificaciones de Sonido</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>Las notificaciones de sonido están habilitadas, pero requieren una interacción con la página para funcionar. Haz clic en el botón a continuación para activar el sonido.</p>
+        <div class="text-center mt-3">
+          <button id="btnActivarSonido" class="btn btn-primary">Activar Sonido</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Elemento de audio para la notificación -->
+<audio id="notificationSound" src="{% static 'sounds/notification-bell.mp3' %}" preload="auto"></audio>
+{% endblock %}
+
+{% block scripts %}
+{{ block.super }}
+<script src="{% static 'js/websocket.js' %}?v=6"></script>
+<script>
+// Ensure window.refreshColumns is defined
+window.refreshColumns = function() {
+    console.log('Refreshing columns for procesando_pago and error_pago');
+    $.ajax({
+        url: '/panel/pedidos/procesando_pagos/html/',
+        method: 'GET',
+        cache: false,
+        timeout: 10000,
+        beforeSend: function() {
+            $('#procesando_pago').addClass('loading').empty();
+            $('#error_pago').addClass('loading').empty();
+            console.log('Cleared procesando_pago and error_pago columns');
+        },
+        success: function(html) {
+            console.log('AJAX response received for procesando_pagos:', html);
+            const $temp = $('<div>').html(html);
+            const $procesando = $('#procesando_pago');
+            const $error = $('#error_pago');
+
+            // Update procesando_pago column
+            const procesandoHtml = $temp.find('#procesando_pago').html() || '<p class="text-center">No hay pedidos procesando pago.</p>';
+            $procesando.html(procesandoHtml);
+            console.log('Updated procesando_pago with:', procesandoHtml);
+
+            // Update error_pago column
+            const errorHtml = $temp.find('#error_pago').html() || '<p class="text-center">No hay pedidos con error en pago.</p>';
+            $error.html(errorHtml);
+            console.log('Updated error_pago with:', errorHtml);
+
+            // Reinitialize Bootstrap dropdowns
+            $('.dropdown-toggle', $procesando).dropdown();
+            $('.dropdown-toggle', $error).dropdown();
+            console.log('Dropdowns initialized:', $('.dropdown-toggle').length);
+
+            // Call updateTimers if defined
+            if (typeof window.updateTimers === 'function') {
+                window.updateTimers();
+                console.log('Timers updated');
+            }
+
+            $procesando.removeClass('loading');
+            $error.removeClass('loading');
+        },
+        error: function(xhr) {
+            console.error('Error refreshing columns:', xhr);
+            showNotification(`Error al actualizar pedidos: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
+            $('#procesando_pago').removeClass('loading');
+            $('#error_pago').removeClass('loading');
+        }
+    });
+};
+
+// Timer for error_pago orders
+window.updateTimers = function() {
+    $('.timer').each(function() {
+        const $timer = $(this);
+        const fechaError = new Date($timer.data('fecha-error'));
+        const now = new Date();
+        const diff = 30 * 60 * 1000 - (now - fechaError); // 30 minutes in ms
+        if (diff <= 0) {
+            const $card = $timer.closest('.order-card');
+            console.log(`Removing expired order ${$card.data('pedido-id')} from DOM`);
+            $card.remove();
+            return;
+        }
+        const minutes = Math.floor(diff / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        $timer.text(`Tiempo restante: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+    });
+};
+setInterval(window.updateTimers, 1000);
+
+// Confirmar Pago (Sí)
+$(document).on('click', '.confirmar-pago', function(e) {
+    e.preventDefault();
+    const $this = $(this);
+    if ($this.hasClass('disabled')) return;
+    $this.addClass('disabled').prop('disabled', true);
+
+    const pedidoId = $this.data('pedido-id');
+    $.ajax({
+        url: `/panel/pedidos/${pedidoId}/confirmar_pago/`,
+        method: 'POST',
+        success: function(response) {
+            if (response.success) {
+                showNotification(`Pago del pedido #${pedidoId} confirmado`, 'success');
+                window.refreshColumns();
+            } else {
+                showNotification(`Error al confirmar el pago: ${response.error || 'Error desconocido'}`, 'error');
+            }
+        },
+        error: function(xhr) {
+            console.error(`Error confirming payment for pedido ${pedidoId}:`, xhr);
+            showNotification(`Error al confirmar el pago: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
+        },
+        complete: function() {
+            $this.removeClass('disabled').prop('disabled', false);
+        }
+    });
+});
+
+// Rechazar Pago (No)
+$(document).on('click', '.rechazar-pago', function(e) {
+    e.preventDefault();
+    const $this = $(this);
+    if ($this.hasClass('disabled')) return;
+    $this.addClass('disabled').prop('disabled', true);
+
+    const pedidoId = $this.data('pedido-id');
+    $.ajax({
+        url: `/panel/pedidos/${pedidoId}/rechazar_pago/`,
+        method: 'POST',
+        data: { motivo_error: 'Error desconocido en el procesamiento del pago' },
+        success: function(response) {
+            if (response.success) {
+                showNotification(`Pago del pedido #${pedidoId} rechazado`, 'success');
+                window.refreshColumns();
+            } else {
+                showNotification(`Error al rechazar el pago: ${response.error || 'Error desconocido'}`, 'error');
+            }
+        },
+        error: function(xhr) {
+            console.error(`Error rejecting payment for pedido ${pedidoId}:`, xhr);
+            showNotification(`Error al rechazar el pago: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
+        },
+        complete: function() {
+            $this.removeClass('disabled').prop('disabled', false);
+        }
+    });
+});
+
+$(document).ready(function() {
+    // Check dependencies
+    if (typeof $ === 'undefined') {
+        console.error('jQuery is not loaded');
+        showNotification('Error: jQuery no está cargado correctamente', 'error');
+        return;
+    }
+    if (typeof $.fn.modal === 'undefined') {
+        console.error('Bootstrap modal plugin is not loaded');
+        showNotification('Error: Bootstrap no está cargado correctamente', 'error');
+        return;
+    }
+
+    // CSRF setup
+    $.ajaxSetup({
+        beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+                const csrftoken = getCookie('csrftoken');
+                if (csrftoken) {
+                    xhr.setRequestHeader('X-CSRFToken', csrftoken);
+                } else {
+                    console.error('CSRF token no encontrado');
+                    showNotification('Error: CSRF token no encontrado', 'error');
+                }
+            }
+        }
+    });
+
+    // Timer for error_pago orders
+    window.updateTimers = function() {
+        $('.timer').each(function() {
+            const $timer = $(this);
+            const fechaError = new Date($timer.data('fecha-error'));
+            const now = new Date();
+            const diff = 30 * 60 * 1000 - (now - fechaError); // 30 minutes in ms
+            if (diff <= 0) {
+                const $card = $timer.closest('.order-card');
+                $card.remove();
+                return;
+            }
+            const minutes = Math.floor(diff / 60000);
+            const seconds = Math.floor((diff % 60000) / 1000);
+            $timer.text(`Tiempo restante: ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`);
+        });
+    };
+    setInterval(window.updateTimers, 1000);
+    window.updateTimers();
+
+    // Confirmar Pago (Sí)
+    $(document).on('click', '.confirmar-pago', function(e) {
+        e.preventDefault();
+        const $this = $(this);
+        if ($this.hasClass('disabled')) return;
+        $this.addClass('disabled').prop('disabled', true);
+
+        const pedidoId = $this.data('pedido-id');
+        $.ajax({
+            url: `/panel/pedidos/${pedidoId}/confirmar_pago/`,
+            method: 'POST',
+            success: function(response) {
+                if (response.success) {
+                    showNotification(`Pago del pedido #${pedidoId} confirmado`, 'success');
+                    window.refreshColumns();
+                } else {
+                    showNotification(`Error al confirmar el pago: ${response.error || 'Error desconocido'}`, 'error');
+                }
+            },
+            error: function(xhr) {
+                console.error(`Error confirming payment for pedido ${pedidoId}:`, xhr);
+                showNotification(`Error al confirmar el pago: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
+            },
+            complete: function() {
+                $this.removeClass('disabled').prop('disabled', false);
+            }
+        });
+    });
+
+    // Rechazar Pago (No)
+    $(document).on('click', '.rechazar-pago', function(e) {
+        e.preventDefault();
+        const $this = $(this);
+        if ($this.hasClass('disabled')) return;
+        $this.addClass('disabled').prop('disabled', true);
+
+        const pedidoId = $this.data('pedido-id');
+        $.ajax({
+            url: `/panel/pedidos/${pedidoId}/rechazar_pago/`,
+            method: 'POST',
+            data: { motivo_error: 'Error en el procesamiento del pago' },
+            success: function(response) {
+                if (response.success) {
+                    showNotification(`Pago del pedido #${pedidoId} rechazado`, 'success');
+                    window.refreshColumns();
+                } else {
+                    showNotification(`Error al rechazar el pago: ${response.error || 'Error desconocido'}`, 'error');
+                }
+            },
+            error: function(xhr) {
+                console.error(`Error rejecting payment for pedido ${pedidoId}:`, xhr);
+                showNotification(`Error al rechazar el pago: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
+            },
+            complete: function() {
+                $this.removeClass('disabled').prop('disabled', false);
+            }
+        });
+    });
+
+    // Mostrar detalles del pedido
+    $(document).on('click', '.order-card', function(e) {
+        if ($(e.target).closest('.icon-group').length || $(e.target).hasClass('order-phone')) return;
+
+        const pedidoId = $(this).data('pedido-id');
+        console.log(`Fetching details for pedido ${pedidoId}`);
+        $.ajax({
+            url: `/panel/pedidos/${pedidoId}/json/`,
+            method: 'GET',
+            cache: false,
+            success: function(data) {
+                console.log('Received data:', data);
+                if (data.error) {
+                    console.error('Server error:', data.error);
+                    showNotification(`Error: ${data.error}`, 'error');
+                    return;
+                }
+
+                $('#modalPedidoTitle').text(`Pedido #${data.numero_pedido || 'Desconocido'}`);
+                $('#modalCliente').text(data.nombre_cliente || 'Sin nombre');
+                $('#modalTelefono').text(data.telefono_cliente || 'Sin teléfono');
+                $('#modalDireccion').text(data.direccion_entrega || 'Retiro en local');
+                $('#modalAclaraciones').text(data.aclaraciones || 'Sin aclaraciones');
+                $('#modalFecha').text(data.fecha_creacion ? new Date(data.fecha_creacion).toLocaleString('es-AR', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 'Sin fecha');
+                $('#modalMetodoPago').text(data.metodo_pago || 'No especificado');
+                $('#modalEstado').text(data.estado || 'Sin estado');
+                $('#modalTiempoEstimado').text(data.tiempo_estimado || 'No especificado');
+                $('#modalErrorPagoContainer').toggle(!!data.error_pago_mensaje);
+                $('#modalErrorPago').text(data.error_pago_mensaje || '');
+                $('#modalSubtotal').text(parseFloat(data.subtotal || 0).toFixed(2));
+                $('#modalDescuentoEfectivoContainer').toggle(!!data.monto_descuento_efectivo && parseFloat(data.monto_descuento_efectivo) > 0);
+                $('#modalDescuentoEfectivo').text(parseFloat(data.monto_descuento_efectivo || 0).toFixed(2));
+                $('#modalDescuentoCodigoContainer').toggle(!!data.monto_descuento_codigo && parseFloat(data.monto_descuento_codigo) > 0);
+                $('#modalDescuentoCodigo').text(parseFloat(data.monto_descuento_codigo || 0).toFixed(2));
+                $('#modalDescuentoTotal').text(parseFloat(data.monto_descuento || 0).toFixed(2));
+                $('#modalCostoEnvio').text(parseFloat(data.costo_envio || 0).toFixed(2));
+                $('#modalTotal').text(parseFloat(data.total || 0).toFixed(2));
+
+                const productosContainer = $('#modalProductos');
+                productosContainer.empty();
+                if (data.items && data.items.length > 0) {
+                    const restaurantName = data.restaurante_nombre || 'pizzapicante';
+                    data.items.forEach(item => {
+                        let imageUrl = item.imagen_url || `/media/${restaurantName}/productos/${item.imagen_nombre_original || 'default.png'}`;
+                        if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
+                            imageUrl = `/media/${restaurantName}/productos/${item.imagen_nombre_original || 'default.png'}`;
+                        }
+
+                        const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (
+                            `<div class="product-options">Opciones:<ul>${item.opciones_seleccionadas.map(op => `<li>${op.nombre} (+$${parseFloat(op.precio_adicional || 0).toFixed(2)})</li>`).join('')}</ul></div>`
+                        ) : '';
+                        const productCard = `
+                            <div class="product-card">
+                                <img src="${imageUrl}" alt="${item.nombre_producto || 'Producto'}" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Producto';">
+                                <div class="product-name">${item.nombre_producto || 'Sin nombre'}</div>
+                                <div class="product-detail">Cantidad: ${item.cantidad || 0}</div>
+                                <div class="product-detail">Precio: $${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
+                                <div class="product-detail">Subtotal: $${parseFloat(item.subtotal || 0).toFixed(2)}</div>
+                            ${opcionesHtml}
+                            </div>
+                        `;
+                        productosContainer.append(productCard);
+                    });
+                } else {
+                    productosContainer.append('<p>No hay productos en este pedido.</p>');
+                }
+
+                try {
+                    $('#modalPedido').modal('show');
+                    console.log('Modal opened successfully');
+                } catch (e) {
+                    console.error('Error opening modalPedido:', e);
+                    showNotification('Error al abrir el modal de detalles del pedido', 'error');
+                }
+            },
+            error: function(xhr) {
+                console.error('AJAX error for pedido', pedidoId, xhr.status, xhr.responseText);
+                showNotification(`No se pudo cargar los detalles del pedido. Código de error: ${xhr.status}`, 'error');
+            }
+        });
+    });
+
+    // Manejo de clic en order-phone para WhatsApp
+    $(document).on('click', '.order-phone', function(e) {
+        e.preventDefault();
+        const $this = $(this);
+        const pedidoId = $this.data('pedido-id');
+        const telefonoRaw = $this.attr('data-telefono');
+        const estado = $this.closest('.order-column').data('estado');
+
+        if (estado === 'procesando_pago') {
+            showNotification('No se puede contactar por WhatsApp mientras el pago está en procesamiento.', 'error');
+            return;
+        }
+
+        if (!telefonoRaw || typeof telefonoRaw !== 'string' || telefonoRaw.trim() === '') {
+            showNotification('Número inválido. No se puede contactar por WhatsApp.', 'error');
+            return;
+        }
+
+        const telefono = telefonoRaw.replace(/\D/g, '');
+        if (telefono.length !== 10 || isNaN(telefono)) {
+            showNotification('Número inválido. Debe tener 10 dígitos numéricos.', 'error');
+            return;
+        }
+
+        const numeroWhatsApp = `+54${telefono}`;
+
+        $.ajax({
+            url: `/panel/pedidos/${pedidoId}/json/`,
+            method: 'GET',
+            cache: false,
+            success: function(pedido) {
+                if (pedido.error) {
+                    console.error('Server error:', pedido.error);
+                    showNotification(`Error: ${pedido.error}`, 'error');
+                    return;
+                }
+
+                let mensaje, modalTitle;
+                if (estado === 'error_pago') {
+                    modalTitle = 'Notificar Error de Pago por WhatsApp';
+                    mensaje = `Hola ${pedido.nombre_cliente || 'Cliente'}, lamentamos informarte que hubo un error en el procesamiento del pago de tu pedido #${pedido.numero_pedido}.\n`;
+                    mensaje += `Motivo: ${pedido.error_pago_mensaje || 'Error desconocido'}.\n`;
+                    mensaje += `Por favor, intenta nuevamente o contáctanos para más detalles.`;
+                } else {
+                    modalTitle = 'Confirmación por WhatsApp';
+                    mensaje = `Hola ${pedido.nombre_cliente || 'Cliente'}, tu pedido #${pedido.numero_pedido} ha sido confirmado!\n\n*Detalles del pedido:*\n`;
+                    pedido.items.forEach(item => {
+                        mensaje += `- ${item.cantidad}x ${item.nombre_producto} ($${parseFloat(item.subtotal).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})`;
+                        if (item.opciones_seleccionadas.length > 0) {
+                            mensaje += `\n  Opciones:\n`;
+                            item.opciones_seleccionadas.forEach(opt => {
+                                mensaje += `    * ${opt.nombre} (+$${parseFloat(opt.precio_adicional).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})\n`;
+                            });
+                        } else {
+                            mensaje += `\n`;
+                        }
+                    });
+                    mensaje += `\n*Total*: $${parseFloat(pedido.total).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+                    if (pedido.direccion_entrega && pedido.direccion_entrega !== 'Retiro en local') {
+                        mensaje += `\n\n*Entrega en*: ${pedido.direccion_entrega}`;
+                    } else {
+                        mensaje += `\n\n*Retiro en local*`;
+                    }
+                }
+
+                const mensajeEncoded = encodeURIComponent(mensaje);
+                const whatsappUrl = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${mensajeEncoded}`;
+
+                $('#modalWhatsAppTitle').text(modalTitle);
+                $('#whatsappMessage').text(mensaje);
+                $('#whatsappLink').attr('href', whatsappUrl).show();
+                try {
+                    $('#modalWhatsApp').modal('show');
+                    console.log('WhatsApp modal opened successfully');
+                } catch (e) {
+                    console.error('Error opening modalWhatsApp:', e);
+                    showNotification('Error al abrir el modal de WhatsApp', 'error');
+                }
+            },
+            error: function(xhr) {
+                console.error('Error fetching pedido for WhatsApp:', xhr);
+                showNotification(`Error al cargar detalles del pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
+            }
+        });
+    });
+
+    // Audio handling
+    const audio = document.getElementById('notificationSound');
+    let isSoundEnabled = localStorage.getItem('isSoundEnabled') === 'true';
+    let audioUnlocked = false;
+    let pendingSound = null;
+    $('#soundToggle').prop('checked', isSoundEnabled);
+
+    audio.addEventListener('loadeddata', () => {
+        console.log('Archivo de audio cargado correctamente');
+    });
+    audio.addEventListener('error', (e) => {
+        console.error('Error al cargar el archivo de audio:', e);
+        showNotification('Error al cargar el sonido de notificación.', 'error');
+    });
+    audio.load();
+
+    function unlockAudio() {
+        if (!audioUnlocked) {
+            console.log('Intentando desbloquear audio...');
+            audio.play().then(() => {
+                audio.pause();
+                audio.currentTime = 0;
+                audioUnlocked = true;
+                console.log('Audio desbloqueado tras interacción del usuario');
+                if (pendingSound) {
+                    console.log('Reintentando sonido para pedido pendiente:', pendingSound);
+                    window.playNotificationSound(pendingSound);
+                    pendingSound = null;
+                }
+            }).catch(e => {
+                console.warn('No se pudo desbloquear audio:', e);
+                if (isSoundEnabled && !$('#modalActivarSonido').hasClass('show')) {
+                    try {
+                        $('#modalActivarSonido').modal('show');
+                        console.log('Sound activation modal opened');
+                    } catch (e) {
+                        console.error('Error opening modalActivarSonido:', e);
+                        showNotification('Error al abrir el modal de activación de sonido', 'error');
+                    }
+                }
+            });
+        }
+    }
+
+    window.playNotificationSound = function(pedidoId) {
+        if (!isSoundEnabled) {
+            console.log('Sonido deshabilitado, no se reproduce para pedido:', pedidoId);
+            return;
+        }
+        console.log('Intentando reproducir sonido para pedido:', pedidoId);
+        if (audioUnlocked) {
+            audio.play().then(() => {
+                console.log('Sonido reproducido exitosamente para pedido:', pedidoId);
+            }).catch(e => {
+                console.error('Error al reproducir sonido:', e);
+                showNotification(`Nuevo pedido #${pedidoId} recibido, pero el sonido no se pudo reproducir. Interactúa con la página.`, 'warning');
+            });
+        } else {
+            pendingSound = pedidoId;
+            showNotification(`Nuevo pedido #${pedidoId} recibido, pero el sonido está bloqueado. Interactúa con la página.`, 'warning');
+            unlockAudio();
+        }
+    };
+
+    if (isSoundEnabled) {
+        unlockAudio();
+    }
+
+    $(document).on('click touchstart', unlockAudio);
+    $('#soundToggle').on('click', unlockAudio);
+    $('#btnActivarSonido').on('click', function() {
+        unlockAudio();
+        try {
+            $('#modalActivarSonido').modal('hide');
+            console.log('Sound activation modal closed');
+        } catch (e) {
+            console.error('Error hiding modalActivarSonido:', e);
+            showNotification('Error al cerrar el modal de activación de sonido', 'error');
+        }
+    });
+
+    $('#soundToggle').change(function() {
+        isSoundEnabled = $(this).is(':checked');
+        localStorage.setItem('isSoundEnabled', isSoundEnabled);
+        console.log('Notificaciones de sonido:', isSoundEnabled ? 'habilitadas' : 'deshabilitadas');
+        if (isSoundEnabled) {
+            unlockAudio();
+            setTimeout(() => {
+                audio.play().then(() => {
+                    audio.pause();
+                    audio.currentTime = 0;
+                    console.log('Sonido de prueba reproducido al habilitar notificaciones');
+                }).catch(e => {
+                    console.error('Error al reproducir sonido de prueba:', e);
+                    showNotification('No se pudo reproducir el sonido de prueba. Interactúa con la página.', 'error');
+                    try {
+                        $('#modalActivarSonido').modal('show');
+                        console.log('Sound activation modal opened');
+                    } catch (e) {
+                        console.error('Error opening modalActivarSonido:', e);
+                        showNotification('Error al abrir el modal de activación de sonido', 'error');
+                    }
+                });
+            }, 100);
+        }
+    });
+
+    // Initial refresh
+    console.log('Triggering initial refreshColumns');
+    window.refreshColumns();
+});
+
+// Function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// Function to show notifications
+function showNotification(message, type) {
+    const notificationDiv = document.createElement('div');
+    notificationDiv.className = `alert alert-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'success'} alert-dismissible fade show`;
+    notificationDiv.style.position = 'fixed';
+    notificationDiv.style.top = '20px';
+    notificationDiv.style.right = '20px';
+    notificationDiv.style.zIndex = '1000';
+    notificationDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notificationDiv);
+    setTimeout(() => notificationDiv.remove(), 5000);
+}
+</script>
+{% endblock %}

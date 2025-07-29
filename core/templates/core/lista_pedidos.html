@@ -30,6 +30,47 @@
       margin: 0;
       padding-left: 20px;
     }
+
+    .btn{
+      font-family: 'Nunito', sans-serif !important;
+    }
+    .btn-primary{
+    border-color: #fff;
+    border-radius: 50rem;
+    border: solid 4px;
+    }
+
+    .btn-primary:hover{
+      border-color: #fff;
+    }
+
+    .btn-danger{
+      border-color: #fff;
+    border-radius: 50rem;
+    border: solid 4px;
+    }
+    .btn-danger:hover{
+      border-color: #fff;
+    }
+
+    .btn-warning{
+    border-color: #fff !important;
+    border-radius: 50rem;
+    border: solid 4px;
+    }
+    .btn-warning:hover{
+      border-color: #fff !important; 
+    }
+
+    .btn-info{
+      border-color: #fff !important;
+      border-radius: 50rem;
+    border: solid 4px;
+    }
+
+    .btn-info:hover{
+      border-color: #fff !important;
+    }
   </style>
 {% endblock %}
 
@@ -42,6 +83,7 @@
   <div class="d-flex justify-content-between align-items-center mb-4">
     <h2>Gestión de Pedidos</h2>
     <div class="d-flex align-items-center gap-3">
+      <a href="{% url 'pedidos_procesando_pagos_html' %}" class="btn btn-primary">Ver Pedidos Procesando Pago</a>
       <a href="{% url 'pedidos_cancelados' %}" class="btn btn-danger">Ver Pedidos Cancelados</a>
       <a href="{% url 'pedidos_en_entrega' %}" class="btn btn-warning">Ver Pedidos en Entrega</a>
       <a href="{% url 'todos_pedidos' %}" class="btn btn-info">Ver Todos los Pedidos</a>
@@ -94,32 +136,33 @@
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="row mb-3">
-          <div class="col-md-6">
+    <div class="row mb-3">
+        <div class="col-md-6">
             <h5>Información del Cliente</h5>
             <p><strong>Nombre:</strong> <span id="modalCliente"></span></p>
             <p><strong>Teléfono:</strong> <span id="modalTelefono"></span></p>
             <p><strong>Dirección:</strong> <span id="modalDireccion"></span></p>
             <p><strong>Aclaraciones:</strong> <span id="modalAclaraciones"></span></p>
-          </div>
-          <div class="col-md-6">
+        </div>
+        <div class="col-md-6">
             <h5>Detalles del Pedido</h5>
             <p><strong>Fecha:</strong> <span id="modalFecha"></span></p>
             <p><strong>Método de Pago:</strong> <span id="modalMetodoPago"></span></p>
             <p><strong>Estado:</strong> <span id="modalEstado"></span></p>
             <p><strong>Tiempo Estimado:</strong> <span id="modalTiempoEstimado"></span></p>
+            <p id="modalErrorPagoContainer" style="display: none;"><strong>Error de Pago:</strong> <span id="modalErrorPago"></span></p>
             <p><strong>Subtotal:</strong> $<span id="modalSubtotal"></span></p>
             <p id="modalDescuentoEfectivoContainer"><strong>Descuento Efectivo:</strong> $<span id="modalDescuentoEfectivo"></span></p>
             <p id="modalDescuentoCodigoContainer"><strong>Descuento Código:</strong> $<span id="modalDescuentoCodigo"></span></p>
             <p><strong>Subtotal con Descuentos incluídos:</strong> $<span id="modalDescuentoTotal"></span></p>
             <p><strong>Costo Envío:</strong> $<span id="modalCostoEnvio"></span></p>
             <p><strong>Total:</strong> $<span id="modalTotal"></span></p>
-          </div>
         </div>
-        <hr>
-        <h5>Productos</h5>
-        <div class="product-grid" id="modalProductos"></div>
-      </div>
+    </div>
+    <hr>
+    <h5>Productos</h5>
+    <div class="product-grid" id="modalProductos"></div>
+</div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
       </div>
@@ -585,83 +628,76 @@
 
 // Mostrar detalles del pedido
 $(document).on('click', '.order-card', function(e) {
-  if ($(e.target).closest('.icon-group').length || $(e.target).hasClass('order-phone')) return;
+    if ($(e.target).closest('.icon-group').length || $(e.target).hasClass('order-phone')) return;
 
-  const pedidoId = $(this).data('pedido-id');
-  console.log(`Info icon clicked for pedido ID: ${pedidoId}`);
+    const pedidoId = $(this).data('pedido-id');
+    $.ajax({
+        url: `/panel/pedidos/${pedidoId}/json/`,
+        method: 'GET',
+        success: function(data) {
+            $('#modalPedidoTitle').text(`Pedido #${data.numero_pedido || 'Desconocido'}`);
+            $('#modalCliente').text(data.nombre_cliente || 'Sin nombre');
+            $('#modalTelefono').text(data.telefono_cliente || 'Sin teléfono');
+            $('#modalDireccion').text(data.direccion_entrega || 'Retiro en local');
+            $('#modalAclaraciones').text(data.aclaraciones || 'Sin aclaraciones');
+            $('#modalFecha').text(data.fecha_creacion ? new Date(data.fecha_creacion).toLocaleString('es-AR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : 'Sin fecha');
+            $('#modalMetodoPago').text(data.metodo_pago || 'No especificado');
+            $('#modalEstado').text(data.estado || 'Sin estado');
+            $('#modalTiempoEstimado').text(data.tiempo_estimado || 'No especificado');
+            $('#modalErrorPagoContainer').toggle(!!data.error_pago_mensaje);
+            $('#modalErrorPago').text(data.error_pago_mensaje || '');
+            $('#modalSubtotal').text(parseFloat(data.subtotal || 0).toFixed(2));
+            $('#modalDescuentoEfectivoContainer').toggle(!!data.monto_descuento_efectivo && data.monto_descuento_efectivo > 0);
+            $('#modalDescuentoEfectivo').text(parseFloat(data.monto_descuento_efectivo || 0).toFixed(2));
+            $('#modalDescuentoCodigoContainer').toggle(!!data.monto_descuento_codigo && data.monto_descuento_codigo > 0);
+            $('#modalDescuentoCodigo').text(parseFloat(data.monto_descuento_codigo || 0).toFixed(2));
+            $('#modalDescuentoTotal').text(parseFloat(data.monto_descuento || 0).toFixed(2));
+            $('#modalCostoEnvio').text(parseFloat(data.costo_envio || 0).toFixed(2));
+            $('#modalTotal').text(parseFloat(data.total || 0).toFixed(2));
 
-  $.ajax({
-    url: `/panel/pedidos/${pedidoId}/json/`,
-    method: 'GET',
-    success: function(data) {
-      console.log('AJAX success for pedido', pedidoId, data);
-      $('#modalPedidoTitle').text(`Pedido #${data.numero_pedido || 'Desconocido'}`);
-      $('#modalCliente').text(data.nombre_cliente || 'Sin nombre');
-      $('#modalTelefono').text(data.telefono_cliente || 'Sin teléfono');
-      $('#modalDireccion').text(data.direccion_entrega || 'Retiro en local');
-      $('#modalAclaraciones').text(data.aclaraciones || 'Sin aclaraciones');
-      $('#modalFecha').text(data.fecha_creacion ? new Date(data.fecha_creacion).toLocaleString('es-AR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }) : 'Sin fecha');
-      $('#modalMetodoPago').text(data.metodo_pago || 'No especificado');
-      $('#modalEstado').text(data.estado || 'Sin estado');
-      $('#modalTiempoEstimado').text(data.tiempo_estimado || 'No especificado');
-      $('#modalSubtotal').text(parseFloat(data.subtotal || 0).toFixed(2));
-      $('#modalDescuentoEfectivoContainer').toggle(!!data.monto_descuento_efectivo && data.monto_descuento_efectivo > 0);
-      $('#modalDescuentoEfectivo').text(parseFloat(data.monto_descuento_efectivo || 0).toFixed(2));
-      $('#modalDescuentoCodigoContainer').toggle(!!data.monto_descuento_codigo && data.monto_descuento_codigo > 0);
-      $('#modalDescuentoCodigo').text(parseFloat(data.monto_descuento_codigo || 0).toFixed(2));
-      $('#modalDescuentoTotal').text(parseFloat(data.monto_descuento || 0).toFixed(2));
-      $('#modalCostoEnvio').text(parseFloat(data.costo_envio || 0).toFixed(2));
-      $('#modalTotal').text(parseFloat(data.total || 0).toFixed(2));
+            const productosContainer = $('#modalProductos');
+            productosContainer.empty();
+            if (data.items && data.items.length > 0) {
+                const restaurantName = data.restaurante_nombre || '{{ restaurante.username|default:"default_restaurant" }}'.replace(/ /g, '_').toLowerCase();
+                data.items.forEach(item => {
+                    let imageUrl = item.imagen_url || '';
+                    if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
+                        const originalFilename = item.imagen_nombre_original || 'default.png';
+                        imageUrl = `{{ MEDIA_URL }}${restaurantName}/productos/${originalFilename}`;
+                    }
 
-      const productosContainer = $('#modalProductos');
-      productosContainer.empty();
-      if (data.items && data.items.length > 0) {
-        const restaurantName = data.restaurante_nombre || '{{ restaurante.username|default:"default_restaurant" }}'.replace(/ /g, '_').toLowerCase();
-        data.items.forEach(item => {
-          let imageUrl = item.imagen_url || '';
-          if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
-            const originalFilename = item.imagen_nombre_original || 'default.png';
-            imageUrl = `{{ MEDIA_URL }}${restaurantName}/productos/${originalFilename}`;
-          }
+                    const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (
+                        `<div class="product-options">Opciones:<ul>${item.opciones_seleccionadas.map(op => `<li>${op.nombre} (+$${parseFloat(op.precio_adicional || 0).toFixed(2)})</li>`).join('')}</ul></div>`
+                    ) : '';
+                    const productCard = `
+                        <div class="product-card">
+                            <img src="${imageUrl}" alt="${item.nombre_producto || 'Producto'}" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Producto';">
+                            <div class="product-name">${item.nombre_producto || 'Sin nombre'}</div>
+                            <div class="product-detail">Cantidad: ${item.cantidad || 0}</div>
+                            <div class="product-detail">Precio: $${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
+                            <div class="product-detail">Subtotal: $${parseFloat(item.subtotal || 0).toFixed(2)}</div>
+                            ${opcionesHtml}
+                        </div>
+                    `;
+                    productosContainer.append(productCard);
+                });
+            } else {
+                productosContainer.append('<p>No hay productos en este pedido.</p>');
+            }
 
-          const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (
-            `<div class="product-options">Opciones:<ul>${item.opciones_seleccionadas.map(op => `<li>${op.nombre} (+$${parseFloat(op.precio_adicional || 0).toFixed(2)})</li>`).join('')}</ul></div>`
-          ) : '';
-          const productCard = `
-            <div class="product-card">
-              <img src="${imageUrl}" alt="${item.nombre_producto || 'Producto'}" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Producto';">
-              <div class="product-name">${item.nombre_producto || 'Sin nombre'}</div>
-              <div class="product-detail">Cantidad: ${item.cantidad || 0}</div>
-              <div class="product-detail">Precio: $${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
-              <div class="product-detail">Subtotal: $${parseFloat(item.subtotal || 0).toFixed(2)}</div>
-              ${opcionesHtml}
-            </div>
-          `;
-          productosContainer.append(productCard);
-        });
-      } else {
-        productosContainer.append('<p>No hay productos en este pedido.</p>');
-      }
-
-      try {
-        $('#modalPedido').modal('show');
-        console.log('Modal shown for pedido', pedidoId);
-      } catch (error) {
-        console.error('Error showing modal:', error);
-        alert('No se pudo abrir el modal. Por favor, revisa la consola del navegador.');
-      }
-    },
-    error: function(xhr) {
-      console.error('AJAX error for pedido', pedidoId, xhr.status, xhr.responseText);
-      alert('No se pudo cargar los detalles del pedido. Código de error: ' + xhr.status);
-    }
-  });
+            $('#modalPedido').modal('show');
+        },
+        error: function(xhr) {
+            console.error('AJAX error for pedido', pedidoId, xhr.status, xhr.responseText);
+            alert('No se pudo cargar los detalles del pedido. Código de error: ' + xhr.status);
+        }
+    });
 });
 
 // Manejo de clic en order-phone para WhatsApp

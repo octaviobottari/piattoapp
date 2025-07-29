@@ -1,84 +1,386 @@
 {% extends 'base.html' %}
 {% load static %}
 
+{% block styles %}
+  <link rel="stylesheet" href="{% static 'css/pedidos.css' %}">
+  <style>
+    .countdown-entrega {
+      font-size: 16px !important;
+      color: #ff0000 !important;
+      font-weight: bold !important;
+      margin-top: 10px !important;
+      padding: 5px !important;
+      background-color: #ffe6e6 !important;
+      border-radius: 4px !important;
+      display: block !important;
+      min-height: 24px !important;
+      visibility: visible !important;
+      border: 1px solid #ff0000 !important;
+    }
+    .order-card {
+      cursor: pointer;
+      min-height: 150px;
+    }
+    .fa-info-circle {
+      font-size: 20px;
+      color: #007bff;
+      cursor: pointer;
+    }
+    .modal {
+      z-index: 1055 !important;
+    }
+    .no-jquery-warning {
+      color: #ff0000;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .product-card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .product-image {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .product-name {
+      font-weight: bold;
+      margin-top: 5px;
+    }
+    .product-detail {
+      font-size: 14px;
+    }
+    .product-options {
+      margin-top: 5px;
+    }
+    .product-options ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .btn{
+      font-family: 'Nunito', sans-serif !important;
+    }
+    .btn-primary{
+    border-color: #fff;
+    border-radius: 50rem;
+    border: solid 4px;
+    }
+
+    .btn-primary:hover{
+      border-color: #fff;
+    }
+  </style>
+{% endblock %}
+
 {% block content %}
-<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Pedidos en entrega</title>
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Pedidos en Entrega</h2>
-    <a href="{% url 'lista_pedidos' %}" class="btn btn-primary">Volver a Pedidos Activos</a>
-  </div>
-  
-  <div class="row">
-    {% for pedido in pedidos %}
-    <div class="col-md-4 mb-4">
-      <div class="card" data-pedido-id="{{ pedido.id }}">
-        <div class="card-header">
-          Pedido #{{ pedido.numero_pedido }} - {{ pedido.fecha|date:"d/m/Y H:i" }}
+  <title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Pedidos en Entrega</title>
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Pedidos en Entrega</h2>
+      <a href="{% url 'lista_pedidos' %}" class="btn btn-primary">Volver a Pedidos Activos</a>
+    </div>
+    
+    <div id="no-jquery-warning" class="no-jquery-warning" style="display: none;">
+      Error: jQuery no está cargado. Las funciones de modal y archivado automático no funcionarán.
+    </div>
+
+    <div class="row">
+      {% for pedido in pedidos %}
+      <div class="col-md-4 mb-4">
+        <div class="order-card" data-pedido-id="{{ pedido.id }}">
+          <div class="order-info">
+            <div class="order-header">En entrega desde {{ pedido.fecha_en_entrega|date:"d/m/Y H:i" }}</div>
+            <div class="order-name">Pedido #{{ pedido.numero_pedido }}</div>
+            <div class="order-phone">{{ pedido.cliente }}</div>
+            <div class="order-address">
+              <i class="fas fa-map-marker-alt"></i>
+              {{ pedido.direccion|default:"Retiro en local" }}
+            </div>
+            <div class="order-method">{{ pedido.get_metodo_pago_display|default:"Sin método" }}</div>
+            <div class="countdown-entrega" id="countdown-entrega-{{ pedido.id }}" data-pedido-id="{{ pedido.id }}" data-fecha-entrega="{{ pedido.fecha_en_entrega|date:'c' }}">Cargando...</div>
+          </div>
+          <div class="order-actions">
+            <div class="order-price">${{ pedido.total|floatformat:2 }}</div>
+            <div class="icon-group">
+              <i class="fas fa-info-circle" title="Ver detalles"></i>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <h5 class="card-title">{{ pedido.cliente }}</h5>
-          <p class="card-text">
-            <strong>Total:</strong> ${{ pedido.total }}<br>
-            <strong>Teléfono:</strong> {{ pedido.telefono }}<br>
-            <strong>Dirección:</strong> {{ pedido.direccion }}<br>
-            <strong>Aclaraciones:</strong> {{ pedido.aclaraciones|default:"-" }}
-          </p>
-          <h6>Productos:</h6>
-          <ul>
-            {% for item in pedido.items.all %}
-            <li>{{ item.cantidad }}x {{ item.nombre_producto }} - ${{ item.subtotal }}</li>
-            {% endfor %}
-          </ul>
-          <div class="countdown-entrega" data-pedido-id="{{ pedido.id }}" data-fecha-entrega="{{ pedido.fecha_en_entrega|date:'c' }}"></div>
+      </div>
+      {% empty %}
+      <div class="col-12 text-center">
+        <p>No hay pedidos en entrega.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Modal for Order Details -->
+    <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="modalPedidoTitle">Cargando...</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h5>Información del Cliente</h5>
+                <p><strong>Nombre:</strong> <span id="modalCliente"></span></p>
+                <p><strong>Teléfono:</strong> <span id="modalTelefono"></span></p>
+                <p><strong>Dirección:</strong> <span id="modalDireccion"></span></p>
+                <p><strong>Aclaraciones:</strong> <span id="modalAclaraciones"></span></p>
+              </div>
+              <div class="col-md-6">
+                <h5>Detalles del Pedido</h5>
+                <p><strong>Fecha:</strong> <span id="modalFecha"></span></p>
+                <p><strong>Método de Pago:</strong> <span id="modalMetodoPago"></span></p>
+                <p><strong>Estado:</strong> <span id="modalEstado"></span></p>
+                <p><strong>Tiempo Estimado:</strong> <span id="modalTiempoEstimado"></span></p>
+                <p><strong>Subtotal:</strong> $<span id="modalSubtotal"></span></p>
+                <p id="modalDescuentoEfectivoContainer"><strong>Descuento Efectivo:</strong> $<span id="modalDescuentoEfectivo"></span></p>
+                <p id="modalDescuentoCodigoContainer"><strong>Descuento Código:</strong> $<span id="modalDescuentoCodigo"></span></p>
+                <p><strong>Total Descuentos:</strong> $<span id="modalDescuentoTotal"></span></p>
+                <p><strong>Costo Envío:</strong> $<span id="modalCostoEnvio"></span></p>
+                <p><strong>Total:</strong> $<span id="modalTotal"></span></p>
+              </div>
+            </div>
+            <hr>
+            <h5>Productos</h5>
+            <div class="product-grid" id="modalProductos"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
         </div>
       </div>
     </div>
-    {% empty %}
-    <div class="col-12 text-center">
-      <p>No hay pedidos en entrega.</p>
-    </div>
-    {% endfor %}
   </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
-<script>
-$(document).ready(function() {
-  $('.countdown-entrega').each(function() {
-    const pedidoId = $(this).data('pedido-id');
-    const fechaEntrega = new Date($(this).data('fecha-entrega'));
-    const limite = new Date(fechaEntrega.getTime() + 1 * 60 * 60 * 1000); // 1 hora después
+  {{ block.super }}
+  <script>
+    // Debug: Log script start
+    console.log('Pedidos en Entrega script loaded at', new Date().toLocaleString());
 
-    const updateCountdown = () => {
-      const now = new Date();
-      const diff = limite - now;
+    // Fallback countdown without jQuery
+    function initVanillaCountdown() {
+      console.log('Initializing vanilla JavaScript countdowns for entrega');
+      document.querySelectorAll('.countdown-entrega').forEach(function(el) {
+        const pedidoId = el.getAttribute('data-pedido-id');
+        const fechaEntregaRaw = el.getAttribute('data-fecha-entrega');
+        console.log(`Vanilla countdown for pedido ${pedidoId}, fechaEntrega: ${fechaEntregaRaw}`);
+        
+        const fechaEntrega = new Date(fechaEntregaRaw);
+        if (isNaN(fechaEntrega.getTime())) {
+          console.error(`Invalid date for pedido ${pedidoId}: ${fechaEntregaRaw}`);
+          el.textContent = 'Fecha inválida';
+          return;
+        }
 
-      if (diff <= 0) {
-        $.ajax({
-          url: `/panel/pedidos/${pedidoId}/archivar/`,
-          method: 'POST',
-          success: function(response) {
-            if (response.success) {
-              $(`.card[data-pedido-id="${pedidoId}"]`).remove();
+        const limite = new Date(fechaEntrega.getTime() + 1 * 60 * 60 * 1000); // 1 hour
+        console.log(`Vanilla countdown limit for pedido ${pedidoId}: ${limite}`);
+
+        function updateCountdown() {
+          const now = new Date();
+          const diff = limite - now;
+
+          if (diff <= 0) {
+            el.textContent = 'Archivado';
+            console.log(`Vanilla countdown expired for pedido ${pedidoId}`);
+            const card = document.querySelector(`.order-card[data-pedido-id="${pedidoId}"]`);
+            if (card) {
+              card.style.display = 'none';
             }
-          },
-          error: function(xhr) {
-            console.error('Error al archivar el pedido:', xhr.status, xhr.statusText, xhr.responseText);
+            return;
           }
+
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+          el.textContent = `Se archivará en ${minutes}m ${seconds}s`;
+          console.log(`Vanilla countdown updated for pedido ${pedidoId}: ${minutes}m ${seconds}s`);
+        }
+
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+      });
+    }
+
+    // Check dependencies
+    if (typeof jQuery === 'undefined' || typeof $.ajax === 'undefined') {
+      console.error('jQuery is not loaded. Modal and auto-archiving will not work.');
+      document.getElementById('no-jquery-warning').style.display = 'block';
+      initVanillaCountdown();
+    } else if (typeof bootstrap === 'undefined') {
+      console.error('Bootstrap is not loaded. Modal functionality will not work.');
+      document.getElementById('no-jquery-warning').style.display = 'block';
+      initVanillaCountdown();
+    } else {
+      console.log('jQuery and Bootstrap loaded successfully:', jQuery.fn.jquery, bootstrap);
+      
+      $(document).ready(function() {
+        console.log('Document ready. Setting up jQuery event handlers for entrega.');
+
+        // Modal trigger
+        $('.order-card .fa-info-circle').on('click', function(e) {
+          e.stopPropagation();
+          const card = $(this).closest('.order-card');
+          const pedidoId = card.data('pedido-id');
+          console.log(`Info icon clicked for pedido ID: ${pedidoId}`);
+
+          $.ajax({
+            url: `/panel/pedidos/${pedidoId}/json/`,
+            method: 'GET',
+            success: function(data) {
+              console.log('AJAX success for pedido', pedidoId, data);
+              $('#modalPedidoTitle').text(`Pedido #${data.numero_pedido || 'Desconocido'}`);
+              $('#modalCliente').text(data.nombre_cliente || 'Sin nombre');
+              $('#modalTelefono').text(data.telefono_cliente || 'Sin teléfono');
+              $('#modalDireccion').text(data.direccion_entrega || 'Retiro en local');
+              $('#modalAclaraciones').text(data.aclaraciones || 'Sin aclaraciones');
+              $('#modalFecha').text(data.fecha_creacion ? new Date(data.fecha_creacion).toLocaleString('es-AR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }) : 'Sin fecha');
+              $('#modalMetodoPago').text(data.metodo_pago || 'No especificado');
+              $('#modalEstado').text(data.estado || 'Sin estado');
+              $('#modalTiempoEstimado').text(data.tiempo_estimado || 'No especificado');
+              $('#modalSubtotal').text(parseFloat(data.subtotal || 0).toFixed(2));
+              $('#modalDescuentoEfectivoContainer').toggle(!!data.monto_descuento_efectivo && data.monto_descuento_efectivo > 0);
+              $('#modalDescuentoEfectivo').text(parseFloat(data.monto_descuento_efectivo || 0).toFixed(2));
+              $('#modalDescuentoCodigoContainer').toggle(!!data.monto_descuento_codigo && data.monto_descuento_codigo > 0);
+              $('#modalDescuentoCodigo').text(parseFloat(data.monto_descuento_codigo || 0).toFixed(2));
+              $('#modalDescuentoTotal').text(parseFloat(data.monto_descuento || 0).toFixed(2));
+              $('#modalCostoEnvio').text(parseFloat(data.costo_envio || 0).toFixed(2));
+              $('#modalTotal').text(parseFloat(data.total || 0).toFixed(2));
+
+              const productosContainer = $('#modalProductos');
+              productosContainer.empty();
+              if (data.items && data.items.length > 0) {
+                const restaurantName = data.restaurante_nombre || '{{ restaurante.username|default:"default_restaurant" }}'.replace(/ /g, '_').toLowerCase();
+                data.items.forEach(item => {
+                  let imageUrl = item.imagen_url || '';
+                  if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
+                    const originalFilename = item.imagen_nombre_original || 'default.png';
+                    imageUrl = `{{ MEDIA_URL }}${restaurantName}/productos/${originalFilename}`;
+                  }
+
+                  const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (
+                    `<div class="product-options">Opciones:<ul>${item.opciones_seleccionadas.map(op => `<li>${op.nombre} (+$${parseFloat(op.precio_adicional || 0).toFixed(2)})</li>`).join('')}</ul></div>`
+                  ) : '';
+                  const productCard = `
+                    <div class="product-card">
+                      <img src="${imageUrl}" alt="${item.nombre_producto || 'Producto'}" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Producto';">
+                      <div class="product-name">${item.nombre_producto || 'Sin nombre'}</div>
+                      <div class="product-detail">Cantidad: ${item.cantidad || 0}</div>
+                      <div class="product-detail">Precio: $${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
+                      <div class="product-detail">Subtotal: $${parseFloat(item.subtotal || 0).toFixed(2)}</div>
+                      ${opcionesHtml}
+                    </div>
+                  `;
+                  productosContainer.append(productCard);
+                });
+              } else {
+                productosContainer.append('<p>No hay productos en este pedido.</p>');
+              }
+
+              try {
+                $('#modalPedido').modal('show');
+                console.log('Modal shown for pedido', pedidoId);
+              } catch (error) {
+                console.error('Error showing modal:', error);
+                alert('No se pudo abrir el modal. Por favor, revisa la consola del navegador.');
+              }
+            },
+            error: function(xhr) {
+              console.error('AJAX error for pedido', pedidoId, xhr.status, xhr.responseText);
+              alert('No se pudo cargar los detalles del pedido. Código de error: ' + xhr.status);
+            }
+          });
         });
-        return;
+
+        // jQuery countdown with auto-archiving
+        $('.countdown-entrega').each(function() {
+          const $this = $(this);
+          const pedidoId = $this.data('pedido-id');
+          const fechaEntregaRaw = $this.data('fecha-entrega');
+          console.log(`jQuery countdown for entrega pedido ${pedidoId}, fechaEntrega: ${fechaEntregaRaw}`);
+
+          const fechaEntrega = new Date(fechaEntregaRaw);
+          if (isNaN(fechaEntrega.getTime())) {
+            console.error(`Invalid date for pedido ${pedidoId}: ${fechaEntregaRaw}`);
+            $this.text('Fecha inválida');
+            return;
+          }
+
+          const limite = new Date(fechaEntrega.getTime() + 1 * 60 * 60 * 1000); // 1 hour
+          console.log(`jQuery countdown limit for pedido ${pedidoId}: ${limite}`);
+
+          const updateCountdown = () => {
+            const now = new Date();
+            const diff = limite - now;
+
+            if (diff <= 0) {
+              console.log(`jQuery countdown expired for entrega pedido ${pedidoId}. Attempting to archive.`);
+              $.ajax({
+                url: `/panel/pedidos/${pedidoId}/archivar/`,
+                method: 'POST',
+                headers: { 'X-CSRFToken': getCookie('csrftoken') },
+                success: function(response) {
+                  console.log(`Archiving response for pedido ${pedidoId}:`, response);
+                  if (response.success) {
+                    $(`.order-card[data-pedido-id="${pedidoId}"]`).fadeOut(300, function() {
+                      $(this).remove();
+                      console.log(`Pedido ${pedidoId} removed from DOM`);
+                      if ($('.order-card').length === 0) {
+                        $('.row').append('<div class="col-12 text-center"><p>No hay pedidos en entrega.</p></div>');
+                      }
+                    });
+                  } else {
+                    console.error(`Archiving failed for pedido ${pedidoId}:`, response.error);
+                  }
+                },
+                error: function(xhr) {
+                  console.error(`Archiving error for pedido ${pedidoId}:`, xhr.status, xhr.responseText);
+                }
+              });
+              $this.text('Archivado');
+              return;
+            }
+
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+            $this.text(`Se archivará en ${minutes}m ${seconds}s`);
+            console.log(`jQuery countdown updated for entrega pedido ${pedidoId}: ${minutes}m ${seconds}s`);
+          };
+
+          updateCountdown();
+          setInterval(updateCountdown, 1000);
+        });
+      });
+    }
+
+    // Function to get CSRF token
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.substring(0, name.length + 1) === (name + '=')) {
+            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+            break;
+          }
+        }
       }
-
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-      $(this).text(`Se archivará en ${minutes}m ${seconds}s`);
-    };
-
-    updateCountdown();
-    setInterval(updateCountdown, 1000);
-  });
-});
-</script>
+      return cookieValue;
+    }
+  </script>
 {% endblock %}

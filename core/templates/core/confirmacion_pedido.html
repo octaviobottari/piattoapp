@@ -139,7 +139,8 @@
             <i class="fas fa-times"></i>
         </button>
         <h1 class="confirmation-header">
-            Realizamos con éxito tu <strong><br>pedido #{{ pedido.numero_pedido }}</strong>!
+            Realizamos con éxito tu <strong><br>pedido #{{ pedido.numero_pedido }}</strong>! 
+    El estado es <strong>{{ pedido.get_estado_display }}</strong>
         </h1>
         {% if restaurante.logo %}
             <img src="{{ restaurante.logo.url }}" alt="Logo de {{ restaurante.nombre_local }}" class="restaurant-logo">

@@ -1,0 +1,64 @@
+{% load humanize %}
+
+<!-- Render orders in procesando_pago state -->
+{% if procesando_pago_only %}
+<div id="procesando_pago">
+    {% if pedidos_procesando %}
+        {% for pedido in pedidos_procesando %}
+        <div class="order-card mb-3" data-pedido-id="{{ pedido.id }}">
+            <div class="order-info">
+                <div class="order-header">#{{ pedido.numero_pedido|default:"Sin número" }} - {{ pedido.fecha|date:"d/m/Y H:i" }}</div>
+                <div class="order-name">{{ pedido.cliente|default:"Sin nombre" }}</div>
+                <a href="#" class="order-phone" data-pedido-id="{{ pedido.id }}" data-telefono="{{ pedido.telefono|default:"" }}">{{ pedido.telefono|default:"Sin teléfono" }}</a>
+                <div class="order-address">
+                    <i class="fas fa-map-marker-alt"></i> {{ pedido.direccion|default:"Retiro en local" }}
+                </div>
+            </div>
+            <div class="order-actions text-end">
+                <div class="icon-group mb-2">
+                    <a href="{% url 'imprimir_ticket' pedido.id %}" class="text-decoration-none print-link" target="_blank">
+                        <i class="fas fa-print"></i>
+                    </a>
+                    <button class="btn btn-success btn-sm confirmar-pago" data-pedido-id="{{ pedido.id }}">Sí</button>
+                    <button class="btn btn-danger btn-sm rechazar-pago" data-pedido-id="{{ pedido.id }}">No</button>
+                </div>
+                <div class="order-price">${{ pedido.total|floatformat:2 }}</div>
+                <div class="order-method">{{ pedido.get_metodo_pago_display|default:"Sin método" }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-center">No hay pedidos procesando pago.</p>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- Render orders in error_pago state -->
+{% if error_pago_only %}
+<div id="error_pago">
+    {% if pedidos_error %}
+        {% for pedido in pedidos_error %}
+        <div class="order-card mb-3" data-pedido-id="{{ pedido.id }}">
+            <div class="order-info">
+                <div class="order-header">#{{ pedido.numero_pedido|default:"Sin número" }} - {{ pedido.fecha|date:"d/m/Y H:i" }}</div>
+                <div class="order-name">{{ pedido.cliente|default:"Sin nombre" }}</div>
+                <a href="#" class="order-phone" data-pedido-id="{{ pedido.id }}" data-telefono="{{ pedido.telefono|default:"" }}">{{ pedido.telefono|default:"Sin teléfono" }}</a>
+                <div class="order-address">
+                    <i class="fas fa-map-marker-alt"></i> {{ pedido.direccion|default:"Retiro en local" }}
+                </div>
+                <div class="order-error">
+                    <strong>Error:</strong> {{ pedido.motivo_error_pago|default:"Error desconocido" }}
+                </div>
+                <div class="timer" data-fecha-error="{{ pedido.fecha_error_pago|date:"c" }}"></div>
+            </div>
+            <div class="order-actions text-end">
+                <div class="order-price">${{ pedido.total|floatformat:2 }}</div>
+                <div class="order-method">{{ pedido.get_metodo_pago_display|default:"Sin método" }}</div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+        <p class="text-center">No hay pedidos con error en pago.</p>
+    {% endif %}
+</div>
+{% endif %}

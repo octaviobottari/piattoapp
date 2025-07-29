@@ -6,10 +6,12 @@ from django.conf.urls import handler500
 from . import views, consumers
 
 handler500 = views.error_view
+handler404 = views.error_view
 
 
 urlpatterns = [
     path('', views.home, name='home'),
+    path('terminos-y-condiciones/', views.terms_view, name='terms'),  # New Terms and Conditions route
     path('registro/', RedirectView.as_view(url='/login/', permanent=True), name='registro'),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
@@ -23,6 +25,9 @@ urlpatterns = [
     path('mass_price_change/', views.mass_price_change, name='mass_price_change'),
     path('mass_delete_products/', views.mass_delete_products, name='mass_delete_products'),
     path('panel/pedidos/', views.lista_pedidos, name='lista_pedidos'),
+    path('panel/pedidos/procesando_pagos/html/', views.pedidos_procesando_pagos_html, name='pedidos_procesando_pagos_html'),
+    path('panel/pedidos/<int:pedido_id>/confirmar_pago/', views.confirmar_pago, name='confirmar_pago'),
+    path('panel/pedidos/<int:pedido_id>/rechazar_pago/', views.rechazar_pago, name='rechazar_pago'),
     path('panel/pedidos/pendientes/html/', views.pedidos_pendientes_html, name='pedidos_pendientes_html'),
     path('panel/pedidos/en_preparacion/html/', views.pedidos_en_preparacion_html, name='pedidos_en_preparacion_html'),  # Nuevo
     path('panel/pedidos/listos/html/', views.pedidos_listos_html, name='pedidos_listos_html'),  # Nuevo

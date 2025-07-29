@@ -317,6 +317,7 @@ class OpcionProducto(models.Model):
 
 class Pedido(models.Model):
     ESTADO_CHOICES = [
+        ('procesando_pago', 'Procesando Pago'),  # New status for Mercado Pago processing
         ('pendiente', 'Pendiente'),
         ('pagado', 'Pagado'),
         ('en_preparacion', 'En preparación'),
@@ -325,6 +326,7 @@ class Pedido(models.Model):
         ('cancelado', 'Cancelado'),
         ('archivado', 'Archivado'),
         ('en_entrega', 'En entrega'),
+        ('error_pago', 'Error en Pago'),  # New status for failed payments
     ]
     METODO_PAGO_CHOICES = [
         ('efectivo', 'Efectivo'),
@@ -353,7 +355,7 @@ class Pedido(models.Model):
 
     restaurante = models.ForeignKey(Restaurante, on_delete=models.CASCADE, related_name='pedidos')
     numero_pedido = models.PositiveIntegerField(default=0)
-    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)  # Added token field
+    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     fecha = models.DateTimeField(auto_now_add=True)
     fecha_cancelado = models.DateTimeField(null=True, blank=True)
     fecha_en_entrega = models.DateTimeField(null=True, blank=True)
@@ -375,7 +377,8 @@ class Pedido(models.Model):
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0.00, verbose_name="Subtotal")
     cash_discount_applied = models.BooleanField(default=False)
     cash_discount_percentage = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(50)])
-
+    fecha_error_pago = models.DateTimeField(null=True, blank=True)  # To track error time
+    motivo_error_pago = models.CharField(max_length=255, blank=True, null=True)  # Reason for payment error
     def save(self, *args, **kwargs):
         if not self.id:
             ultimo_pedido = Pedido.objects.filter(restaurante=self.restaurante).order_by('-numero_pedido').first()
@@ -388,13 +391,14 @@ class Pedido(models.Model):
     def get_absolute_url(self):
         return reverse('confirmacion_pedido', kwargs={
             'nombre_restaurante': self.restaurante.username,
-            'token': self.token  # Updated to use token
+            'token': self.token
         })
 
     class Meta:
         ordering = ['-fecha']
         indexes = [
-            models.Index(fields=['token']),  # Added index for token
+            models.Index(fields=['token']),
+            models.Index(fields=['estado']),  # Index for faster filtering by estado
         ]
 
     def __str__(self):

@@ -29,7 +29,10 @@ import json
 from decimal import Decimal, InvalidOperation
 import decimal
 import logging
-import calendar
+from itertools import groupby
+from operator import attrgetter
+from django.utils import timezone
+from calendar import month_name
 import qrcode
 import os
 from django.conf import settings
@@ -40,22 +43,27 @@ from django.core.files.storage import default_storage  # Importar default_storag
 from botocore.exceptions import ClientError  # Importar ClientError
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+import re
+from django.views.decorators.cache import cache_page
+from django.views.decorators.cache import never_cache
 
 logger = logging.getLogger(__name__)
 
+def no_cache_view(view_func):
+    def wrapper(request, *args, **kwargs):
+        response = view_func(request, *args, **kwargs)
+        response['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        return response
+    return wrapper
 
+@never_cache
+@no_cache_view
 def error_view(request, exception=None):
-    from django.contrib.auth.decorators import login_required
-    from django.http import HttpResponse
-    from django.shortcuts import render
-    import logging
-
-    logger = logging.getLogger(__name__)
-
-    # Log the error for debugging
+ 
     logger.error(f"Unexpected error occurred: {str(exception)}", exc_info=True)
 
-    # Determine the redirect URL based on user authentication
     if request.user.is_authenticated:
         redirect_url = reverse('panel')
         context = {
@@ -78,6 +86,20 @@ def error_view(request, exception=None):
 def registro_view(request):
     return redirect('login')
 
+@never_cache
+@no_cache_view
+def terms_view(request):
+    context = {
+        'restaurantes': Restaurante.objects.filter(activo=True),
+    }
+    response = render(request, 'core/terminos-y-condiciones.html', context)
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate'
+    response['Pragma'] = 'no-cache'
+    response['Expires'] = '0'
+    return response
+
+@never_cache
+@no_cache_view
 def login_view(request):
     if request.method == 'POST':
         form = LoginForm(data=request.POST)
@@ -94,6 +116,8 @@ def login_view(request):
     return render(request, 'core/login.html', {'form': form})
 
 @login_required
+@never_cache
+@no_cache_view
 def panel_view(request):
     pedidos_recientes = Pedido.objects.filter(
         restaurante=request.user
@@ -142,6 +166,8 @@ def agregar_producto(request):
         
 @login_required
 @require_POST
+@never_cache
+@no_cache_view
 def agregar_categoria(request):
     print("POST data:", request.POST)  # Debugging line to check incoming data
     print("FILES data:", request.FILES)  # Debugging line to check incoming files
@@ -161,6 +187,8 @@ def agregar_categoria(request):
     return redirect('mi_menu')
 
 @login_required
+@never_cache
+@no_cache_view
 def mi_menu(request):
     restaurante = request.user
     categorias = Categoria.objects.filter(restaurante=restaurante).prefetch_related('producto_set')
@@ -176,6 +204,8 @@ def mi_menu(request):
     return render(request, 'core/mi_menu.html', context)
 
 @login_required
+@never_cache
+@no_cache_view
 def clonar_producto(request, producto_id):
     producto_original = get_object_or_404(Producto, id=producto_id, restaurante=request.user)
     logger.info(f"Cloning product: {producto_original.nombre}")
@@ -235,6 +265,8 @@ def clonar_producto(request, producto_id):
 
 
 @login_required
+@never_cache
+@no_cache_view
 def gestionar_opciones_producto(request, producto_id):
     producto = get_object_or_404(Producto, id=producto_id, restaurante=request.user)
     restaurante = request.user  # El usuario autenticado es el restaurante
@@ -358,6 +390,8 @@ def gestionar_opciones_producto(request, producto_id):
 
 @login_required
 @require_POST
+@never_cache
+@no_cache_view
 def eliminar_producto(request, producto_id):
     producto = get_object_or_404(Producto, id=producto_id, restaurante=request.user)
     producto.delete()
@@ -366,6 +400,8 @@ def eliminar_producto(request, producto_id):
 
 @require_POST
 @login_required
+@never_cache
+@no_cache_view
 def editar_producto(request, producto_id):
     producto = get_object_or_404(Producto, id=producto_id, restaurante=request.user)
     
@@ -420,6 +456,8 @@ def editar_producto(request, producto_id):
 
 @login_required
 @require_POST
+@never_cache
+@no_cache_view
 def eliminar_categoria(request, categoria_id):
     categoria = get_object_or_404(Categoria, id=categoria_id, restaurante=request.user)
     Producto.objects.filter(categoria=categoria).update(categoria=None)
@@ -429,6 +467,8 @@ def eliminar_categoria(request, categoria_id):
 
 @login_required
 @require_POST
+@never_cache
+@no_cache_view
 def editar_categoria(request, categoria_id):
     categoria = get_object_or_404(Categoria, id=categoria_id, restaurante=request.user)
     nombre = request.POST.get('nombre')
@@ -455,6 +495,8 @@ def editar_categoria(request, categoria_id):
 
 @login_required
 @require_POST
+@never_cache
+@no_cache_view
 def mass_price_change(request):
     try:
         data = json.loads(request.body)
@@ -580,6 +622,8 @@ def mass_price_change(request):
 
 @login_required
 @require_POST
+@never_cache
+@no_cache_view
 def mass_delete_products(request):
     try:
         data = json.loads(request.body)
@@ -601,6 +645,8 @@ def mass_delete_products(request):
         return JsonResponse({'success': False, 'error': f'Error al eliminar productos: {str(e)}'}, status=500)
 
 @login_required
+@never_cache
+@no_cache_view
 def lista_pedidos(request):
     # Use request.user directly, as it's a Restaurante instance
     restaurante = request.user
@@ -628,6 +674,8 @@ def lista_pedidos(request):
     return render(request, 'core/lista_pedidos.html', context)
 
 @login_required
+@never_cache
+@no_cache_view
 def pedidos_pendientes_html(request):
     pedidos_pendientes = Pedido.objects.filter(
         restaurante=request.user,
@@ -641,6 +689,8 @@ def pedidos_pendientes_html(request):
     })
 
 @login_required
+@never_cache
+@no_cache_view
 def pedidos_en_preparacion_html(request):
     pedidos_en_preparacion = Pedido.objects.filter(
         restaurante=request.user,
@@ -653,6 +703,8 @@ def pedidos_en_preparacion_html(request):
     })
 
 @login_required
+@never_cache
+@no_cache_view
 def pedidos_listos_html(request):
     pedidos_listos = Pedido.objects.filter(
         restaurante=request.user,
@@ -665,6 +717,8 @@ def pedidos_listos_html(request):
     })
 
 @login_required
+@never_cache
+@no_cache_view
 def pedidos_cancelados(request):
     # Verificar y eliminar pedidos cancelados que hayan pasado las 3 horas
     now = timezone.now()
@@ -685,16 +739,24 @@ def pedidos_cancelados(request):
     })
 
 @login_required
+@never_cache
+@no_cache_view
 @require_POST
 def eliminar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
-    if pedido.estado != 'cancelado':
-        return JsonResponse({'success': False, 'error': 'El pedido no está cancelado'})
-    
-    pedido.delete()
-    return JsonResponse({'success': True})
+    if pedido.estado not in ['cancelado', 'archivado']:
+        return JsonResponse({'success': False, 'error': 'El pedido no está cancelado ni archivado'}, status=400)
+
+    try:
+        pedido.delete()
+        return JsonResponse({'success': True, 'message': f'Pedido #{pedido.numero_pedido} eliminado correctamente'})
+    except Exception as e:
+        logger.error(f"Error al eliminar pedido {pedido_id}: {str(e)}")
+        return JsonResponse({'success': False, 'error': f'Error al eliminar el pedido: {str(e)}'}, status=500)
 
 @login_required
+@never_cache
+@no_cache_view
 @require_POST
 def marcar_en_entrega(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
@@ -707,6 +769,8 @@ def marcar_en_entrega(request, pedido_id):
     return JsonResponse({'success': True})
 
 @login_required
+@never_cache
+@no_cache_view
 @require_POST
 def archivar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
@@ -718,6 +782,8 @@ def archivar_pedido(request, pedido_id):
     return JsonResponse({'success': True})
 
 @login_required
+@never_cache
+@no_cache_view
 def pedidos_en_entrega(request):
     # Verificar y archivar pedidos en entrega que hayan pasado 1 hora
     now = timezone.now()
@@ -742,18 +808,45 @@ def pedidos_en_entrega(request):
         'restaurante': request.user
     })
 
+
+month_names_es = [
+    "", 
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+]
+
 @login_required
+@never_cache
+@no_cache_view
 def todos_pedidos(request):
     pedidos = Pedido.objects.filter(
         restaurante=request.user,
         estado='archivado'
     ).order_by('-fecha')
+
+    # Agrupar pedidos por año y mes
+    pedidos_by_month = {}
+    for year, year_group in groupby(pedidos, key=lambda x: x.fecha.year):
+        for month, month_group in groupby(sorted(year_group, key=lambda x: x.fecha.month, reverse=True), key=lambda x: x.fecha.month):
+            month_key = f"{year}-{month:02d}"
+            pedidos_by_month[month_key] = {
+                'year': year,
+                'month': month,
+                'month_name': month_names_es[month],  # Usar la lista en español
+                'pedidos': list(month_group)
+            }
+
+    # Ordenar meses en orden descendente (más reciente primero)
+    sorted_months = sorted(pedidos_by_month.items(), key=lambda x: x[0], reverse=True)
+
     return render(request, 'core/todos_pedidos.html', {
-        'pedidos': pedidos,
+        'pedidos_by_month': sorted_months,
         'restaurante': request.user
     })
 
 @login_required
+@never_cache
+@no_cache_view
 @require_POST
 def aceptar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
@@ -770,6 +863,8 @@ def aceptar_pedido(request, pedido_id):
     return JsonResponse({'success': True})
 
 @login_required
+@never_cache
+@no_cache_view
 @require_POST
 def rechazar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
@@ -784,6 +879,8 @@ def rechazar_pedido(request, pedido_id):
     return JsonResponse({'success': True})
 
 @login_required
+@never_cache
+@no_cache_view
 @require_POST
 def actualizar_estado(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
@@ -796,6 +893,8 @@ def actualizar_estado(request, pedido_id):
     return JsonResponse({'success': True})
 
 @login_required
+@never_cache
+@no_cache_view
 def pedido_json(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     items = [
@@ -859,6 +958,7 @@ def pedido_json(request, pedido_id):
     }
     return JsonResponse(data)
 
+@never_cache
 def restaurante_publico(request, nombre_restaurante):
     reserved_paths = ['panel', 'login', 'registro', 'logout', 'admin']
     if nombre_restaurante.lower() in reserved_paths:
@@ -885,6 +985,98 @@ def restaurante_publico(request, nombre_restaurante):
     response['Expires'] = '0'
     return response
 
+
+@login_required
+@never_cache
+@no_cache_view
+def pedidos_procesando_pagos_html(request):
+    # Clean up orders in 'error_pago' state older than 30 minutes
+    now = timezone.now()
+    limite_error_pago = now - timedelta(minutes=30)
+    deleted_count = Pedido.objects.filter(
+        restaurante=request.user,
+        estado='error_pago',
+        fecha_error_pago__lt=limite_error_pago
+    ).delete()[0]
+    logger.info(f"Deleted {deleted_count} error_pago orders older than 30 minutes for restaurante {request.user.id}")
+
+    # Fetch orders in procesando_pago state
+    pedidos_procesando = Pedido.objects.filter(
+        restaurante=request.user,
+        estado='procesando_pago'
+    ).order_by('-fecha')
+    logger.info(f"Procesando_pago orders: {list(pedidos_procesando.values('id', 'numero_pedido', 'estado'))}")
+
+    # Fetch orders in error_pago state
+    pedidos_error = Pedido.objects.filter(
+        restaurante=request.user,
+        estado='error_pago'
+    ).order_by('-fecha')
+    logger.info(f"Error_pago orders: {list(pedidos_error.values('id', 'numero_pedido', 'estado', 'fecha_error_pago'))}")
+
+    # Debug: Check for overlap
+    overlap_ids = set(pedidos_procesando.values_list('id', flat=True)) & set(pedidos_error.values_list('id', flat=True))
+    if overlap_ids:
+        logger.warning(f"Overlap detected between procesando_pago and error_pago: {overlap_ids}")
+
+    context = {
+        'restaurante': request.user,
+        'pedidos_procesando': pedidos_procesando,
+        'pedidos_error': pedidos_error,
+    }
+    return render(request, 'core/pedidos_procesando_pago.html', context)
+
+@login_required
+@never_cache
+@no_cache_view
+@require_POST
+def confirmar_pago(request, pedido_id):
+    pedido = get_object_or_404(Pedido, token=pedido_id, restaurante=request.user)
+    if pedido.estado != 'procesando_pago':
+        return JsonResponse({'success': False, 'error': 'El pedido no está en estado de procesamiento de pago'}, status=400)
+
+    pedido.estado = 'pendiente'
+    pedido.save()
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'pedidos_restaurante_{request.user.id}',
+        {
+            'type': 'pedido_updated',
+            'pedido_id': pedido.id,
+            'message': 'Pago confirmado, pedido pendiente'
+        }
+    )
+
+    return JsonResponse({'success': True})
+
+@login_required
+@never_cache
+@no_cache_view
+@require_POST
+def rechazar_pago(request, pedido_id):
+    pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
+    if pedido.estado != 'procesando_pago':
+        return JsonResponse({'success': False, 'error': 'El pedido no está en estado de procesamiento de pago'}, status=400)
+    
+    motivo_error = request.POST.get('motivo_error', 'Error desconocido en el procesamiento del pago')
+    pedido.estado = 'error_pago'
+    pedido.motivo_error_pago = motivo_error
+    pedido.fecha_error_pago = timezone.now()
+    pedido.save()
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f'pedidos_restaurante_{request.user.id}',
+        {
+            'type': 'pedido_updated',
+            'pedido_id': pedido.id,
+            'message': 'Error en el pago del pedido'
+        }
+    )
+    return JsonResponse({'success': True})
+
+# Update procesar_pedido to handle Mercado Pago orders
 def procesar_pedido(request, restaurante):
     if request.method == 'POST':
         try:
@@ -893,9 +1085,7 @@ def procesar_pedido(request, restaurante):
                 if not restaurante.esta_abierto:
                     return JsonResponse({'error': 'El restaurante está cerrado.'}, status=400)
 
-                print("Datos POST recibidos:", dict(request.POST))
-
-                # Extract datos_cliente (handle list wrapping)
+                # Extract datos_cliente
                 datos_cliente_raw = request.POST.get('datos_cliente', '')
                 if isinstance(datos_cliente_raw, list):
                     datos_cliente_raw = datos_cliente_raw[0]
@@ -904,7 +1094,6 @@ def procesar_pedido(request, restaurante):
                 except json.JSONDecodeError:
                     return JsonResponse({'error': 'Formato de datos_cliente inválido.'}, status=400)
 
-                # Extract fields from datos_cliente
                 nombre = datos_cliente.get('nombre', '').strip()
                 telefono = datos_cliente.get('telefono', '').strip()
                 direccion = datos_cliente.get('direccion', '').strip()
@@ -917,7 +1106,7 @@ def procesar_pedido(request, restaurante):
                 if not telefono:
                     return JsonResponse({'error': 'El teléfono del cliente es requerido.'}, status=400)
 
-                # Extract productos (handle list wrapping)
+                # Extract productos
                 productos_raw = request.POST.get('productos', '')
                 if isinstance(productos_raw, list):
                     productos_raw = productos_raw[0]
@@ -934,7 +1123,6 @@ def procesar_pedido(request, restaurante):
                 subtotal = Decimal('0.00')
                 items_pedido = []
 
-                # Process products
                 for item in productos:
                     producto_id = str(item.get('id'))
                     cantidad = int(item.get('cantidad', 1))
@@ -968,7 +1156,6 @@ def procesar_pedido(request, restaurante):
                 monto_descuento_efectivo = Decimal('0.00')
                 cash_discount_applied = False
 
-                # Apply cash discount
                 subtotal_ajustado = subtotal
                 if metodo_pago == 'efectivo' and restaurante.cash_discount_enabled and restaurante.cash_discount_percentage > 0:
                     cash_discount_porcentaje = Decimal(str(restaurante.cash_discount_percentage))
@@ -977,7 +1164,6 @@ def procesar_pedido(request, restaurante):
                     monto_descuento += monto_descuento_efectivo
                     cash_discount_applied = True
 
-                # Apply code-based discount
                 if codigo_descuento:
                     codigos = restaurante.codigos_descuento or []
                     for codigo in codigos:
@@ -992,7 +1178,6 @@ def procesar_pedido(request, restaurante):
                     else:
                         return JsonResponse({'error': 'El código de descuento no existe o no es válido.'}, status=400)
 
-                # Calculate shipping cost
                 costo_envio = Decimal('0.00')
                 tipo_pedido = request.POST.get('tipo_pedido', 'retiro')
                 if isinstance(tipo_pedido, list):
@@ -1007,6 +1192,9 @@ def procesar_pedido(request, restaurante):
                 else:
                     direccion = 'Retiro en local'
 
+                # Set estado based on payment method
+                estado = 'procesando_pago' if metodo_pago == 'mercadopago' else 'pendiente'
+
                 # Create the order
                 pedido = Pedido.objects.create(
                     restaurante=restaurante,
@@ -1020,7 +1208,7 @@ def procesar_pedido(request, restaurante):
                     monto_descuento=monto_descuento,
                     total=subtotal_ajustado - monto_descuento_codigo + costo_envio,
                     aclaraciones=aclaraciones,
-                    estado='pendiente',
+                    estado=estado,
                     codigo_descuento=codigo_descuento if codigo_descuento and monto_descuento_codigo > 0 else None,
                     cash_discount_applied=cash_discount_applied,
                     cash_discount_percentage=restaurante.cash_discount_percentage if cash_discount_applied else 0
@@ -1053,11 +1241,12 @@ def procesar_pedido(request, restaurante):
                     'redirect_url': pedido.get_absolute_url()
                 })
         except Exception as e:
-            print(f"Error en procesar_pedido: {str(e)}")
+            logger.error(f"Error en procesar_pedido: {str(e)}")
             return JsonResponse({'error': str(e)}, status=400)
     return JsonResponse({'error': 'Método no permitido'}, status=405)
 
-
+@never_cache
+@no_cache_view
 @csrf_protect
 def validar_codigo_descuento(request, nombre_restaurante):
     logger.info(f"Validar código descuento llamado para restaurante: {nombre_restaurante}")
@@ -1099,15 +1288,37 @@ def validar_codigo_descuento(request, nombre_restaurante):
         'error': 'Código no válido o no disponible'
     }, status=400)
 
+@never_cache
+@no_cache_view
 def confirmacion_pedido(request, nombre_restaurante, token):
+    # approved, pending, in_process, rejected o cancelled
+    status = request.GET.get("status", None)
+    external_reference = request.GET.get("external_reference", None)
+
+    print(f"Confirmación para pedido {external_reference}, estado {status}")
+
     pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
-    return render(request, 'core/confirmacion_pedido.html', {
+ 
+    params = {
         'pedido': pedido,
         'restaurante': pedido.restaurante,
-        'color_principal': pedido.restaurante.color_principal or '#A3E1BE'
-    })
+        'color_principal': pedido.restaurante.color_principal or '#A3E1BE',
+        'confirmado': status == "approved"
+    }
+
+    # Significa que te va a llegar la confirmación desde el webhook
+    if status == "pending" or status == "in_process":
+        params['confirmado'] = False
+
+    if status == "cancelled" or status == "rejected":
+        params['confirmado'] = False
+        params['error'] = True
+
+    return render(request, 'core/confirmacion_pedido.html', params)
 
 @login_required
+@never_cache
+@no_cache_view
 def imprimir_ticket(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     
@@ -1181,6 +1392,8 @@ def imprimir_ticket(request, pedido_id):
 
 # views.py
 @login_required
+@never_cache
+@no_cache_view
 def configuracion_horarios(request):
     restaurante = get_object_or_404(Restaurante, id=request.user.id)
     
@@ -1221,6 +1434,8 @@ def configuracion_horarios(request):
     })
 
 @login_required
+@never_cache
+@no_cache_view
 def toggle_cerrado_manualmente(request):
     if request.method == 'POST':
         try:
@@ -1244,6 +1459,8 @@ def toggle_cerrado_manualmente(request):
 
 # views.py
 @login_required
+@never_cache
+@no_cache_view
 def guardar_horarios_dia(request):
     if request.method == 'POST':
         restaurante = get_object_or_404(Restaurante, id=request.user.id)
@@ -1304,6 +1521,8 @@ def guardar_horarios_dia(request):
     return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
 
 @login_required
+@never_cache
+@no_cache_view
 def guardar_demora(request):
     if request.method == 'POST':
         restaurante = get_object_or_404(Restaurante, id=request.user.id)
@@ -1319,6 +1538,8 @@ def guardar_demora(request):
         return JsonResponse({'success': False, 'error': demora_form.errors}, status=400)
     return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=400)
 
+@never_cache
+@no_cache_view
 def obtener_estado_restaurante(request, username):
     restaurante = get_object_or_404(Restaurante, username=username)
     horarios = HorarioRestaurante.objects.filter(restaurante=restaurante)
@@ -1347,6 +1568,8 @@ def obtener_estado_restaurante(request, username):
 
 
 @login_required
+@never_cache
+@no_cache_view
 def configuraciones(request):
     restaurante = get_object_or_404(Restaurante, id=request.user.id)
     config_form = ConfigRestauranteForm(instance=restaurante)
@@ -1360,6 +1583,8 @@ def configuraciones(request):
     })
 
 @login_required
+@never_cache
+@no_cache_view
 def configurar_restaurante(request):
     restaurante = get_object_or_404(Restaurante, id=request.user.id)
     if request.method == 'POST':
@@ -1389,6 +1614,8 @@ def configurar_restaurante(request):
 
 
 @login_required
+@never_cache
+@no_cache_view
 def agregar_codigo_descuento(request):
     """Vista para añadir un nuevo código de descuento vía AJAX."""
     if request.method == 'POST':
@@ -1412,6 +1639,8 @@ def agregar_codigo_descuento(request):
     return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
 
 @login_required
+@never_cache
+@no_cache_view
 def eliminar_codigo_descuento(request):
     """Vista para eliminar un código de descuento vía AJAX."""
     if request.method == 'POST':
@@ -1430,6 +1659,8 @@ def eliminar_codigo_descuento(request):
 
 @login_required
 @require_POST
+@never_cache
+@no_cache_view
 def aplicar_descuento_producto(request, producto_id):
     try:
         # Check if request body is empty or not valid JSON
@@ -1515,6 +1746,8 @@ def aplicar_descuento_producto(request, producto_id):
 
 @login_required
 @require_POST
+@never_cache
+@no_cache_view
 def update_cash_discount(request):
     restaurante = get_object_or_404(Restaurante, id=request.user.id)
     try:
@@ -1542,13 +1775,17 @@ def update_cash_discount(request):
             'error': 'Porcentaje inválido.'
         }, status=400)    
 
-
-def home(request): 
+@cache_page(3600)  # Cache server-side for 1 hour
+def home(request):
     restaurantes_activos = Restaurante.objects.filter(activo=True)
-    return render(request, 'core/home.html', {
+    response = render(request, 'core/home.html', {
         'restaurantes': restaurantes_activos
     })
+    response['Cache-Control'] = 'max-age=3600, must-revalidate'
+    return response
 
+@never_cache
+@no_cache_view
 def csrf_failure(request, reason=""):
     """
     Custom CSRF failure view to handle AJAX and non-AJAX requests.
@@ -1600,13 +1837,71 @@ def generate_qr_for_restaurant(restaurant_name):
     return restaurant_qr
 
 @api_view(['GET'])
+@never_cache
+# TODO: renombrar a webhook de confirmaciones
 def hello(request):
+    # approved, pending, in_process, rejected o cancelled
+    status = request.GET.get("status", None)
+    token = request.GET.get("external_reference", None)
 
-    print(request.data)
+    pedido = get_object_or_404(Pedido, token=token)
+
+    channel_layer = get_channel_layer()
+    send_event = async_to_sync(channel_layer.group_send) 
+
+    if pedido.estado != 'procesando_pago':
+        return JsonResponse({'error': 'El pedido no está en estado de procesamiento de pago'}, status=400)
+
+    if status == "approved":
+        pedido.estado = 'pendiente'
+        pedido.save()
+
+        print(f'pedidos_restaurante_{pedido['restaurante']}',
+            {
+                'type': 'pedido_approved',
+                'pedido_token': token,
+                'message': 'Pago confirmado, pedido pendiente'
+            })
+
+        send_event(
+            f'pedidos_restaurante_{pedido['restaurante']}',
+            {
+                'type': 'pedido_approved',
+                'pedido_token': token,
+                'message': 'Pago confirmado, pedido pendiente'
+            }
+        )
+    
+    if status == "pending" or status == "in_process":
+        pedido.estado = 'procesando_pago'
+        pedido.save()
+
+        send_event(
+            f'pedidos_restaurante_{pedido['restaurante']}',
+            {
+                'type': 'pedido_pending',
+                'pedido_token': token,
+                'message': 'Pedido confirmado, pago pendiente'
+            }
+        )
+
+    if status == "rejected" or status == "cancelled":
+        pedido.estado = 'error_pago'
+        pedido.motivo_error_pago = "No se pudo procesar el pago"
+        pedido.fecha_error_pago = timezone.now()
+        pedido.save()
+
+        send_event(
+            f'pedidos_restaurante_{pedido['restaurante']}',
+            {
+                'type': 'pedido_rejected',
+                'pedido_token': token,
+                'message': 'Pago rechazado o cancelado'
+            }
+        )
 
     data = {
         'message': f"Webhook recibido"
     }
-
 
     return Response(data, status=200)

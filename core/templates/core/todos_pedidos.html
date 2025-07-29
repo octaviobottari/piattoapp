@@ -1,152 +1,495 @@
 {% extends 'base.html' %}
-{% load static %}
+{% load static humanize %}
+
+{% block styles %}
+  <link rel="stylesheet" href="{% static 'css/pedidos.css' %}">
+  <style>
+    .modal {
+      z-index: 1055 !important;
+    }
+    .no-jquery-warning {
+      color: #ff0000;
+      font-weight: bold;
+      margin: 10px 0;
+    }
+    .product-card {
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .product-image {
+      width: 120px;
+      height: 120px;
+      object-fit: cover;
+      border-radius: 4px;
+    }
+    .product-name {
+      font-weight: bold;
+      margin-top: 5px;
+    }
+    .product-detail {
+      font-size: 14px;
+    }
+    .product-options {
+      margin-top: 5px;
+    }
+    .product-options ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .btn {
+      font-family: 'Nunito', sans-serif !important;
+    }
+    .btn-primary {
+      border-color: #fff;
+      border-radius: 50rem;
+      border: solid 4px;
+    }
+    .btn-primary:hover {
+      border-color: #fff;
+    }
+    .order-card {
+      position: relative;
+      cursor: pointer;
+    }
+    .delete-icon {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      color: #dc3545;
+      cursor: pointer;
+      font-size: 1.2rem;
+    }
+    .delete-icon:hover {
+      color: #a71d2a;
+    }
+    .accordion-button {
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+  </style>
+{% endblock %}
 
 {% block content %}
-<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Todos los pedidos</title>
-<div class="container mt-4">
-  <div class="d-flex justify-content-between align-items-center mb-4">
-    <h2>Todos los Pedidos Archivados</h2>
-    <a href="{% url 'lista_pedidos' %}" class="btn btn-primary">Volver a Pedidos Activos</a>
-  </div>
-  
-  <table class="table table-striped">
-    <thead>
-      <tr>
-        <th># Pedido</th>
-        <th>Cliente</th>
-        <th>Fecha</th>
-        <th>Total</th>
-        <th>Estado</th>
-        <th>Dirección</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for pedido in pedidos %}
-      <tr class="pedido-row" data-pedido-id="{{ pedido.id }}">
-        <td>#{{ pedido.numero_pedido }}</td>
-        <td>{{ pedido.cliente }}</td>
-        <td>{{ pedido.fecha|date:"d/m/Y H:i" }}</td>
-        <td>${{ pedido.total }}</td>
-        <td>{{ pedido.get_estado_display }}</td>
-        <td>{{ pedido.direccion|default:"Retiro en local" }}</td>
-      </tr>
-      {% empty %}
-      <tr>
-        <td colspan="6" class="text-center">No hay pedidos archivados.</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-  </table>
-</div>
+  <title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Pedidos Archivados</title>
+  <div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h2>Pedidos Archivados</h2>
+      <a href="{% url 'lista_pedidos' %}" class="btn btn-primary">Volver a Pedidos Activos</a>
+    </div>
 
-<!-- Modal para ver detalles del pedido -->
-<div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header bg-primary text-white">
-        <h5 class="modal-title" id="modalPedidoTitle"></h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row mb-3">
-          <div class="col-md-6">
-            <h5>Información del Cliente</h5>
-            <p><strong>Nombre:</strong> <span id="modalCliente"></span></p>
-            <p><strong>Teléfono:</strong> <span id="modalTelefono"></span></p>
-            <p><strong>Dirección:</strong> <span id="modalDireccion"></span></p>
-            <p><strong>Aclaraciones:</strong> <span id="modalAclaraciones"></span></p>
-          </div>
-          <div class="col-md-6">
-            <h5>Detalles del Pedido</h5>
-            <p><strong>Fecha:</strong> <span id="modalFecha"></span></p>
-            <p><strong>Método pago:</strong> <span id="modalMetodoPago"></span></p>
-            <p><strong>Estado:</strong> <span id="modalEstado"></span></p>
-            <p><strong>Tiempo Estimado:</strong> <span id="modalTiempoEstimado"></span></p>
-            <p><strong>Costo Envío:</strong> $<span id="modalCostoEnvio"></span></p>
-            <p><strong>Descuento:</strong> $<span id="modalDescuento"></span></p>
-            <p><strong>Total:</strong> $<span id="modalTotal"></span></p>
+    <div id="no-jquery-warning" class="no-jquery-warning" style="display: none;">
+      Error: jQuery no está cargado. Las funciones de modal no funcionarán.
+    </div>
+
+    <!-- Search Bar -->
+    <div class="mb-4">
+      <input type="text" id="searchInput" class="form-control" placeholder="Buscar pedido por #, nombre o apellido...">
+    </div>
+
+    <!-- Orders Grouped by Month -->
+    <div class="accordion" id="pedidosAccordion">
+      {% for month_key, data in pedidos_by_month %}
+      <div class="accordion-item" data-month-key="{{ month_key }}">
+        <h2 class="accordion-header" id="heading-{{ month_key }}">
+          <button class="accordion-button {% if forloop.first %}show{% else %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ month_key }}" aria-expanded="{% if forloop.first %}true{% else %}false{% endif %}" aria-controls="collapse-{{ month_key }}">
+            {{ data.month_name }} {{ data.year }} ({{ data.pedidos|length }} pedidos)
+          </button>
+        </h2>
+        <div id="collapse-{{ month_key }}" class="accordion-collapse collapse {% if forloop.first %}show{% endif %}" aria-labelledby="heading-{{ month_key }}" data-bs-parent="#pedidosAccordion">
+          <div class="accordion-body">
+            <div class="row">
+              {% for pedido in data.pedidos %}
+              <div class="col-md-4 mb-4 order-card-container">
+                <div class="order-card" data-pedido-id="{{ pedido.id }}">
+                  <i class="fas fa-times delete-icon" data-pedido-id="{{ pedido.id }}" title="Eliminar pedido"></i>
+                  <div class="order-info">
+                    <div class="order-header">Archivado el {{ pedido.fecha_archivado|default:pedido.fecha|date:"d/m/Y H:i" }}</div>
+                    <div class="order-name">{{ pedido.cliente }}</div>
+                    <div class="order-phone">{{ pedido.cliente }}</div>
+                    <div class="order-address">
+                      <i class="fas fa-map-marker-alt"></i>
+                      {{ pedido.direccion|default:"Retiro en local" }}
+                    </div>
+                    <div class="order-method">{{ pedido.get_estado_display|default:"Archivado" }}</div>
+                  </div>
+                  <div class="order-actions">
+                    <div class="order-price">${{ pedido.total|floatformat:2 }}</div>
+                  </div>
+                </div>
+              </div>
+              {% empty %}
+              <div class="col-12 text-center">
+                <p>No hay pedidos archivados para {{ data.month_name }} {{ data.year }}.</p>
+              </div>
+              {% endfor %}
+            </div>
           </div>
         </div>
-        <hr>
-        <h5>Productos</h5>
-        <table class="table table-sm">
-          <thead>
-            <tr>
-              <th>Producto</th>
-              <th>Cantidad</th>
-              <th>Precio Unitario</th>
-              <th>Subtotal</th>
-              <th>Opciones</th>
-            </tr>
-          </thead>
-          <tbody id="modalProductos">
-          </tbody>
-        </table>
       </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+      {% empty %}
+      <div class="col-12 text-center" id="no-pedidos-message">
+        <p>No hay pedidos archivados.</p>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- Modal for Order Details -->
+    <div class="modal fade" id="modalPedido" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="modalPedidoTitle">Cargando...</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <div class="row mb-3">
+              <div class="col-md-6">
+                <h5>Información del Cliente</h5>
+                <p><strong>Nombre:</strong> <span id="modalCliente"></span></p>
+                <p><strong>Teléfono:</strong> <span id="modalTelefono"></span></p>
+                <p><strong>Dirección:</strong> <span id="modalDireccion"></span></p>
+                <p><strong>Aclaraciones:</strong> <span id="modalAclaraciones"></span></p>
+              </div>
+              <div class="col-md-6">
+                <h5>Detalles del Pedido</h5>
+                <p><strong>Fecha:</strong> <span id="modalFecha"></span></p>
+                <p><strong>Método de Pago:</strong> <span id="modalMetodoPago"></span></p>
+                <p><strong>Estado:</strong> <span id="modalEstado"></span></p>
+                <p><strong>Tiempo Estimado:</strong> <span id="modalTiempoEstimado"></span></p>
+                <p><strong>Subtotal:</strong> $<span id="modalSubtotal"></span></p>
+                <p id="modalDescuentoEfectivoContainer"><strong>Descuento Efectivo:</strong> $<span id="modalDescuentoEfectivo"></span></p>
+                <p id="modalDescuentoCodigoContainer"><strong>Descuento Código:</strong> $<span id="modalDescuentoCodigo"></span></p>
+                <p><strong>Total Descuentos:</strong> $<span id="modalDescuentoTotal"></span></p>
+                <p><strong>Costo Envío:</strong> $<span id="modalCostoEnvio"></span></p>
+                <p><strong>Total:</strong> $<span id="modalTotal"></span></p>
+              </div>
+            </div>
+            <hr>
+            <h5>Productos</h5>
+            <div class="product-grid" id="modalProductos"></div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header bg-danger text-white">
+            <h5 class="modal-title">Confirmar Eliminación</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>¿Estás seguro de que deseas eliminar el pedido #<span id="deletePedidoId"></span>? Esta acción no se puede deshacer.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+            <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Eliminar</button>
+          </div>
+        </div>
       </div>
     </div>
   </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
-{{ block.super }}
-<script>
-$(document).ready(function() {
-  console.log('jQuery is loaded:', typeof $ !== 'undefined');
-  $('.pedido-row').on('click', function() {
-    const pedidoId = $(this).data('pedido-id');
-    console.log('Fetching pedido with ID:', pedidoId);
-    
-    $.get(`/panel/pedidos/${pedidoId}/json/`, (pedido) => {
-      console.log("JSON recibido:", pedido);
-      
-      const fechaFormatted = pedido.fecha_creacion 
-        ? new Date(pedido.fecha_creacion).toLocaleString('es-AR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          }) 
-        : 'Sin fecha';
+  {{ block.super }}
+  <script>
+    // Debug: Log script start
+    console.log('Pedidos Archivados script loaded at', new Date().toLocaleString());
 
-      $('#modalPedidoTitle').text(`Pedido #${pedido.id || 'Sin ID'}`);
-      $('#modalCliente').text(pedido.nombre_cliente || 'Sin nombre');
-      $('#modalTelefono').text(pedido.telefono_cliente || 'Sin teléfono');
-      $('#modalDireccion').text(pedido.direccion_entrega || 'Retiro en local');
-      $('#modalAclaraciones').text(pedido.aclaraciones || 'Sin aclaraciones');
-      $('#modalFecha').text(fechaFormatted);
-      $('#modalMetodoPago').text(pedido.metodo_pago || 'Sin método');
-      $('#modalEstado').text(pedido.estado || 'Sin estado');
-      $('#modalTiempoEstimado').text(pedido.tiempo_estimado || 'Sin tiempo estimado');
-      $('#modalCostoEnvio').text(parseFloat(pedido.costo_envio || 0).toFixed(2));
-      $('#modalDescuento').text(parseFloat(pedido.monto_descuento || 0).toFixed(2));
-      $('#modalTotal').text(parseFloat(pedido.total || 0).toFixed(2));
+    // Check dependencies
+    if (typeof jQuery === 'undefined' || typeof $.ajax === 'undefined') {
+      console.error('jQuery is not loaded. Modal and delete functionality will not work.');
+      document.getElementById('no-jquery-warning').style.display = 'block';
+    } else if (typeof bootstrap === 'undefined') {
+      console.error('Bootstrap is not loaded. Modal and accordion functionality will not work.');
+      document.getElementById('no-jquery-warning').style.display = 'block';
+    } else {
+      console.log('jQuery and Bootstrap loaded successfully:', jQuery.fn.jquery, bootstrap);
 
-      const productosHtml = pedido.items.map(item => `
-        <tr>
-          <td>${item.nombre_producto}</td>
-          <td>${item.cantidad}</td>
-          <td>$${parseFloat(item.precio_unitario).toFixed(2)}</td>
-          <td>$${parseFloat(item.subtotal).toFixed(2)}</td>
-          <td>${
-            item.opciones_seleccionadas.length > 0
-              ? `<ul>${item.opciones_seleccionadas.map(opt => `<li>${opt.nombre} (+$${parseFloat(opt.precio_adicional).toFixed(2)})</li>`).join('')}</ul>`
-              : 'Sin opciones'
-          }</td>
-        </tr>
-      `).join('');
-      $('#modalProductos').html(productosHtml);
+      $(document).ready(function() {
+        console.log('Document ready. Setting up jQuery event handlers for archivados.');
 
-      $('#modalPedido').modal('show');
-    }).fail((xhr) => {
-      console.error("Error al obtener el pedido:", xhr.status, xhr.statusText, xhr.responseText);
-      alert('Error al cargar los detalles del pedido: ' + (xhr.responseText || 'Error en la solicitud'));
-    });
-  });
-});
-</script>
+        // Configure CSRF token for AJAX requests
+        $.ajaxSetup({
+          beforeSend: function(xhr, settings) {
+            if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+              const csrftoken = getCookie('csrftoken');
+              if (csrftoken) {
+                xhr.setRequestHeader("X-CSRFToken", csrftoken);
+              } else {
+                console.error("CSRF token not found");
+                showNotification("Error: CSRF token no encontrado", "error");
+              }
+            }
+          }
+        });
+
+        // Store original counts and headers
+        const originalCounts = {};
+        const originalHeaders = {};
+        $('.accordion-item').each(function() {
+          const monthKey = $(this).data('month-key');
+          const $header = $(this).find('.accordion-button');
+          originalCounts[monthKey] = $(this).find('.order-card-container').length;
+          originalHeaders[monthKey] = $header.text().split(' (')[0].trim();
+          console.log(`Initialized month ${monthKey}: ${originalCounts[monthKey]} pedidos, header: ${originalHeaders[monthKey]}`);
+        });
+
+        // Search functionality
+        $('#searchInput').on('keyup', function() {
+          const searchText = $(this).val().toLowerCase().trim();
+          console.log(`Search triggered with: "${searchText}"`);
+
+          $('.accordion-item').each(function() {
+            const $accordionItem = $(this);
+            const monthKey = $accordionItem.data('month-key');
+            const $header = $accordionItem.find('.accordion-button');
+            const $orderCards = $accordionItem.find('.order-card-container');
+            let visibleCount = 0;
+
+            $orderCards.each(function() {
+              const $card = $(this).find('.order-card');
+              const pedidoId = $card.data('pedido-id').toString();
+              const cliente = $card.find('.order-name').text().toLowerCase();
+              const isVisible = searchText ? (pedidoId.includes(searchText) || cliente.includes(searchText)) : true;
+              $(this).toggle(isVisible);
+              if (isVisible) visibleCount++;
+            });
+
+            // Update accordion header
+            if (visibleCount > 0) {
+              $header.text(`${originalHeaders[monthKey]} (${searchText ? `${visibleCount} pedidos encontrados con "${searchText}"` : `${visibleCount} pedidos`})`);
+              $accordionItem.show();
+            } else {
+              $accordionItem.hide();
+            }
+            console.log(`Month ${monthKey}: ${visibleCount} visible, ${originalCounts[monthKey]} total`);
+          });
+
+          // Handle empty state
+          if ($('.order-card-container:visible').length === 0) {
+            if ($('#no-pedidos-message').length === 0) {
+              $('#pedidosAccordion').after('<div id="no-pedidos-message" class="col-12 text-center"><p>No hay pedidos archivados.</p></div>');
+            }
+          } else {
+            $('#no-pedidos-message').remove();
+          }
+        });
+
+        // Modal trigger on card click (excluding delete icon)
+        $('.order-card').on('click', function(e) {
+          if ($(e.target).hasClass('delete-icon')) return;
+          e.preventDefault();
+          const pedidoId = $(this).data('pedido-id');
+          console.log(`Card clicked for pedido ID: ${pedidoId}`);
+
+          $.ajax({
+            url: `/panel/pedidos/${pedidoId}/json/`,
+            method: 'GET',
+            success: function(data) {
+              console.log('AJAX success for pedido', pedidoId, data);
+              $('#modalPedidoTitle').text(`Pedido #${data.numero_pedido || 'Desconocido'}`);
+              $('#modalCliente').text(data.nombre_cliente || 'Sin nombre');
+              $('#modalTelefono').text(data.telefono_cliente || 'Sin teléfono');
+              $('#modalDireccion').text(data.direccion_entrega || 'Retiro en local');
+              $('#modalAclaraciones').text(data.aclaraciones || 'Sin aclaraciones');
+              $('#modalFecha').text(data.fecha_creacion ? new Date(data.fecha_creacion).toLocaleString('es-AR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }) : 'Sin fecha');
+              $('#modalMetodoPago').text(data.metodo_pago || 'No especificado');
+              $('#modalEstado').text(data.estado || 'Sin estado');
+              $('#modalTiempoEstimado').text(data.tiempo_estimado || 'No especificado');
+              $('#modalDescuentoEfectivoContainer').toggle(!!data.monto_descuento_efectivo && data.monto_descuento_efectivo > 0);
+              $('#modalDescuentoEfectivo').text(parseFloat(data.monto_descuento_efectivo || 0).toFixed(2));
+              $('#modalDescuentoCodigoContainer').toggle(!!data.monto_descuento_codigo && data.monto_descuento_codigo > 0);
+              $('#modalDescuentoCodigo').text(parseFloat(data.monto_descuento_codigo || 0).toFixed(2));
+              $('#modalDescuentoTotal').text(parseFloat(data.monto_descuento || 0).toFixed(2));
+              $('#modalCostoEnvio').text(parseFloat(data.costo_envio || 0).toFixed(2));
+              $('#modalTotal').text(parseFloat(data.total || 0).toFixed(2));
+
+              const productosContainer = $('#modalProductos');
+              productosContainer.empty();
+              if (data.items && data.items.length > 0) {
+                const restaurantName = data.restaurante_nombre || '{{ restaurante.username|default:"default_restaurant" }}'.replace(/ /g, '_').toLowerCase();
+                data.items.forEach(item => {
+                  let imageUrl = item.imagen_url || '';
+                  if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
+                    const originalFilename = item.imagen_nombre_original || 'default.png';
+                    imageUrl = `{{ MEDIA_URL }}${restaurantName}/productos/${originalFilename}`;
+                  }
+
+                  const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (
+                    `<div class="product-options">Opciones:<ul>${item.opciones_seleccionadas.map(op => `<li>${op.nombre} (+$${parseFloat(op.precio_adicional || 0).toFixed(2)})</li>`).join('')}</ul></div>`
+                  ) : '';
+                  const productCard = `
+                    <div class="product-card">
+                      <img src="${imageUrl}" alt="${item.nombre_producto || 'Producto'}" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Producto';">
+                      <div class="product-name">${item.nombre_producto || 'Sin nombre'}</div>
+                      <div class="product-detail">Cantidad: ${item.cantidad || 0}</div>
+                      <div class="product-detail">Precio: $${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
+                      <div class="product-detail">Subtotal: $${parseFloat(item.subtotal || 0).toFixed(2)}</div>
+                      ${opcionesHtml}
+                    </div>
+                  `;
+                  productosContainer.append(productCard);
+                });
+              } else {
+                productosContainer.append('<p>No hay productos en este pedido.</p>');
+              }
+
+              try {
+                $('#modalPedido').modal('show');
+                console.log('Modal shown for pedido', pedidoId);
+              } catch (error) {
+                console.error('Error showing modal:', error);
+                showNotification('No se pudo abrir el modal. Por favor, revisa la consola del navegador.', 'error');
+              }
+            },
+            error: function(xhr) {
+              console.error('AJAX error for pedido', pedidoId, xhr.status, xhr.responseText);
+              showNotification('No se pudo cargar los detalles del pedido. Código de error: ' + xhr.status, 'error');
+            }
+          });
+        });
+
+        // Delete order
+        $(document).on('click', '.delete-icon', function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          const $this = $(this);
+          const pedidoId = $this.data('pedido-id');
+          console.log(`Delete icon clicked for pedido ID: ${pedidoId}`);
+
+          // Show delete confirmation modal
+          $('#deletePedidoId').text(pedidoId);
+          try {
+            $('#deleteConfirmModal').modal('show');
+            console.log('Delete modal shown for pedido', pedidoId);
+          } catch (error) {
+            console.error('Error showing delete modal:', error);
+            showNotification('No se pudo abrir el modal de eliminación.', 'error');
+          }
+        });
+
+        // Handle confirm delete
+        $('#confirmDeleteBtn').on('click', function() {
+          const pedidoId = $('#deletePedidoId').text();
+          console.log(`Confirm delete clicked for pedido ID: ${pedidoId}`);
+          $('#deleteConfirmModal').modal('hide');
+
+          $.ajax({
+            url: `/panel/pedidos/${pedidoId}/eliminar/`,
+            method: 'POST',
+            success: function(response) {
+              if (response.success) {
+                showNotification(response.message || `Pedido #${pedidoId} eliminado correctamente`, 'success');
+                const $orderCard = $(`.order-card[data-pedido-id="${pedidoId}"]`).closest('.order-card-container');
+                const $accordionItem = $orderCard.closest('.accordion-item');
+                const monthKey = $accordionItem.data('month-key');
+                console.log(`Deleting pedido ${pedidoId} from month ${monthKey}`);
+
+                // Update original count
+                originalCounts[monthKey]--;
+                console.log(`Updated count for ${monthKey}: ${originalCounts[monthKey]}`);
+
+                // Remove the order card
+                $orderCard.remove();
+
+                // Update accordion header
+                const searchText = $('#searchInput').val().toLowerCase().trim();
+                const $orderCards = $accordionItem.find('.order-card-container');
+                let visibleCount = 0;
+
+                $orderCards.each(function() {
+                  const $card = $(this).find('.order-card');
+                  const pedidoId = $card.data('pedido-id').toString();
+                  const cliente = $card.find('.order-name').text().toLowerCase();
+                  const isVisible = searchText ? (pedidoId.includes(searchText) || cliente.includes(searchText)) : true;
+                  $(this).toggle(isVisible);
+                  if (isVisible) visibleCount++;
+                });
+
+                const $header = $accordionItem.find('.accordion-button');
+                if (visibleCount > 0) {
+                  $header.text(`${originalHeaders[monthKey]} (${searchText ? `${visibleCount} pedidos encontrados con "${searchText}"` : `${visibleCount} pedidos`})`);
+                  $accordionItem.show();
+                } else {
+                  $accordionItem.hide();
+                }
+
+                // Handle empty state
+                if ($('.order-card-container:visible').length === 0) {
+                  if ($('#no-pedidos-message').length === 0) {
+                    $('#pedidosAccordion').after('<div id="no-pedidos-message" class="col-12 text-center"><p>No hay pedidos archivados.</p></div>');
+                  }
+                } else {
+                  $('#no-pedidos-message').remove();
+                }
+              } else {
+                showNotification(`Error al eliminar el pedido: ${response.error || 'Error desconocido'}`, 'error');
+              }
+            },
+            error: function(xhr) {
+              console.error('AJAX error deleting pedido', pedidoId, xhr.status, xhr.responseText);
+              showNotification(`Error al eliminar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
+            }
+          });
+        });
+
+        // Function to show notifications
+        function showNotification(message, type) {
+          const notificationDiv = document.createElement('div');
+          notificationDiv.className = `alert alert-${type === 'error' ? 'danger' : type === 'warning' ? 'warning' : 'success'} alert-dismissible fade show`;
+          notificationDiv.style.position = 'fixed';
+          notificationDiv.style.top = '20px';
+          notificationDiv.style.right = '20px';
+          notificationDiv.style.zIndex = '1000';
+          notificationDiv.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+          `;
+          document.body.appendChild(notificationDiv);
+          setTimeout(() => notificationDiv.remove(), 5000);
+        }
+
+        // Function to get CSRF token
+        function getCookie(name) {
+          console.log('getCookie called for:', name);
+          let cookieValue = null;
+          if (document.cookie && document.cookie !== '') {
+            console.log('All cookies:', document.cookie);
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+              const cookie = cookies[i].trim();
+              if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+              }
+            }
+          }
+          console.log('Cookie value for', name, ':', cookieValue);
+          return cookieValue;
+        }
+
+        console.log('Initial csrftoken from cookie:', getCookie('csrftoken'));
+        window.csrftoken = getCookie('csrftoken');
+        console.log('window.csrftoken set to:', window.csrftoken);
+
+        // Initial search trigger to set correct state
+        $('#searchInput').trigger('keyup');
+      });
+    }
+  </script>
 {% endblock %}

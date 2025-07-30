@@ -1856,7 +1856,7 @@ def hello(request):
         pedido.estado = 'pendiente'
         pedido.save()
 
-        print(f'pedidos_restaurante_{pedido['restaurante']}',
+        print(f"pedidos_restaurante_{pedido['restaurante']}",
             {
                 'type': 'pedido_approved',
                 'pedido_token': token,
@@ -1864,7 +1864,7 @@ def hello(request):
             })
 
         send_event(
-            f'pedidos_restaurante_{pedido['restaurante']}',
+            f"pedidos_restaurante_{pedido['restaurante']}",
             {
                 'type': 'pedido_approved',
                 'pedido_token': token,
@@ -1877,7 +1877,7 @@ def hello(request):
         pedido.save()
 
         send_event(
-            f'pedidos_restaurante_{pedido['restaurante']}',
+            f"pedidos_restaurante_{pedido['restaurante']}",
             {
                 'type': 'pedido_pending',
                 'pedido_token': token,
@@ -1892,7 +1892,7 @@ def hello(request):
         pedido.save()
 
         send_event(
-            f'pedidos_restaurante_{pedido['restaurante']}',
+            f"pedidos_restaurante_{pedido['restaurante']}",
             {
                 'type': 'pedido_rejected',
                 'pedido_token': token,

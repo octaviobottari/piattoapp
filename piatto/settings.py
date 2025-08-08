@@ -1,28 +1,26 @@
 import os
 from pathlib import Path
-import dj_database_url
 
 # Build paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
-DEBUG = os.getenv('DJANGO_DEBUG', 'False') == 'True'
-ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', 'piattoweb.com,www.piattoweb.com,localhost,127.0.0.1').split(',')
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://piattoweb.com,https://www.piattoweb.com').split(',')
+SECRET_KEY = '4k#9z$2x!p7q@w9e#r5t$y8u&i2o-plk0j=mhn6bvc3xz1a9s8d7f6g5h4j3k2'
+DEBUG = True  # Local testing
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
 CSRF_COOKIE_NAME = "csrftoken"
 CSRF_COOKIE_HTTPONLY = False
-CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = False  # False for local development
 CSRF_COOKIE_SAMESITE = 'Strict'
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
-# Custom 500 error handler
+# Custom error handlers
 handler500 = 'core.views.error_view'
 
 # Apps
 INSTALLED_APPS = [
-    'daphne',
-    'django.contrib.admin',
+    'django.contrib.admin',  # Required for admin interface
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
@@ -37,7 +35,7 @@ INSTALLED_APPS = [
     'django_extensions',
     'storages',
     'core.apps.CoreConfig',
-    'rest_framework'
+    'rest_framework',
 ]
 
 # Middleware
@@ -57,7 +55,7 @@ MIDDLEWARE = [
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'templates')],
+        'DIRS': [BASE_DIR / 'templates'],  # Ensure templates directory is set
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -70,17 +68,18 @@ TEMPLATES = [
         },
     },
 ]
+
 # URLs
 ROOT_URLCONF = 'piatto.urls'
 WSGI_APPLICATION = 'piatto.wsgi.application'
 ASGI_APPLICATION = 'piatto.asgi.application'
 
-# Database
+# Database (SQLite for local testing; consider PostgreSQL for production)
 DATABASES = {
-    'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL', 'sqlite:///' + os.path.join(BASE_DIR, 'db.sqlite3')),
-        conn_max_age=600,
-    )
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
 # Authentication
@@ -102,24 +101,24 @@ DECIMAL_SEPARATOR = ','
 USE_THOUSAND_SEPARATOR = False
 
 # Static files
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'core', 'static')]
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_DIRS = [BASE_DIR / 'core' / 'static']
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = '/static/'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
 # Media files
-MEDIA_URL = 'https://piatto-media-2025.s3.us-east-2.amazonaws.com/media/'
-DEFAULT_FILE_STORAGE = 'core.storage_backends.MediaStorage'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage' if DEBUG else 'core.storage_backends.MediaStorage'
 
-
-# AWS S3 Configuration
-AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+# AWS S3 settings (for production)
+AWS_ACCESS_KEY_ID = 'your-access-key-id'  # Replace with your key for production
+AWS_SECRET_ACCESS_KEY = 'your-secret-access-key'  # Replace with your key for production
 AWS_STORAGE_BUCKET_NAME = 'piatto-media-2025'
 AWS_S3_REGION_NAME = 'us-east-2'
 AWS_S3_FILE_OVERWRITE = False
 AWS_DEFAULT_ACL = 'public-read'
-AWS_QUERYSTRING_AUTH = False     
+AWS_QUERYSTRING_AUTH = False
 AWS_S3_ADDRESSING_STYLE = 'virtual'
 AWS_S3_VERIFY = True
 AWS_S3_CUSTOM_DOMAIN = 'piatto-media-2025.s3.us-east-2.amazonaws.com'
@@ -128,37 +127,26 @@ AWS_S3_CUSTOM_DOMAIN = 'piatto-media-2025.s3.us-east-2.amazonaws.com'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
-# Channels with Redis
+# Channels
 CHANNEL_LAYERS = {
     'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:6379')],
-            'capacity': 20,
-        },
+        'BACKEND': 'channels.layers.InMemoryChannelLayer',  # Suitable for local testing
     },
 }
 
-# Caching with Redis
+# Caching
 CACHES = {
     'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'TIMEOUT': 3600,
-        'KEY_PREFIX': 'piatto_',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
     }
 }
-
-# Prevent cache buildup
 CACHE_MIDDLEWARE_ALIAS = 'default'
 CACHE_MIDDLEWARE_SECONDS = 3600
 CACHE_MIDDLEWARE_KEY_PREFIX = 'piatto'
 
 # CORS
-CORS_ALLOW_ALL_ORIGINS = DEBUG
+CORS_ALLOW_ALL_ORIGINS = True  # Relaxed for local testing; restrict in production
 CORS_ALLOW_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS']
 CORS_ALLOW_HEADERS = [
     'accept',
@@ -171,13 +159,9 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
-CORS_ALLOWED_ORIGINS = [
-    'https://piattoweb.com',
-    'https://www.piattoweb.com',
-]
 
 # Mercado Pago
-MERCADO_PAGO_ACCESS_TOKEN = os.getenv('MP_ACCESS_TOKEN')
+MERCADO_PAGO_ACCESS_TOKEN = 'TEST-1234-5678-9012-3456'  # Replace with your test token
 
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -196,7 +180,7 @@ LOGGING = {
         'file': {
             'level': 'ERROR',
             'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'logs/error.log'),
+            'filename': BASE_DIR / 'logs' / 'error.log',
             'formatter': 'verbose',
         },
         'console': {
@@ -218,29 +202,23 @@ LOGGING = {
         },
         'core': {
             'handlers': ['file', 'console'],
-            'level': 'INFO',
+            'level': 'DEBUG',  # Set to DEBUG to capture console command errors
             'propagate': True,
         },
     },
 }
 
-# Security settings
+# Security settings (relaxed for local testing)
 SECURE_SSL_REDIRECT = False
-PREPEND_WWW = False
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
+SECURE_HSTS_SECONDS = 0
 
-# Email settings
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST')
-EMAIL_PORT = os.getenv('EMAIL_PORT', 587)
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'no-reply@piattoweb.com')
+# Email settings (for local testing)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
+# Admin settings
+ADMIN_ENABLED = True  # Ensure admin interface is enabled

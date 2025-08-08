@@ -688,13 +688,13 @@ textarea.form-control {
     const seoDescriptionPreview = document.getElementById('seo-description-preview');
 
     function updateMetaTitle() {
-      const title = metaTitleInput.value || '{{ restaurante.nombre	Local }}';
+      const title = metaTitleInput.value || '{{ restaurante.nombre_local|escapejs }}'; // Fixed typo and added escapejs
       seoTitlePreview.textContent = title + ' | Piatto';
       metaTitleWarning.style.display = metaTitleInput.value.length > 60 ? 'block' : 'none';
     }
 
     function updateMetaDescription() {
-      const description = metaDescriptionInput.value || 'Disfruta de los mejores platos de {{ restaurante.nombre_local }} con entrega rápida.';
+      const description = metaDescriptionInput.value || 'Disfruta de los mejores platos de {{ restaurante.nombre_local|escapejs }} con entrega rápida.'; // Already correct, added escapejs
       seoDescriptionPreview.textContent = description;
       metaDescriptionWarning.style.display = metaDescriptionInput.value.length > 160 ? 'block' : 'none';
     }

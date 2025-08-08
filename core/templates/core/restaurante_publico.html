@@ -6,6 +6,9 @@
 <title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Piatto</title>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+
+<link rel="icon" type="image/png" href="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo.png{% endif %}">
+
 <!-- SEO Meta Tags -->
 <meta name="title" content="{{ restaurante.meta_title|default:restaurante.nombre_local }}">
 <meta name="description" content="{{ restaurante.meta_description|default:'Deliciosa comida con entrega rápida en ' }}{{ restaurante.nombre_local }}">

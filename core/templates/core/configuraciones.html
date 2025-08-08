@@ -326,20 +326,35 @@ textarea.form-control {
         <!-- Meta Tags -->
         <h6 class="mt-4">Optimización para Buscadores (SEO)</h6>
         <div class="mb-3">
-          <label class="form-label">Meta Título</label>
-          {{ config_form.meta_title }}
-          <small class="text-muted">Título para Google (máx. 60 caracteres).</small>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Meta Descripción</label>
-          {{ config_form.meta_description }}
-          <small class="text-muted">Descripción para Google (máx. 160 caracteres).</small>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Meta Palabras Clave</label>
-          {{ config_form.meta_keywords }}
-          <small class="text-muted">Palabras clave separadas por comas.</small>
-        </div>
+  <label class="form-label">Meta Título</label>
+  {{ config_form.meta_title }}
+  <small class="text-muted">Título que aparece en Google (máx. 60 caracteres, {{ config_form.meta_title.value|default:''|length }} usados).</small>
+  <small id="meta-title-warning" class="text-danger" style="display: none;">El título excede los 60 caracteres.</small>
+</div>
+<div class="mb-3">
+  <label class="form-label">Meta Descripción</label>
+  {{ config_form.meta_description }}
+  <small class="text-muted">Descripción que aparece en Google (máx. 160 caracteres, {{ config_form.meta_description.value|default:''|length }} usados).</small>
+  <small id="meta-description-warning" class="text-danger" style="display: none;">La descripción excede los 160 caracteres.</small>
+</div>
+<div class="mb-3">
+  <label class="form-label">Meta Palabras Clave</label>
+  {{ config_form.meta_keywords }}
+  <small class="text-muted">Palabras clave separadas por comas (ej. comida, delivery, {{ restaurante.nombre_local|lower }}).</small>
+</div>
+<!-- Vista previa de SEO -->
+<div class="card mt-3">
+  <div class="card-header">
+    <h5 class="mb-0">Vista Previa de SEO</h5>
+  </div>
+  <div class="card-body">
+    <div class="seo-preview">
+      <p class="seo-title" id="seo-title-preview">{{ restaurante.meta_title|default:restaurante.nombre_local }} | Piatto</p>
+      <p class="seo-url">https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}</p>
+      <p class="seo-description" id="seo-description-preview">{{ restaurante.meta_description|default:'Disfruta de los mejores platos de ' }}{{ restaurante.nombre_local }} con entrega rápida.</p>
+    </div>
+  </div>
+</div>
         <!-- Dirección -->
         <div class="mb-3">
           <label class="form-label">Dirección</label>
@@ -660,6 +675,36 @@ textarea.form-control {
       console.error('Error al cargar imágenes para PDF:', err);
       alert(`No se pudieron cargar las imágenes para el PDF: ${err.message}`);
     });
+  });
+</script>
+<script>
+  // Validación de longitud y actualización de vista previa
+  document.addEventListener('DOMContentLoaded', function() {
+    const metaTitleInput = document.querySelector('input[name="meta_title"]');
+    const metaDescriptionInput = document.querySelector('textarea[name="meta_description"]');
+    const metaTitleWarning = document.getElementById('meta-title-warning');
+    const metaDescriptionWarning = document.getElementById('meta-description-warning');
+    const seoTitlePreview = document.getElementById('seo-title-preview');
+    const seoDescriptionPreview = document.getElementById('seo-description-preview');
+
+    function updateMetaTitle() {
+      const title = metaTitleInput.value || '{{ restaurante.nombre	Local }}';
+      seoTitlePreview.textContent = title + ' | Piatto';
+      metaTitleWarning.style.display = metaTitleInput.value.length > 60 ? 'block' : 'none';
+    }
+
+    function updateMetaDescription() {
+      const description = metaDescriptionInput.value || 'Disfruta de los mejores platos de {{ restaurante.nombre_local }} con entrega rápida.';
+      seoDescriptionPreview.textContent = description;
+      metaDescriptionWarning.style.display = metaDescriptionInput.value.length > 160 ? 'block' : 'none';
+    }
+
+    metaTitleInput.addEventListener('input', updateMetaTitle);
+    metaDescriptionInput.addEventListener('input', updateMetaDescription);
+
+    // Inicializar vista previa
+    updateMetaTitle();
+    updateMetaDescription();
   });
 </script>
 {% endblock %}

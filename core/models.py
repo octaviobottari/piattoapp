@@ -121,6 +121,21 @@ class Restaurante(AbstractUser):
             models.Index(fields=['meta_keywords']),
         ]
 
+    def clean(self):
+        super().clean()
+        if self.meta_title and len(self.meta_title) > 60:
+            raise ValidationError({'meta_title': 'El meta título no debe exceder los 60 caracteres.'})
+        if self.meta_description and len(self.meta_description) > 160:
+            raise ValidationError({'meta_description': 'La meta descripción no debe exceder los 160 caracteres.'})
+        if self.meta_keywords and len(self.meta_keywords.split(',')) > 10:
+            raise ValidationError({'meta_keywords': 'No se deben incluir más de 10 palabras clave.'})
+        if self.meta_keywords and not all(keyword.strip() for keyword in self.meta_keywords.split(',')):
+            raise ValidationError({'meta_keywords': 'Las palabras clave no deben estar vacías.'})
+
+    def save(self, *args, **kwargs):
+        self.full_clean()  # Ejecuta validaciones
+        super().save(*args, **kwargs)
+
 class HorarioRestaurante(models.Model):
     DIA_SEMANA_CHOICES = [
         (0, 'Lunes'),

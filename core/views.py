@@ -1590,17 +1590,22 @@ def configurar_restaurante(request):
     if request.method == 'POST':
         form = ConfigRestauranteForm(request.POST, request.FILES, instance=restaurante)
         if form.is_valid():
-            # Save form and regenerate QR if nombre_local changed
             old_nombre_local = restaurante.nombre_local
-            form.save()
-            if old_nombre_local != form.instance.nombre_local:
-                # Delete old QR and generate new one
-                RestaurantQR.objects.filter(name=old_nombre_local).delete()
-                generate_qr_for_restaurant(form.instance.nombre_local)
-            messages.success(request, 'Configuración actualizada correctamente.')
-            return redirect('configuraciones')
+            try:
+                form.save()
+                if old_nombre_local != form.instance.nombre_local:
+                    RestaurantQR.objects.filter(name=old_nombre_local).delete()
+                    generate_qr_for_restaurant(form.instance.nombre_local)
+                messages.success(request, 'Configuración actualizada correctamente.')
+                return redirect('configuraciones')
+            except ValidationError as e:
+                for field, errors in e.error_dict.items():
+                    for error in errors:
+                        messages.error(request, f"Error en {field}: {error}")
         else:
-            messages.error(request, 'Error al guardar la configuración. Verifica los datos.')
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"Error en {field}: {error}")
     else:
         form = ConfigRestauranteForm(instance=restaurante)
     restaurant_qr = generate_qr_for_restaurant(restaurante.nombre_local)
@@ -1905,3 +1910,5 @@ def hello(request):
     }
 
     return Response(data, status=200)
+
+

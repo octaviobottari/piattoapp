@@ -1843,7 +1843,6 @@ def generate_qr_for_restaurant(restaurant_name):
 
 @api_view(['GET'])
 @never_cache
-# TODO: renombrar a webhook de confirmaciones
 def hello(request):
     # approved, pending, in_process, rejected o cancelled
     status = request.GET.get("status", None)
@@ -1861,7 +1860,7 @@ def hello(request):
         pedido.estado = 'pendiente'
         pedido.save()
 
-        print(f"pedidos_restaurante_{pedido['restaurante']}",
+        print(f"pedidos_restaurante_{pedido.restaurante.id}",
             {
                 'type': 'pedido_approved',
                 'pedido_token': token,
@@ -1869,7 +1868,7 @@ def hello(request):
             })
 
         send_event(
-            f"pedidos_restaurante_{pedido['restaurante']}",
+            f"pedidos_restaurante_{pedido.restaurante.id}",
             {
                 'type': 'pedido_approved',
                 'pedido_token': token,
@@ -1882,7 +1881,7 @@ def hello(request):
         pedido.save()
 
         send_event(
-            f"pedidos_restaurante_{pedido['restaurante']}",
+            f"pedidos_restaurante_{pedido.restaurante.id}",
             {
                 'type': 'pedido_pending',
                 'pedido_token': token,
@@ -1897,7 +1896,7 @@ def hello(request):
         pedido.save()
 
         send_event(
-            f"pedidos_restaurante_{pedido['restaurante']}",
+            f"pedidos_restaurante_{pedido.restaurante.id}",
             {
                 'type': 'pedido_rejected',
                 'pedido_token': token,

@@ -107,7 +107,8 @@ $(document).ready(function() {
                 cache: false,
                 timeout: 10000,
                 success: function(html) {
-                    $('.container').replaceWith($(html).find('.container'));
+                    // TODO: Reemplazar esto x jquery reemplazando toda la pagina
+                    window.location.reload();
                     $('.dropdown-toggle').dropdown();
                 },
                 error: function(xhr) {

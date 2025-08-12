@@ -102,7 +102,7 @@ $(document).ready(function() {
         // Check if on pedidos_procesando_pago page
         if (window.location.pathname.includes('/panel/pedidos/procesando_pagos/')) {
             $.ajax({
-                url: '/panel/pedidos/procesando_pagos/',
+                url: '/panel/pedidos/procesando_pagos/html/',
                 method: 'GET',
                 cache: false,
                 timeout: 10000,

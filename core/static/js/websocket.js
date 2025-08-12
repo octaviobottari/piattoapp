@@ -107,7 +107,7 @@ $(document).ready(function() {
                 cache: false,
                 timeout: 10000,
                 success: function(html) {
-                    $('.container').replaceWith($(html).find('.container').addBack());
+                    $('.container').replaceWith($(html).find('.container'));
                     $('.dropdown-toggle').dropdown();
                 },
                 error: function(xhr) {

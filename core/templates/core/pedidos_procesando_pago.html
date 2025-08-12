@@ -175,64 +175,56 @@
 <script src="{% static 'js/websocket.js' %}?v=6"></script>
 <script>
 // Ensure window.refreshColumns is defined
-window.refreshColumns = (function() {
-    let isRefreshing = false;
-    return function() {
-        if (isRefreshing) {
-            console.log('Refresh in progress, skipping');
-            return;
-        }
-        isRefreshing = true;
-        console.log('Starting refreshColumns');
+window.refreshColumns = function() {
+    console.log('Refreshing columns for procesando_pago and error_pago');
     $.ajax({
         url: '/panel/pedidos/procesando_pagos/html/',
         method: 'GET',
         cache: false,
         timeout: 10000,
         beforeSend: function() {
-                console.log('Clearing container');
-                const $container = $('.container.mt-4.p-4.bg-light');
-                if ($container.length) {
-                    $container.addClass('loading').empty();
-                } else {
-                    console.warn('Container not found in DOM, creating new one');
-                    // Ensure the container is added in the correct place (e.g., after header)
-                    $('body').append('<div class="container mt-4 p-4 bg-light loading"></div>');
-                }
+            $('#procesando_pago').addClass('loading').empty();
+            $('#error_pago').addClass('loading').empty();
+            console.log('Cleared procesando_pago and error_pago columns');
         },
         success: function(html) {
-                console.log('Raw AJAX response:', html);
+            console.log('AJAX response received for procesando_pagos:', html);
             const $temp = $('<div>').html(html);
-                const $newContainer = $temp.find('.container.mt-4.p-4.bg-light');
-                console.log('New container found:', $newContainer.length, 'HTML:', $newContainer.html());
-                if ($newContainer.length) {
-                    $('.container.mt-4.p-4.bg-light').replaceWith($newContainer);
+            const $procesando = $('#procesando_pago');
+            const $error = $('#error_pago');
+
+            // Update procesando_pago column
+            const procesandoHtml = $temp.find('#procesando_pago').html() || '<p class="text-center">No hay pedidos procesando pago.</p>';
+            $procesando.html(procesandoHtml);
+            console.log('Updated procesando_pago with:', procesandoHtml);
+
+            // Update error_pago column
+            const errorHtml = $temp.find('#error_pago').html() || '<p class="text-center">No hay pedidos con error en pago.</p>';
+            $error.html(errorHtml);
+            console.log('Updated error_pago with:', errorHtml);
+
             // Reinitialize Bootstrap dropdowns
-                    $('.dropdown-toggle').dropdown();
-                    // Update timers if defined
+            $('.dropdown-toggle', $procesando).dropdown();
+            $('.dropdown-toggle', $error).dropdown();
+            console.log('Dropdowns initialized:', $('.dropdown-toggle').length);
+
+            // Call updateTimers if defined
             if (typeof window.updateTimers === 'function') {
-                        console.log('Updating timers');
                 window.updateTimers();
-                    }
-                } else {
-                    console.error('Container not found in response');
-                    showNotification('Error: No se encontró el contenedor en la respuesta', 'error');
-                    $('.container.mt-4.p-4.bg-light').html('<p class="text-center">Error al cargar los pedidos.</p>');
-                }
-                $('.container.mt-4.p-4.bg-light').removeClass('loading');
+                console.log('Timers updated');
+            }
+
+            $procesando.removeClass('loading');
+            $error.removeClass('loading');
         },
         error: function(xhr) {
-                console.error('AJAX error:', xhr.status, xhr.responseText);
+            console.error('Error refreshing columns:', xhr);
             showNotification(`Error al actualizar pedidos: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
-                $('.container.mt-4.p-4.bg-light').removeClass('loading').html('<p class="text-center">Error al cargar los pedidos.</p>');
-            },
-            complete: function() {
-                isRefreshing = false;
-                console.log('Refresh completed');
+            $('#procesando_pago').removeClass('loading');
+            $('#error_pago').removeClass('loading');
         }
     });
 };
-})();
 
 // Timer for error_pago orders
 window.updateTimers = function() {

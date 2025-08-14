@@ -193,18 +193,22 @@
   </div>
 </div>
 
-<!-- Modal para activar sonido -->
-<div class="modal fade" id="modalActivarSonido" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="modalWhatsApp" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-md">
     <div class="modal-content">
-      <div class="modal-header bg-warning text-dark">
-        <h5 class="modal-title">Activar Notificaciones de Sonido</h5>
+      <div class="modal-header bg-success text-white">
+        <h5 class="modal-title" id="modalWhatsAppTitle">Confirmación por WhatsApp</h5>
+                <button id="copyWhatsAppMessage" class="btn btn-sm btn-outline-light ms-auto me-2" title="Copiar mensaje">
+          <i class="fas fa-copy"></i>
+        </button>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <p>Las notificaciones de sonido están habilitadas, pero requieren una interacción con la página para funcionar. Haz clic en el botón a continuación para activar el sonido.</p>
+        <p id="whatsappMessage" style="white-space: pre-wrap;"></p>
         <div class="text-center mt-3">
-          <button id="btnActivarSonido" class="btn btn-primary">Activar Sonido</button>
+          <a id="whatsappLink" href="#" target="_blank" class="btn btn-success">
+            <i class="fab fa-whatsapp me-2"></i>Ir al chat
+          </a>
         </div>
       </div>
     </div>
@@ -223,6 +227,22 @@
   function updateDateTime() {
     console.log("updateDateTime called but not implemented");
   }
+
+  // Función para mostrar notificaciones
+  function showNotification(message, type) {
+    const notificationDiv = document.createElement("div");
+    notificationDiv.className = `alert alert-${type === "error" ? "danger" : type === "warning" ? "warning" : "success"} alert-dismissible fade show`;
+    notificationDiv.style.position = "fixed";
+    notificationDiv.style.top = "20px";
+    notificationDiv.style.right = "20px";
+    notificationDiv.style.zIndex = "1000";
+    notificationDiv.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(notificationDiv);
+    setTimeout(() => notificationDiv.remove(), 5000);
+  }
 
   // Función para copiar el mensaje al portapapeles
   function copyToClipboard(text) {
@@ -812,22 +832,6 @@ $(document).on('click', '.order-phone', function(e) {
         const message = $('#whatsappMessage').text();
         copyToClipboard(message);
     });
-
-    // Función para mostrar notificaciones
-    function showNotification(message, type) {
-      const notificationDiv = document.createElement("div");
-      notificationDiv.className = `alert alert-${type === "error" ? "danger" : type === "warning" ? "warning" : "success"} alert-dismissible fade show`;
-      notificationDiv.style.position = "fixed";
-      notificationDiv.style.top = "20px";
-      notificationDiv.style.right = "20px";
-      notificationDiv.style.zIndex = "1000";
-      notificationDiv.innerHTML = `
-        ${message}
-        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-      `;
-      document.body.appendChild(notificationDiv);
-      setTimeout(() => notificationDiv.remove(), 5000);
-    }
 
     // Función para obtener CSRF token
     function getCookie(name) {

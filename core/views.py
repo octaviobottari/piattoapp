@@ -1844,7 +1844,6 @@ def generate_qr_for_restaurant(restaurant_name):
 @api_view(['GET'])
 @never_cache
 def hello(request):
-    # approved, pending, in_process, rejected o cancelled
     status = request.GET.get("status", None)
     token = request.GET.get("external_reference", None)
 
@@ -1860,18 +1859,11 @@ def hello(request):
         pedido.estado = 'pendiente'
         pedido.save()
 
-        print(f"pedidos_restaurante_{pedido.restaurante.id}",
-            {
-                'type': 'pedido_approved',
-                'pedido_token': token,
-                'message': 'Pago confirmado, pedido pendiente'
-            })
-
         send_event(
             f"pedidos_restaurante_{pedido.restaurante.id}",
             {
-                'type': 'pedido_approved',
-                'pedido_token': token,
+                'type': 'pedido_updated',  # Use 'pedido_updated' to leverage existing handler
+                'pedido_id': str(pedido.id),  # Send integer ID, not token
                 'message': 'Pago confirmado, pedido pendiente'
             }
         )
@@ -1883,8 +1875,8 @@ def hello(request):
         send_event(
             f"pedidos_restaurante_{pedido.restaurante.id}",
             {
-                'type': 'pedido_pending',
-                'pedido_token': token,
+                'type': 'pedido_updated',  # Use 'pedido_updated'
+                'pedido_id': str(pedido.id),
                 'message': 'Pedido confirmado, pago pendiente'
             }
         )
@@ -1898,8 +1890,8 @@ def hello(request):
         send_event(
             f"pedidos_restaurante_{pedido.restaurante.id}",
             {
-                'type': 'pedido_rejected',
-                'pedido_token': token,
+                'type': 'pedido_updated',  # Use 'pedido_updated'
+                'pedido_id': str(pedido.id),
                 'message': 'Pago rechazado o cancelado'
             }
         )

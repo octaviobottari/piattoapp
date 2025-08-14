@@ -176,6 +176,9 @@
     <div class="modal-content">
       <div class="modal-header bg-success text-white">
         <h5 class="modal-title" id="modalWhatsAppTitle">Confirmación por WhatsApp</h5>
+        <button id="copyWhatsAppMessage" class="btn btn-sm btn-outline-light ms-auto me-2" title="Copiar mensaje">
+          <i class="fas fa-copy"></i>
+        </button>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
@@ -219,6 +222,36 @@
   // Dummy function to prevent updateDateTime error
   function updateDateTime() {
     console.log("updateDateTime called but not implemented");
+  }
+
+  // Función para copiar el mensaje al portapapeles
+  function copyToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      // Usar la API moderna de Clipboard
+      navigator.clipboard.writeText(text).then(() => {
+        showNotification("Mensaje copiado al portapapeles", "success");
+        console.log("Mensaje copiado al portapapeles");
+      }).catch(err => {
+        showNotification("Error al copiar el mensaje", "error");
+        console.error("Error al copiar el mensaje: ", err);
+      });
+    } else {
+      // Fallback para navegadores antiguos
+      const tempTextArea = document.createElement('textarea');
+      tempTextArea.value = text;
+      document.body.appendChild(tempTextArea);
+      tempTextArea.select();
+      tempTextArea.setSelectionRange(0, 99999);
+      try {
+        document.execCommand('copy');
+        showNotification("Mensaje copiado al portapapeles", "success");
+        console.log("Mensaje copiado (fallback)");
+      } catch (err) {
+        showNotification("Error al copiar el mensaje (fallback)", "error");
+        console.error("Error al copiar el mensaje (fallback): ", err);
+      }
+      document.body.removeChild(tempTextArea);
+    }
   }
 
   $(document).ready(function() {
@@ -546,9 +579,9 @@
     pedido.items.forEach(item => {
       mensaje += `- ${item.cantidad}x ${item.nombre_producto} ($${parseFloat(item.subtotal).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})`;
       if (item.opciones_seleccionadas.length > 0) {
-        mensaje += `\n  Opciones:\n`;
+            mensaje += `\n  Opciones:\n`;
         item.opciones_seleccionadas.forEach(opt => {
-          mensaje += `    * ${opt.nombre} (+$${parseFloat(opt.precio_adicional).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})\n`;
+              mensaje += `    * ${opt.nombre} (+$${parseFloat(opt.precio_adicional).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})\n`;
         });
       } else {
         mensaje += `\n`;
@@ -565,6 +598,9 @@
     $('#whatsappMessage').text(mensaje);
     $('#whatsappLink').attr('href', whatsappUrl).show();
     $('#modalWhatsApp').data('pedido-id', pedidoId).modal('show');
+        
+        // Copiar el mensaje al portapapeles automáticamente
+        copyToClipboard(mensaje);
   }).fail((xhr) => {
     showNotification('Error al cargar detalles del pedido: ' + (xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'), "error");
     enableButton($this);
@@ -737,9 +773,9 @@ $(document).on('click', '.order-phone', function(e) {
     pedido.items.forEach(item => {
       mensaje += `- ${item.cantidad}x ${item.nombre_producto} ($${parseFloat(item.subtotal).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})`;
       if (item.opciones_seleccionadas.length > 0) {
-        mensaje += `\n  Opciones:\n`;
+            mensaje += `\n  Opciones:\n`;
         item.opciones_seleccionadas.forEach(opt => {
-          mensaje += `    * ${opt.nombre} (+$${parseFloat(opt.precio_adicional).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})\n`;
+              mensaje += `    * ${opt.nombre} (+$${parseFloat(opt.precio_adicional).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})\n`;
         });
       } else {
         mensaje += `\n`;
@@ -763,10 +799,19 @@ $(document).on('click', '.order-phone', function(e) {
     $('#whatsappMessage').text(mensaje); // Display the raw message for copying
     $('#whatsappLink').attr('href', whatsappUrl).show();
     $('#modalWhatsApp').modal('show');
+        
+        // Copiar el mensaje al portapapeles automáticamente
+        copyToClipboard(mensaje);
   }).fail((xhr) => {
     showNotification('Error al cargar detalles del pedido: ' + (xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'), "error");
   });
 });
+
+    // Manejar el clic en el nuevo botón de copiar
+    $('#copyWhatsAppMessage').on('click', function() {
+        const message = $('#whatsappMessage').text();
+        copyToClipboard(message);
+    });
 
     // Función para mostrar notificaciones
     function showNotification(message, type) {

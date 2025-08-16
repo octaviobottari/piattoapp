@@ -1863,7 +1863,7 @@ def hello(request):
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
     headers = { 'Authorization': 'Bearer APP_USR-6515546442760543-071717-bf3879394ca8350628a04db0b569e0f8-2563411727' }
-    ml_response = requests.get('https://api.mercadopago.com/merchant_orders/${merchant_order_id}', headers=headers)
+    ml_response = requests.get(f'https://api.mercadopago.com/merchant_orders/{merchant_order_id}', headers=headers)
     data = ml_response.json()
     # Puede ser  open, closed y expired
     status = data.get('status', None)

@@ -46,6 +46,7 @@ from rest_framework.response import Response
 import re
 from django.views.decorators.cache import cache_page
 from django.views.decorators.cache import never_cache
+import requests
 
 logger = logging.getLogger(__name__)
 
@@ -1843,11 +1844,32 @@ def generate_qr_for_restaurant(restaurant_name):
 
 @api_view(['GET'])
 @never_cache
-def hello(request):
-    status = request.GET.get("status", None)
+def hello(request):  
     token = request.GET.get("external_reference", None)
+    merchant_order_id = request.GET.get("payment_id", None)
 
     pedido = get_object_or_404(Pedido, token=token)
+
+    if not merchant_order_id or not token:
+        # Solo se da cuando te están tratando de validar pedidos truchos
+        # Error 500 para confundir 
+        return JsonResponse({'error': 'Internal server error'}, status=500)
+
+    if not pedido.payment_id:
+        pedido.payment_id = merchant_order_id
+        pedido.save()
+    elif pedido.payment_id != merchant_order_id:
+        # El pago corresponde a otro pedido
+        return JsonResponse({'error': 'Internal server error'}, status=500)
+
+    ml_response = request.get('https://api.mercadopago.com/v1/merchant_orders/${merchant_order_id}')
+    data = ml_response.json()
+    status = data.get('status', None)
+
+    if not status:
+        # Solo se da cuando te están tratando de validar pedidos truchos
+        # Error 500 para confundir, el pedido no existe en ml
+        return JsonResponse({'error': 'Internal server error'}, status=500)
 
     channel_layer = get_channel_layer()
     send_event = async_to_sync(channel_layer.group_send) 
@@ -1901,5 +1923,3 @@ def hello(request):
     }
 
     return Response(data, status=200)
-
-

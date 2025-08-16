@@ -375,6 +375,7 @@ class Pedido(models.Model):
     fecha_cancelado = models.DateTimeField(null=True, blank=True)
     fecha_en_entrega = models.DateTimeField(null=True, blank=True)
     cliente = models.CharField(max_length=100)
+    payment_id = models.CharField(max_length=100, null=True, default=None)
     telefono = models.CharField(max_length=20)
     metodo_pago = models.CharField(max_length=20, choices=METODO_PAGO_CHOICES)
     tipo_pedido = models.CharField(max_length=20, choices=TIPO_PEDIDO_CHOICES, default='retiro')

@@ -1844,7 +1844,7 @@ def generate_qr_for_restaurant(restaurant_name):
 
 @api_view(['GET'])
 @never_cache
-def hello(request):  
+async def hello(request):  
     token = request.GET.get("external_reference", None)
     merchant_order_id = request.GET.get("merchant_order_id", None)
 

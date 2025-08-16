@@ -1862,7 +1862,7 @@ def hello(request):
         # El pago corresponde a otro pedido
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
-    ml_response = requests.get('https://api.mercadopago.com/v1/merchant_orders/${merchant_order_id}')
+    ml_response = await requests.get('https://api.mercadopago.com/v1/merchant_orders/${merchant_order_id}')
     data = ml_response.json()
     status = data.get('status', None)
 

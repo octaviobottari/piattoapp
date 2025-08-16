@@ -1846,7 +1846,7 @@ def generate_qr_for_restaurant(restaurant_name):
 @never_cache
 def hello(request):  
     token = request.GET.get("external_reference", None)
-    merchant_order_id = request.GET.get("payment_id", None)
+    merchant_order_id = request.GET.get("merchant_order_id", None)
 
     pedido = get_object_or_404(Pedido, token=token)
 

@@ -1844,7 +1844,7 @@ def generate_qr_for_restaurant(restaurant_name):
 
 @api_view(['GET'])
 @never_cache
-async def hello(request):  
+def hello(request):  
     token = request.GET.get("external_reference", None)
     merchant_order_id = request.GET.get("merchant_order_id", None)
 
@@ -1862,8 +1862,10 @@ async def hello(request):
         # El pago corresponde a otro pedido
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
-    ml_response = await requests.get('https://api.mercadopago.com/v1/merchant_orders/${merchant_order_id}')
+    headers = { 'Authorization': 'Bearer APP_USR-6515546442760543-071717-bf3879394ca8350628a04db0b569e0f8-2563411727' }
+    ml_response = requests.get('https://api.mercadopago.com/merchant_orders/${merchant_order_id}', headers=headers)
     data = ml_response.json()
+    # Puede ser  open, closed y expired
     status = data.get('status', None)
 
     if not status:
@@ -1877,7 +1879,7 @@ async def hello(request):
     if pedido.estado != 'procesando_pago':
         return JsonResponse({'error': 'El pedido no está en estado de procesamiento de pago'}, status=400)
 
-    if status == "approved":
+    elif status == "closed":
         pedido.estado = 'pendiente'
         pedido.save()
 
@@ -1890,7 +1892,7 @@ async def hello(request):
             }
         )
     
-    if status == "pending" or status == "in_process":
+    elif status == "open":
         pedido.estado = 'procesando_pago'
         pedido.save()
 
@@ -1903,7 +1905,7 @@ async def hello(request):
             }
         )
 
-    if status == "rejected" or status == "cancelled":
+    elif status == "expired":
         pedido.estado = 'error_pago'
         pedido.motivo_error_pago = "No se pudo procesar el pago"
         pedido.fecha_error_pago = timezone.now()

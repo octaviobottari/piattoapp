@@ -16,7 +16,7 @@
   <!-- Open Graph para redes sociales -->
   <meta property="og:title" content="Piatto - Automatización para tu negocio de comida">
   <meta property="og:description" content="Automatiza tus pedidos, menús y pagos con Piatto. Sin comisiones, fácil de usar y diseñado para restaurantes en Argentina. ¡Empieza hoy!">
-  <meta property="og:image" content="https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo.png">
+  <meta property="og:image" content="https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo-org.png">
   <meta property="og:url" content="https://piattoweb.com">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="es_AR">
@@ -25,7 +25,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Piatto - Automatización para tu negocio de comida">
   <meta name="twitter:description" content="Automatiza tus pedidos, menús y pagos con Piatto. Sin comisiones, fácil de usar y diseñado para restaurantes en Argentina. ¡Empieza hoy!">
-  <meta name="twitter:image" content="https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo.png">
+  <meta name="twitter:image" content="https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo-org.png">
   <meta name="twitter:site" content="@piatto">
   <!-- Structured Data -->
   <script type="application/ld+json">
@@ -34,7 +34,7 @@
     "@type": "Organization",
     "name": "Piatto",
     "url": "https://piattoweb.com",
-    "logo": "https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo.png",
+    "logo": "https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo-org.png",
     "description": "Piatto ofrece una solución todo-en-uno para automatizar negocios de comida con pedidos online, menús digitales y pagos seguros, sin comisiones.",
     "contactPoint": {
       "@type": "ContactPoint",
@@ -714,9 +714,12 @@ p {
           <h2 class="fw-bold mb-4 display-5 hero-title">
             Tu negocio,<br>en piloto automático.
           </h2>
-          <button class="btn btn-piatto-white mt-3 d-inline-flex align-items-center fw-semibold">
+          <a href="https://wa.me/5491131062324" class="btn btn-piatto-white mt-3 d-inline-flex align-items-center fw-semibold">
             Quiero empezar <i class="fas fa-chevron-right ms-2"></i>
-          </button>
+          </a>
+          <a href="{% url 'login' %}" class="btn btn-piatto-white mt-3 ms-3 d-inline-flex align-items-center fw-semibold">
+            Iniciar sesión <i class="fas fa-sign-in-alt ms-2"></i>
+          </a>
         </div>
         <div class="col-12 col-lg-6 text-center">
           <img src="{{ MEDIA_URL }}images/celular.png"
@@ -838,20 +841,20 @@ p {
           </h4>
           <p class="fs-5" style="font-size: clamp(1rem, 4vw, 1.5rem);">
             Dale visibilidad a tu negocio. Aprobá pedidos
-            <a href="#" class="underline-link">y olvidate del resto.</a>
+            <a href="https://wa.me/5491131062324" class="underline-link">y olvidate del resto.</a>
           </p>
         </div>
         <div class="row align-items-center">
           <div class="col-12 col-lg-10">
             <ul class="list-unstyled info-list fs-6">
-              <li>Vos decidís qué pedidos aceptar desde tu panel. <a href="#" class="underline-link">Sin llamadas, sin chats confusos.</a></li>
-              <li>El cliente recibe una confirmación clara <a href="#" class="underline-link">sin que tengas que escribir nada.</a></li>
-              <li><a href="#" class="underline-link">Tu menú se oculta fuera del horario.</a> Sin confusión ni mensajes fuera de turno.</li>
-              <li><a href="#" class="underline-link">Agregá, quitá o actualizá platos y precios</a> fácilmente desde tu panel.</li>
+              <li>Vos decidís qué pedidos aceptarMi desde tu panel. <a href="https://wa.me/5491131062324" class="underline-link">Sin llamadas, sin chats confusos.</a></li>
+              <li>El cliente recibe una confirmación clara <a href="https://wa.me/5491131062324" class="underline-link">sin que tengas que escribir nada.</a></li>
+              <li><a href="https://wa.me/5491131062324" class="underline-link">Tu menú se oculta fuera del horario.</a> Sin confusión ni mensajes fuera de turno.</li>
+              <li><a href="https://wa.me/5491131062324" class="underline-link">Agregá, quitá o actualizá platos y precios</a> fácilmente desde tu panel.</li>
               <li>El cliente elige del menú, ve precios y totales. Todo claro desde el principio.</li>
-              <li>Se genera el link, se cobra, y se confirma, <a href="#" class="underline-link">todo sin que vos tengas que hacer nada.</a></li>
-              <li><a href="#" class="underline-link">Logo, fotos y banners</a> para que tu negocio se vea profesional.</li>
-              <li><a href="#" class="underline-link">Organizate con pedidos impresos</a>. Nada de olvidos: todo claro y a la vista.</li>
+              <li>Se genera el link, se cobra, y se confirma, <a href="https://wa.me/5491131062324" class="underline-link">todo sin que vos tengas que hacer nada.</a></li>
+              <li><a href="https://wa.me/5491131062324" class="underline-link">Logo, fotos y banners</a> para que tu negocio se vea profesional.</li>
+              <li><a href="https://wa.me/5491131062324" class="underline-link">Organizate con pedidos impresos</a>. Nada de olvidos: todo claro y a la vista.</li>
             </ul>
           </div>
           <div class="col-12 col-lg-6 text-center">
@@ -888,11 +891,11 @@ p {
             <div class="badge-custom"><i class="fas fa-plug"></i> Instalación fácil y rápida</div>
           </div>
           <p class="fs-5 mt-4" style="font-size: 1.25rem;">
-            Hablanos por WhatsApp haciendo click <a href="#" class="underline-link">acá</a>!
+            Hablanos por WhatsApp haciendo click <a href="https://wa.me/5491131062324" class="underline-link">acá</a>!
           </p>
-          <button class="btn btn-piatto-white fw-semibold px-4 py-2 mt-2">
+          <a href="https://wa.me/5491131062324" class="btn btn-piatto-white fw-semibold px-4 py-2 mt-2">
             Probalo ahora
-          </button>
+          </a>
         </div>
       </div>
     </div>
@@ -913,8 +916,8 @@ p {
             <img src="{{ MEDIA_URL }}images/piatto-logo.png" alt="Piatto logo" style="width: 157px; height: 35px;">
           </div>
           <div class="social-icons d-flex">
-            <a href="#" class="text-white me-2"><i class="fab fa-whatsapp"></i></a>
-            <a href="#" class="text-white me-2"><i class="fab fa-instagram"></i></a>
+            <a href="https://wa.me/5491131062324" class="text-white me-2"><i class="fab fa-whatsapp"></i></a>
+            <a href="https://www.instagram.com/piatto" class="text-white me-2"><i class="fab fa-instagram"></i></a>
             <a href="#" class="text-white"><i class="fab fa-linkedin-in"></i></a>
           </div>
         </div>
@@ -926,10 +929,13 @@ p {
       <div class="container footer-bottom">
         <div>
           © 2025 Piatto. Todos los derechos reservados.
+          <a href="{% url 'terms' %}" class="text-white ms-2" style="text-decoration: underline;">Términos y Condiciones</a>
         </div>
         <div class="footer-right text-end mt-2">
           <p>Build by</p>
-          <img src="{{ MEDIA_URL }}images/code2.svg" alt="Logo" class="footer-logo" style="height: 25px;">
+          <a href="https://www.driggscode.com">
+            <img src="{{ MEDIA_URL }}images/code2.svg" alt="DriggsCode Logo" class="footer-logo" style="height: 25px;">
+          </a>
         </div>
       </div>
     </div>

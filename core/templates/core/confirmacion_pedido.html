@@ -2,6 +2,15 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+        {% block meta_cache %}
+<!-- Allow caching by omitting no-cache meta tags -->
+<link rel="icon" type="image/png" href="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-icon.png{% endif %}">
+
+
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+{% endblock %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ restaurante.nombre_local }} - Confirmación de Pedido</title>

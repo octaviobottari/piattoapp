@@ -142,6 +142,31 @@
         border-top: none;
         padding-top: 0;
     }
+
+    .category-boxes {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-bottom: 20px;
+        justify-content: center;
+    }
+    .category-box {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        border-radius: 5px;
+        padding: 10px 20px;
+        font-size: 14px;
+        font-weight: 500;
+        color: #333;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        text-decoration: none;
+    }
+    .category-box:hover {
+        background-color: #e9ecef;
+        transform: translateY(-2px);
+    }
 </style>
 {% endblock %}
 {% endblock %}
@@ -226,11 +251,16 @@
 </section>
 
 <main class="px-3 pt-4 pb-5 container">
+    <div class="category-boxes">
+        {% for categoria in categorias %}
+            <a href="#categoria-{{ categoria.id }}" class="category-box">{{ categoria.nombre }}</a>
+        {% endfor %}
+    </div>
     <div class="search-bar">
         <input type="text" id="search-product" class="form-control" placeholder="Buscar productos por nombre">
     </div>
     {% for categoria in categorias %}
-        <h3 class="category-title">{{ categoria.nombre }}</h3>
+        <h3 class="category-title" id="categoria-{{ categoria.id }}">{{ categoria.nombre }}</h3>
         <img src="{% if categoria.banner %}{{ categoria.banner.url }}{% else %}https://via.placeholder.com/1161x226.png?text={{ categoria.nombre|urlencode }}{% endif %}" 
              class="category-banner mx-auto d-block" 
              alt="Banner de {{ categoria.nombre }}"

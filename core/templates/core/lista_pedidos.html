@@ -724,27 +724,35 @@
           if (data.items && data.items.length > 0) {
             const restaurantName = data.restaurante_nombre || '{{ restaurante.username|default:"default_restaurant" }}'.replace(/ /g, '_').toLowerCase();
             data.items.forEach(item => {
-              let imageUrl = item.imagen_url || '';
-              if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
-                const originalFilename = item.imagen_nombre_original || 'default.png';
-                imageUrl = `{{ MEDIA_URL }}${restaurantName}/productos/${originalFilename}`;
-              }
+  let imageUrl = item.imagen_url || '';
+  if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
+    const originalFilename = item.imagen_nombre_original || 'default.png';
+    imageUrl = `{{ MEDIA_URL }}${restaurantName}/productos/${originalFilename}`;
+  }
 
-              const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (
-                `<div class="product-options">Opciones:<ul>${item.opciones_seleccionadas.map(op => `<li>${op.nombre} (+$${parseFloat(op.precio_adicional || 0).toFixed(2)})</li>`).join('')}</ul></div>`
-              ) : '';
-              const productCard = `
-                <div class="product-card">
-                  <img src="${imageUrl}" alt="${item.nombre_producto || 'Producto'}" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Producto';">
-                  <div class="product-name">${item.nombre_producto || 'Sin nombre'}</div>
-                  <div class="product-detail">Cantidad: ${item.cantidad || 0}</div>
-                  <div class="product-detail">Precio: $${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
-                  <div class="product-detail">Subtotal: $${parseFloat(item.subtotal || 0).toFixed(2)}</div>
-                  ${opcionesHtml}
-                </div>
-              `;
-              productosContainer.append(productCard);
-            });
+  // 🔴 Added sanitization for item.nombre_producto
+  const cleanNombre = (item.nombre_producto || 'Producto').replace(/&nbsp;|\xa0/g, ' ');
+  // 🔴 Modified opcionesHtml to sanitize op.nombre
+  const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (
+    `<div class="product-options">Opciones:<ul>${
+      item.opciones_seleccionadas.map(op => {
+        const cleanOpcion = (op.nombre || 'Opción').replace(/&nbsp;|\xa0/g, ' ');
+        return `<li>${cleanOpcion} (+$${parseFloat(op.precio_adicional || 0).toFixed(2)})</li>`;
+      }).join('')
+    }</ul></div>`
+  ) : '';
+  const productCard = `
+    <div class="product-card">
+      <img src="${imageUrl}" alt="${cleanNombre}" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Producto';">
+      <div class="product-name">${cleanNombre}</div>
+      <div class="product-detail">Cantidad: ${item.cantidad || 0}</div>
+      <div class="product-detail">Precio: $${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
+      <div class="product-detail">Subtotal: $${parseFloat(item.subtotal || 0).toFixed(2)}</div>
+      ${opcionesHtml}
+    </div>
+  `;
+  productosContainer.append(productCard);
+});
           } else {
             productosContainer.append('<p>No hay productos en este pedido.</p>');
           }

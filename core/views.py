@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.forms.models import modelformset_factory  # Use modelformset_factory
 from datetime import datetime, timedelta
+from django.http import Http404
 from django.urls import reverse
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
@@ -62,26 +63,24 @@ def no_cache_view(view_func):
 @never_cache
 @no_cache_view
 def error_view(request, exception=None):
- 
-    logger.error(f"Unexpected error occurred: {str(exception)}", exc_info=True)
-
-    if request.user.is_authenticated:
-        redirect_url = reverse('panel')
-        context = {
-            'message': 'Ha ocurrido un error inesperado. Por favor, contacte al soporte si el problema persiste.',
-            'redirect_url': redirect_url,
-            'redirect_text': 'Volver al Panel'
-        }
+    # Log del error
+    logger.error(f"Error occurred for URL {request.path}: {str(exception)}", exc_info=True)
+    
+    # Determinar el mensaje y el código de estado según el tipo de error
+    if isinstance(exception, Http404):
+        error_message = "La página que buscas no existe."
+        status = 404
     else:
-        redirect_url = reverse('home')
-        context = {
-            'message': 'Ha ocurrido un error inesperado. Por favor, intente de nuevo o contacte al soporte si el problema continúa.',
-            'redirect_url': redirect_url,
-            'redirect_text': 'Volver a la Página Principal'
-        }
+        error_message = "Ha ocurrido un error inesperado. Por favor, contacta al soporte si el problema persiste."
+        status = 500
 
-    # Render a custom error template
-    return render(request, 'core/error.html', context, status=500)
+    # Configurar el contexto para la plantilla error.html
+    context = {
+        'error': error_message,
+        'restaurante': request.user if request.user.is_authenticated else None,
+    }
+
+    return render(request, 'core/error.html', context, status=status)
 
 # Redirect registro to login
 def registro_view(request):
@@ -125,7 +124,8 @@ def panel_view(request):
     ).order_by('-fecha')[:5]
     
     return render(request, 'core/panel.html', {
-        'pedidos_recientes': pedidos_recientes
+        'pedidos_recientes': pedidos_recientes,
+        'restaurante': request.user
     })
 
 def logout_view(request):

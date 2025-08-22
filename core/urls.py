@@ -5,8 +5,8 @@ from django.views.generic import RedirectView
 from django.conf.urls import handler500
 from . import views, consumers
 
-handler500 = views.error_view
-handler404 = views.error_view
+handler404 = 'core.views.error_view'
+handler500 = 'core.views.error_view'
 
 
 urlpatterns = [

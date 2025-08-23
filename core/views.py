@@ -119,13 +119,65 @@ def login_view(request):
 @never_cache
 @no_cache_view
 def panel_view(request):
-    pedidos_recientes = Pedido.objects.filter(
-        restaurante=request.user
+    restaurante = request.user
+    now = timezone.localtime(timezone.now())
+    start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    one_month_ago = now - timedelta(days=30)
+
+    # Ventas Hoy
+    ventas_hoy = Pedido.objects.filter(
+        restaurante=restaurante,
+        fecha__gte=start_of_day,
+        estado__in=['listo', 'en_entrega', 'archivado']
+    ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+
+    # Ventas Último Mes
+    ventas_mes = Pedido.objects.filter(
+        restaurante=restaurante,
+        fecha__gte=one_month_ago,
+        estado__in=['listo', 'en_entrega', 'archivado']
+    ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+
+    # Pedidos Pendientes
+    pedidos_pendientes = Pedido.objects.filter(
+        restaurante=restaurante,
+        estado='pendiente'
+    ).count()
+
+    # Productos Más Vendidos
+    productos_populares = ItemPedido.objects.filter(
+        pedido__restaurante=restaurante,
+        pedido__estado__in=['listo', 'en_entrega', 'archivado']
+    ).values('producto__nombre').annotate(
+        cantidad_vendida=Sum('cantidad')
+    ).order_by('-cantidad_vendida')[:5]
+
+    # Pedidos Urgentes o Retrasados (más de 40 minutos)
+    forty_minutes_ago = now - timedelta(minutes=40)
+    pedidos_retrasados = Pedido.objects.filter(
+        restaurante=restaurante,
+        estado__in=['pendiente', 'en_preparacion'],
+        fecha__lte=forty_minutes_ago
     ).order_by('-fecha')[:5]
-    
+
+    # Pedidos con Error de Pago
+    pedidos_error_pago = Pedido.objects.filter(
+        restaurante=restaurante,
+        estado='error_pago'
+    ).order_by('-fecha')
+
+    estadisticas = {
+        'ventas_hoy': ventas_hoy,
+        'ventas_mes': ventas_mes,
+        'pedidos_pendientes': pedidos_pendientes,
+        'productos_populares': productos_populares,
+        'pedidos_retrasados': pedidos_retrasados,
+        'pedidos_error_pago': pedidos_error_pago,
+    }
+
     return render(request, 'core/panel.html', {
-        'pedidos_recientes': pedidos_recientes,
-        'restaurante': request.user
+        'restaurante': restaurante,
+        'estadisticas': estadisticas,
     })
 
 def logout_view(request):

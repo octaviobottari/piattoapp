@@ -28,7 +28,7 @@
             <div class="card text-white bg-dark">
                 <div class="card-body text-center">
                     <h6>Ventas Hoy</h6>
-                    <h3>{{ estadisticas.ventas_hoy|floatformat:2 }} USD</h3>
+                    <h3>${{ estadisticas.ventas_hoy|floatformat:2 }}</h3>
                 </div>
             </div>
         </div>
@@ -36,7 +36,7 @@
             <div class="card text-white bg-dark">
                 <div class="card-body text-center">
                     <h6>Ventas Último Mes</h6>
-                    <h3>{{ estadisticas.ventas_mes|floatformat:2 }} USD</h3>
+                    <h3>${{ estadisticas.ventas_mes|floatformat:2 }}</h3>
                 </div>
             </div>
         </div>
@@ -57,7 +57,7 @@
             <ul class="list-group list-group-flush">
                 {% for producto in estadisticas.productos_populares %}
                     <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ producto.nombre }}
+                        {{ producto.nombre|default:"Producto desconocido" }}
                         <span class="badge bg-primary rounded-pill">{{ producto.cantidad_vendida }} unidades</span>
                     </li>
                 {% empty %}

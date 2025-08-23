@@ -152,6 +152,12 @@ def panel_view(request):
         cantidad_vendida=Sum('cantidad')
     ).order_by('-cantidad_vendida')[:5]
 
+    # Rename the field to match template expectations
+    productos_populares = [
+        {'nombre': item['producto__nombre'], 'cantidad_vendida': item['cantidad_vendida']}
+        for item in productos_populares
+    ]
+
     # Pedidos Urgentes o Retrasados (más de 40 minutos)
     forty_minutes_ago = now - timedelta(minutes=40)
     pedidos_retrasados = Pedido.objects.filter(
@@ -1898,26 +1904,26 @@ def generate_qr_for_restaurant(restaurant_name):
 @never_cache
 def hello(request):  
     token = request.GET.get("external_reference", None)
-    merchant_order_id = request.GET.get("merchant_order_id", None)
+    order_id = request.GET.get("order_id", None)
 
     pedido = get_object_or_404(Pedido, token=token)
 
-    if not merchant_order_id or not token:
+    if not order_id or not token:
         # Solo se da cuando te están tratando de validar pedidos truchos
         # Error 500 para confundir 
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
     if not pedido.payment_id:
-        pedido.payment_id = merchant_order_id
+        pedido.payment_id = order_id
         pedido.save()
-    elif pedido.payment_id != merchant_order_id:
+    elif pedido.payment_id != order_id:
         # El pago corresponde a otro pedido
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
     headers = { 'Authorization': 'Bearer APP_USR-6515546442760543-071717-bf3879394ca8350628a04db0b569e0f8-2563411727' }
-    ml_response = requests.get(f'https://api.mercadopago.com/merchant_orders/{merchant_order_id}', headers=headers)
+    ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{order_id}', headers=headers)
     data = ml_response.json()
-    # Puede ser  open, closed y expired
+    # approved, pending, in_process, rejected o cancelled
     status = data.get('status', None)
 
     if not status:
@@ -1931,7 +1937,7 @@ def hello(request):
     if pedido.estado != 'procesando_pago':
         return JsonResponse({'error': 'El pedido no está en estado de procesamiento de pago'}, status=400)
 
-    elif status == "closed":
+    elif status == "approved":
         pedido.estado = 'pendiente'
         pedido.save()
 
@@ -1944,8 +1950,8 @@ def hello(request):
             }
         )
     
-    elif status == "open":
-        pedido.estado = 'procesando_pago'
+    elif status in ('pending', 'in_process'):
+        pedido.estado ='procesando_pago'
         pedido.save()
 
         send_event(
@@ -1957,7 +1963,7 @@ def hello(request):
             }
         )
 
-    elif status == "expired":
+    elif status in ("cancelled", "rejected"):
         pedido.estado = 'error_pago'
         pedido.motivo_error_pago = "No se pudo procesar el pago"
         pedido.fecha_error_pago = timezone.now()

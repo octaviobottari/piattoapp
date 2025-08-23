@@ -1362,7 +1362,7 @@ def confirmacion_pedido(request, nombre_restaurante, token):
     body = {
         "items": [
             {
-                "title": i.product.nombre,
+                "title": i.nombre_producto,
                 "quantity": i.cantidad,
                 "unit_price": i.precio_unitario
             } for i in items

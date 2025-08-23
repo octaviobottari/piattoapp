@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -1357,12 +1357,38 @@ def confirmacion_pedido(request, nombre_restaurante, token):
     print(f"Confirmación para pedido {external_reference}, estado {status}")
 
     pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
+    items = get_list_or_404(ItemPedido, pedido=pedido.numero_pedido)
  
+    body = {
+        "items": [
+            {
+                "title": i.product.nombre,
+                "quantity": i.cantidad,
+                "unit_price": i.precio_unitario
+            } for i in items
+        ],
+        "back_urls": {
+            "success": "https://piattoweb.com/hello",
+            "failure": "https://piattoweb.com/hello",
+            "pending": "https://piattoweb.com/hello"
+        },
+        "auto_return": "approved",
+        "external_reference": pedido.token
+    }
+    headers = { "Authorization": "Bearer APP_USR-6515546442760543-071717-bf3879394ca8350628a04db0b569e0f8-2563411727" }
+    response = requests.post("https://api.mercadopago.com/checkout/preferences", data=body, headers=headers)
+    data = response.json()
+    init_point = data.get('init_point', None)
+
+    if not init_point:
+        return JsonResponse({'error': 'Internal server error'}, status=500)
+
     params = {
         'pedido': pedido,
         'restaurante': pedido.restaurante,
         'color_principal': pedido.restaurante.color_principal or '#A3E1BE',
-        'confirmado': status == "approved"
+        'confirmado': status == "approved",
+        'init_point': init_point
     }
 
     # Significa que te va a llegar la confirmación desde el webhook

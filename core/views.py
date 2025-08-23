@@ -1904,24 +1904,24 @@ def generate_qr_for_restaurant(restaurant_name):
 @never_cache
 def hello(request):  
     token = request.GET.get("external_reference", None)
-    order_id = request.GET.get("order_id", None)
+    payment_id = request.GET.get("payment_id", None)
 
     pedido = get_object_or_404(Pedido, token=token)
 
-    if not order_id or not token:
+    if not payment_id or not token:
         # Solo se da cuando te están tratando de validar pedidos truchos
         # Error 500 para confundir 
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
     if not pedido.payment_id:
-        pedido.payment_id = order_id
+        pedido.payment_id = payment_id
         pedido.save()
-    elif pedido.payment_id != order_id:
+    elif pedido.payment_id != payment_id:
         # El pago corresponde a otro pedido
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
     headers = { 'Authorization': 'Bearer APP_USR-6515546442760543-071717-bf3879394ca8350628a04db0b569e0f8-2563411727' }
-    ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{order_id}', headers=headers)
+    ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
     data = ml_response.json()
     # approved, pending, in_process, rejected o cancelled
     status = data.get('status', None)

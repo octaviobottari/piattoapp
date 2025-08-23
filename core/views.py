@@ -1349,57 +1349,82 @@ def validar_codigo_descuento(request, nombre_restaurante):
 
 @never_cache
 @no_cache_view
+@csrf_protect
 def confirmacion_pedido(request, nombre_restaurante, token):
-    # approved, pending, in_process, rejected o cancelled
     status = request.GET.get("status", None)
     external_reference = request.GET.get("external_reference", None)
 
-    print(f"Confirmación para pedido {external_reference}, estado {status}")
+    logger.info(f"Confirmación para pedido {external_reference}, estado {status}")
 
-    pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
-    items = get_list_or_404(ItemPedido, pedido=pedido.numero_pedido)
- 
-    body = {
-        "items": [
-            {
-                "title": i.nombre_producto,
-                "quantity": i.cantidad,
-                "unit_price": i.precio_unitario
-            } for i in items
-        ],
-        "back_urls": {
-            "success": "https://piattoweb.com/hello",
-            "failure": "https://piattoweb.com/hello",
-            "pending": "https://piattoweb.com/hello"
-        },
-        "auto_return": "approved",
-        "external_reference": pedido.token
-    }
-    headers = { "Authorization": "Bearer APP_USR-6515546442760543-071717-bf3879394ca8350628a04db0b569e0f8-2563411727" }
-    response = requests.post("https://api.mercadopago.com/checkout/preferences", data=body, headers=headers)
-    data = response.json()
-    init_point = data.get('init_point', None)
+    try:
+        pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
+        items = get_list_or_404(ItemPedido, pedido=pedido.numero_pedido)
 
-    if not init_point:
+        for item in items:
+            if not isinstance(item.precio_unitario, (int, float, Decimal)) or item.precio_unitario <= 0:
+                logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
+                return JsonResponse({'error': 'Invalid item price'}, status=400)
+
+        body = {
+            "items": [
+                {
+                    "title": i.nombre_producto,
+                    "quantity": i.cantidad,
+                    "unit_price": float(i.precio_unitario)  
+                } for i in items
+            ],
+            "back_urls": {
+                "success": "https://piattoweb.com/hello",
+                "failure": "https://piattoweb.com/hello",
+                "pending": "https://piattoweb.com/hello"
+            },
+            "auto_return": "approved",
+            "external_reference": pedido.token
+        }
+        headers = {"Authorization": "Bearer APP_USR-6515546442760543-071717-bf3879394ca8350628a04db0b569e0f8-2563411727"}
+
+        logger.debug(f"Sending request to Mercado Pago: {json.dumps(body, indent=2)}")
+        response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
+   
+        if response.status_code != 200:
+            logger.error(f"Mercado Pago API error: Status {response.status_code}, Response: {response.text}")
+            return JsonResponse({'error': 'Failed to create payment preference'}, status=500)
+
+        try:
+            data = response.json()
+        except ValueError:
+            logger.error(f"Invalid JSON response from Mercado Pago: {response.text}")
+            return JsonResponse({'error': 'Invalid response from payment provider'}, status=500)
+
+        init_point = data.get('init_point', None)
+        if not init_point:
+            logger.error(f"No init_point in Mercado Pago response: {json.dumps(data, indent=2)}")
+            return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
+
+        params = {
+            'pedido': pedido,
+            'restaurante': pedido.restaurante,
+            'color_principal': pedido.restaurante.color_principal or '#A3E1BE',
+            'confirmado': status == "approved",
+            'init_point': init_point
+        }
+
+        pedido.init_point = init_point
+        pedido.save()
+
+        if status in ["pending", "in_process"]:
+            params['confirmado'] = False
+
+        if status in ["cancelled", "rejected"]:
+            params['confirmado'] = False
+            params['error'] = True
+
+        logger.info(f"Rendering confirmation page for pedido {pedido.numero_pedido} with init_point: {init_point}")
+        return render(request, 'core/confirmacion_pedido.html', params)
+
+    except Exception as e:
+        logger.error(f"Unexpected error in confirmacion_pedido: {str(e)}", exc_info=True)
         return JsonResponse({'error': 'Internal server error'}, status=500)
-
-    params = {
-        'pedido': pedido,
-        'restaurante': pedido.restaurante,
-        'color_principal': pedido.restaurante.color_principal or '#A3E1BE',
-        'confirmado': status == "approved",
-        'init_point': init_point
-    }
-
-    # Significa que te va a llegar la confirmación desde el webhook
-    if status == "pending" or status == "in_process":
-        params['confirmado'] = False
-
-    if status == "cancelled" or status == "rejected":
-        params['confirmado'] = False
-        params['error'] = True
-
-    return render(request, 'core/confirmacion_pedido.html', params)
 
 @login_required
 @never_cache

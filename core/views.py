@@ -1379,13 +1379,17 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 "pending": "https://piattoweb.com/hello"
             },
             "auto_return": "approved",
-            "external_reference": pedido.token
+            "external_reference": str(pedido.token) 
         }
-        headers = {"Authorization": "Bearer APP_USR-6515546442760543-071717-bf3879394ca8350628a04db0b569e0f8-2563411727"}
 
-        logger.debug(f"Sending request to Mercado Pago: {json.dumps(body, indent=2)}")
+        log_body = body.copy()
+        log_body['external_reference'] = str(log_body['external_reference'])
+        logger.debug(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
+
+        headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
+
         response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
-   
+        
         if response.status_code != 200:
             logger.error(f"Mercado Pago API error: Status {response.status_code}, Response: {response.text}")
             return JsonResponse({'error': 'Failed to create payment preference'}, status=500)

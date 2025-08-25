@@ -101,6 +101,10 @@ def terms_view(request):
 @never_cache
 @no_cache_view
 def login_view(request):
+    # Redirect authenticated users to the panel
+    if request.user.is_authenticated:
+        return redirect('panel')
+
     if request.method == 'POST':
         form = LoginForm(data=request.POST)
         if form.is_valid():

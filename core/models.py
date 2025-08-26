@@ -39,7 +39,7 @@ class Restaurante(AbstractUser):
     direccion = models.CharField(max_length=255)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     logo = models.ImageField(upload_to=get_restaurante_media_path, blank=True, null=True, storage=MediaStorage())
-    color_principal = models.CharField(max_length=7, default='#A3E1BE')
+    color_principal = models.CharField(max_length=7, default='#f85c2b')
     activo = models.BooleanField(default=True)
     tiene_demora = models.BooleanField(default=False, verbose_name="¿Hay demora en los pedidos?")
     tiempo_demora = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tiempo estimado de demora")

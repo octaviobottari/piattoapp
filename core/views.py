@@ -1396,7 +1396,7 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 
         response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
         
-        if response.ok:
+        if not response.ok:
             logger.error(f"Mercado Pago API error: Status {response.status_code}, Response: {response.text}")
             return JsonResponse({'error': 'Failed to create payment preference'}, status=500)
 

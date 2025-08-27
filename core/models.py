@@ -395,7 +395,6 @@ class Pedido(models.Model):
     cash_discount_percentage = models.IntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(50)])
     fecha_error_pago = models.DateTimeField(null=True, blank=True)  # To track error time
     motivo_error_pago = models.CharField(max_length=255, blank=True, null=True)  # Reason for payment error
-    init_point = models.CharField(max_length=255, blank=False, null=True, default=None)
     def save(self, *args, **kwargs):
         if not self.id:
             ultimo_pedido = Pedido.objects.filter(restaurante=self.restaurante).order_by('-numero_pedido').first()

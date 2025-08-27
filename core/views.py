@@ -1364,13 +1364,13 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
         items = get_list_or_404(ItemPedido, pedido=pedido.numero_pedido)
 
+
         for item in items:
             print(item.nombre_producto, item.precio_unitario, item.cantidad)
             
             if not isinstance(item.precio_unitario, (int, float, Decimal)) or item.precio_unitario <= 0:
                 logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
                 return JsonResponse({'error': 'Invalid item price'}, status=400)
-
 
         body = {
             "items": [
@@ -1391,9 +1391,7 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 
         log_body = body.copy()
         log_body['external_reference'] = str(log_body['external_reference'])
-        logger.debug(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
-
-        print(settings.MERCADO_PAGO_ACCESS_TOKEN)
+        logger.info(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
 
         headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
 

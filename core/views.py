@@ -1365,11 +1365,12 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         items = get_list_or_404(ItemPedido, pedido=pedido.numero_pedido)
 
         for item in items:
+            print(item.nombre_producto, item.precio_unitario, item.cantidad)
+            
             if not isinstance(item.precio_unitario, (int, float, Decimal)) or item.precio_unitario <= 0:
                 logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
                 return JsonResponse({'error': 'Invalid item price'}, status=400)
 
-        print(json.dumps(items))
 
         body = {
             "items": [

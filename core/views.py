@@ -1390,11 +1390,13 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         log_body['external_reference'] = str(log_body['external_reference'])
         logger.debug(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
 
+        print(settings.MERCADO_PAGO_ACCESS_TOKEN)
+
         headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
 
         response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
         
-        if response.status_code != 200:
+        if response.ok:
             logger.error(f"Mercado Pago API error: Status {response.status_code}, Response: {response.text}")
             return JsonResponse({'error': 'Failed to create payment preference'}, status=500)
 

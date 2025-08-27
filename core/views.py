@@ -1369,6 +1369,8 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
                 return JsonResponse({'error': 'Invalid item price'}, status=400)
 
+        print(json.dumps(items))
+
         body = {
             "items": [
                 {

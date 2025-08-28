@@ -1230,7 +1230,7 @@ def procesar_pedido(request, restaurante):
                     codigos = restaurante.codigos_descuento or []
                     for codigo in codigos:
                         if codigo['nombre'] == codigo_descuento and codigo.get('activo', True):
-                            if codigo.get('usos_actuales', 0) < codigo.get('usos_maximos', float('inf')):
+                            if codigo.get('usos_actuales', 0) < codigo.get('usos_maximos', float('inf'))):
                                 porcentaje = Decimal(str(codigo['porcentaje']))
                                 monto_descuento_codigo = subtotal_ajustado * (porcentaje / 100)
                                 monto_descuento += monto_descuento_codigo
@@ -1289,7 +1289,8 @@ def procesar_pedido(request, restaurante):
                     )
                     items.append(item_pedido)
 
-                # If Mercado Pago, create preference and redirect to confirmacion_pedido
+                # If Mercado Pago, create preference
+                init_point = None
                 if metodo_pago == 'mercadopago':
                     mp_items = [
                         {
@@ -1353,21 +1354,15 @@ def procesar_pedido(request, restaurante):
                     pedido.init_point = init_point
                     pedido.save()
 
-                    # Redirect to confirmacion_pedido with init_point
-                    return redirect('confirmacion_pedido', nombre_restaurante=restaurante.username, token=str(pedido.token))
+                # For AJAX requests, return JSON
+                if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                    redirect_url = reverse('confirmacion_pedido', kwargs={'nombre_restaurante': restaurante.username, 'token': str(pedido.token)})
+                    return JsonResponse({
+                        'success': True,
+                        'redirect_url': redirect_url
+                    })
 
-                # Send WebSocket notification for non-Mercado Pago orders
-                channel_layer = get_channel_layer()
-                async_to_sync(channel_layer.group_send)(
-                    f'pedidos_restaurante_{restaurante.id}',
-                    {
-                        'type': 'new_pedido',
-                        'pedido_id': pedido.id,
-                        'message': 'Nuevo pedido recibido!'
-                    }
-                )
-
-                # For non-Mercado Pago orders, redirect to confirmacion_pedido
+                # For non-AJAX requests, redirect to confirmacion_pedido
                 return redirect('confirmacion_pedido', nombre_restaurante=restaurante.username, token=str(pedido.token))
 
         except Exception as e:

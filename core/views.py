@@ -1396,12 +1396,16 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 "unit_price": -float(total_descuento)
             })
 
+        # Construct the confirmation URL for this specific order
+        confirmation_url = reverse('confirmacion_pedido', args=[nombre_restaurante, str(pedido.token)])
+        full_confirmation_url = f"https://piattoweb.com{confirmation_url}"
+
         body = {
             "items": mp_items,
             "back_urls": {
-                "success": "https://piattoweb.com/hello",
-                "failure": "https://piattoweb.com/hello",
-                "pending": "https://piattoweb.com/hello"
+                "success": f"{full_confirmation_url}?status=approved",
+                "failure": f"{full_confirmation_url}?status=rejected",
+                "pending": f"{full_confirmation_url}?status=pending"
             },
             "auto_return": "approved",
             "external_reference": str(pedido.token)

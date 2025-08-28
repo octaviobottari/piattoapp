@@ -65,7 +65,7 @@ urlpatterns = [
     path('panel/categoria/<int:categoria_id>/editar/', views.editar_categoria, name='editar_categoria'),
     path('panel/gestionar_opciones_producto/<int:producto_id>/', views.gestionar_opciones_producto, name='gestionar_opciones_producto'),
 
-    path('hello', views.hello, name="hello")
+    path('<str:nombre_restaurante>/<str:token>/hello/', views.hello, name='hello'),
 ]
 
 

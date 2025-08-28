@@ -1364,48 +1364,29 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
         items = get_list_or_404(ItemPedido, pedido=pedido)
 
-        for item in items:
+
+        for item in items:            
             if not isinstance(item.precio_unitario, (int, float, Decimal)) or item.precio_unitario <= 0:
                 logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
                 return JsonResponse({'error': 'Invalid item price'}, status=400)
 
-       
-        mp_items = [
-            {
-                "title": i.nombre_producto,
-                "quantity": i.cantidad,
-                "unit_price": float(i.precio_unitario)
-            } for i in items
-        ]
-
-       
-        if pedido.costo_envio and pedido.costo_envio > 0:
-            mp_items.append({
-                "title": "Costo de envío",
-                "quantity": 1,
-                "unit_price": float(pedido.costo_envio)
-            })
-
-        total_descuento = Decimal('0.00')
-        if pedido.monto_descuento:
-            total_descuento += pedido.monto_descuento  
-
-        if total_descuento > 0:
-            mp_items.append({
-                "title": "Descuento",
-                "quantity": 1,
-                "unit_price": -float(total_descuento)
-            })
+        
 
         body = {
-            "items": mp_items,
+            "items": [
+                {
+                    "title": i.nombre_producto,
+                    "quantity": i.cantidad,
+                    "unit_price": float(i.precio_unitario)  
+                } for i in items
+            ],
             "back_urls": {
                 "success": "https://piattoweb.com/hello",
                 "failure": "https://piattoweb.com/hello",
                 "pending": "https://piattoweb.com/hello"
             },
             "auto_return": "approved",
-            "external_reference": str(pedido.token)
+            "external_reference": str(pedido.token) 
         }
 
         log_body = body.copy()
@@ -2001,7 +1982,7 @@ def hello(request):
         # El pago corresponde a otro pedido
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
-    headers = { 'Authorization': 'Bearer APP_USR-6515546442760543-071717-bf3879394ca8350628a04db0b569e0f8-2563411727' }
+    headers = {'Authorization': f'Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}'}
     ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
     data = ml_response.json()
     # approved, pending, in_process, rejected o cancelled

@@ -56,7 +56,7 @@ urlpatterns = [
     path('<str:nombre_restaurante>/', views.restaurante_publico, name='restaurante_publico'),
     path('restaurante/<str:username>/estado/', views.obtener_estado_restaurante, name='obtener_estado_restaurante'),
     path('<str:nombre_restaurante>/validar_codigo_descuento/', views.validar_codigo_descuento, name='validar_codigo_descuento'),
-    path('<str:nombre_restaurante>/pedido/<uuid:token>/', views.confirmacion_pedido, name='confirmacion_pedido'),   
+    path('<str:nombre_restaurante>/confirmacion/<uuid:token>/', views.confirmacion_pedido, name='confirmacion_pedido'),   
     # Product and category routes
     path('panel/producto/<int:producto_id>/eliminar/', views.eliminar_producto, name='eliminar_producto'),
     path('panel/producto/<int:producto_id>/editar/', views.editar_producto, name='editar_producto'),
@@ -65,7 +65,7 @@ urlpatterns = [
     path('panel/categoria/<int:categoria_id>/editar/', views.editar_categoria, name='editar_categoria'),
     path('panel/gestionar_opciones_producto/<int:producto_id>/', views.gestionar_opciones_producto, name='gestionar_opciones_producto'),
 
-    path('<str:nombre_restaurante>/<str:token>/hello/', views.hello, name='hello'),
+    path('hello', views.hello, name="hello")
 ]
 
 

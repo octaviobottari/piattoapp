@@ -1055,7 +1055,7 @@ function confirmarPedido(url) {
         formData.append('productos', JSON.stringify(pedidoData.productos));
         formData.append('datos_cliente', JSON.stringify(datosCliente));
         formData.append('subtotal', pedidoData.subtotal);
-        formData.append('costo_envio', pedidoData.costo_envio);
+        formData.append('costo_envio', pedidoData.costoEnvio);
         formData.append('monto_descuento', pedidoData.montoDescuento);
         formData.append('monto_descuento_codigo', pedidoData.montoDescuentoCodigo);
         formData.append('monto_descuento_efectivo', pedidoData.montoDescuentoEfectivo);
@@ -1084,7 +1084,6 @@ function confirmarPedido(url) {
                 statusText: response.statusText,
                 url: response.url
             });
-            // Check Content-Type to ensure it's JSON
             const contentType = response.headers.get('content-type');
             if (!contentType || !contentType.includes('application/json')) {
                 return response.text().then(text => {
@@ -1101,7 +1100,41 @@ function confirmarPedido(url) {
         .then(data => {
             console.log('Fetch data:', data);
             if (data.success) {
-                window.location.href = data.redirect_url || '/';
+                if (datosCliente.metodo_pago === 'mercadopago') {
+                    // Fetch the confirmacion_pedido endpoint to create the preference
+                    const confirmacionUrl = data.redirect_url; // This is the confirmacion_pedido URL
+                    fetch(confirmacionUrl, {
+                        method: 'GET',
+                        headers: {
+                            'X-CSRFToken': csrftoken
+                        },
+                        credentials: 'include'
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            return response.json().then(err => {
+                                throw new Error(`HTTP error ${response.status}: ${err.error || 'Unknown error'}`);
+                            });
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log('Confirmacion response:', data);
+                        if (data.init_point) {
+                            // Redirect to Mercado Pago checkout
+                            window.location.href = data.init_point;
+                        } else {
+                            showErrorModal('Error al crear la preferencia de pago. Por favor, intenta de nuevo.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Confirmacion fetch error:', error);
+                        showErrorModal(`Error al crear la preferencia de pago: ${error.message}`);
+                    });
+                } else {
+                    // For cash payments, redirect directly to confirmacion_pedido
+                    window.location.href = data.redirect_url || '/';
+                }
             } else {
                 showErrorModal(data.error || 'Error al confirmar el pedido. Por favor, intenta de nuevo.');
             }

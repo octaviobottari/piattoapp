@@ -1084,6 +1084,13 @@ function confirmarPedido(url) {
                 statusText: response.statusText,
                 url: response.url
             });
+            // Check Content-Type to ensure it's JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                return response.text().then(text => {
+                    throw new Error(`Expected JSON, received ${contentType}: ${text.substring(0, 100)}...`);
+                });
+            }
             if (!response.ok) {
                 return response.json().then(data => {
                     throw new Error(`HTTP error ${response.status}: ${data.error || 'Unknown error'}`);

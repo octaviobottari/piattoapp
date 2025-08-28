@@ -1362,7 +1362,7 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 
     try:
         pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
-        items = get_list_or_404(ItemPedido, pedido=pedido.numero_pedido)
+        items = get_list_or_404(ItemPedido, pedido=pedido)
 
 
         for item in items:

@@ -1460,6 +1460,7 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         logger.error(f"Unexpected error in confirmacion_pedido: {str(e)}", exc_info=True)
         return JsonResponse({'error': 'Internal server error'}, status=500)
 
+
 @login_required
 @never_cache
 @no_cache_view

@@ -1370,6 +1370,7 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
                 return JsonResponse({'error': 'Invalid item price'}, status=400)
 
+       
         mp_items = [
             {
                 "title": i.nombre_producto,
@@ -1378,6 +1379,7 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             } for i in items
         ]
 
+       
         if pedido.costo_envio and pedido.costo_envio > 0:
             mp_items.append({
                 "title": "Costo de envío",
@@ -1396,16 +1398,12 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 "unit_price": -float(total_descuento)
             })
 
-        # Construct the confirmation URL for this specific order
-        confirmation_url = reverse('confirmacion_pedido', args=[nombre_restaurante, str(pedido.token)])
-        full_confirmation_url = f"https://piattoweb.com{confirmation_url}"
-
         body = {
             "items": mp_items,
             "back_urls": {
-                "success": f"{full_confirmation_url}?status=approved",
-                "failure": f"{full_confirmation_url}?status=rejected",
-                "pending": f"{full_confirmation_url}?status=pending"
+                "success": "https://piattoweb.com/hello",
+                "failure": "https://piattoweb.com/hello",
+                "pending": "https://piattoweb.com/hello"
             },
             "auto_return": "approved",
             "external_reference": str(pedido.token)
@@ -1434,14 +1432,6 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             logger.error(f"No init_point in Mercado Pago response: {json.dumps(data, indent=2)}")
             return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
 
-        pedido.init_point = init_point
-        pedido.save()
-
-        if status is None:
-            # Initial call: Return JSON with init_point for JS to redirect to Mercado Pago
-            return JsonResponse({'init_point': init_point})
-
-        # Callback with status: Render confirmation HTML
         params = {
             'pedido': pedido,
             'restaurante': pedido.restaurante,
@@ -1449,6 +1439,9 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             'confirmado': status == "approved",
             'init_point': init_point
         }
+
+        pedido.init_point = init_point
+        pedido.save()
 
         if status in ["pending", "in_process"]:
             params['confirmado'] = False

@@ -1357,12 +1357,19 @@ def validar_codigo_descuento(request, nombre_restaurante):
 
 @login_required
 @never_cache
-@no_cache_view
 def connect_mp(request):
-    app_id = settings.MERCADO_PAGO_APP_ID
-    redirect_uri = request.build_absolute_uri(reverse('mp_callback'))
-    auth_url = f"https://auth.mercadopago.com.ar/authorization?client_id={app_id}&response_type=code&platform_id=mp&redirect_uri={redirect_uri}"
-    return redirect(auth_url)
+    logger.info("Entrando a connect_mp")
+    logger.info(f"MERCADO_PAGO_APP_ID: {settings.MERCADO_PAGO_APP_ID}")
+    logger.info(f"MERCADO_PAGO_CLIENT_SECRET: {settings.MERCADO_PAGO_CLIENT_SECRET}")
+    try:
+        app_id = settings.MERCADO_PAGO_APP_ID
+        redirect_uri = request.build_absolute_uri(reverse('mp_callback'))
+        auth_url = f"https://auth.mercadopago.com.ar/authorization?client_id={app_id}&response_type=code&platform_id=mp&redirect_uri={redirect_uri}"
+        logger.info(f"Redirecting to: {auth_url}")
+        return redirect(auth_url)
+    except Exception as e:
+        logger.error(f"Error in connect_mp: {str(e)}")
+        raise
 
 @login_required
 @never_cache

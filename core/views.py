@@ -1356,7 +1356,6 @@ def validar_codigo_descuento(request, nombre_restaurante):
 
 
 @login_required
-@never_cache
 def connect_mp(request):
     logger.info("Entrando a connect_mp")
     logger.info(f"MERCADO_PAGO_APP_ID: {settings.MERCADO_PAGO_APP_ID}")
@@ -1372,8 +1371,6 @@ def connect_mp(request):
         raise
 
 @login_required
-@never_cache
-@no_cache_view
 def mp_callback(request):
     code = request.GET.get('code')
     if not code:
@@ -1411,8 +1408,6 @@ def mp_callback(request):
     return redirect('configuraciones')
 
 @login_required
-@never_cache
-@no_cache_view
 @require_POST
 def disconnect_mp(request):
     restaurante = request.user

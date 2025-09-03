@@ -435,6 +435,19 @@ textarea.form-control {
     </div>
   </div>
 
+
+  <h2>Mercado Pago</h2>
+{% if mp_connected %}
+    <p>Cuenta conectada (User ID: {{ restaurante.mp_user_id }})</p>
+    <form method="post" action="{% url 'disconnect_mp' %}">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger">Desconectar Mercado Pago</button>
+    </form>
+{% else %}
+    <p>No conectado. Haz clic para conectar tu cuenta de Mercado Pago.</p>
+    <a href="{% url 'connect_mp' %}" class="btn btn-primary">Conectar con Mercado Pago</a>
+{% endif %}
+
   <!-- QR del Local -->
   <div class="card">
     <div class="card-header">

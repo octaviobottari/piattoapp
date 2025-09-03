@@ -1162,6 +1162,8 @@ def procesar_pedido(request, restaurante):
                 direccion = datos_cliente.get('direccion', '').strip()
                 aclaraciones = datos_cliente.get('aclaraciones', '').strip()
                 metodo_pago = datos_cliente.get('metodo_pago', 'efectivo')
+                if metodo_pago == 'mercadopago' and not restaurante.mp_access_token:
+                    return JsonResponse({'error': 'Mercado Pago no está configurado para este restaurante.'}, status=400)
 
                 # Validate required fields
                 if not nombre:
@@ -1352,6 +1354,94 @@ def validar_codigo_descuento(request, nombre_restaurante):
     }, status=400)
 
 
+
+@login_required
+@never_cache
+@no_cache_view
+def connect_mp(request):
+    app_id = settings.MERCADO_PAGO_APP_ID
+    redirect_uri = request.build_absolute_uri(reverse('mp_callback'))
+    auth_url = f"https://auth.mercadopago.com.ar/authorization?client_id={app_id}&response_type=code&platform_id=mp&redirect_uri={redirect_uri}"
+    return redirect(auth_url)
+
+@login_required
+@never_cache
+@no_cache_view
+def mp_callback(request):
+    code = request.GET.get('code')
+    if not code:
+        messages.error(request, 'Error en la autorización de Mercado Pago.')
+        return redirect('configuraciones')
+
+    try:
+        url = "https://api.mercadopago.com/oauth/token"
+        data = {
+            'client_id': settings.MERCADO_PAGO_APP_ID,
+            'client_secret': settings.MERCADO_PAGO_CLIENT_SECRET,
+            'code': code,
+            'grant_type': 'authorization_code',
+            'redirect_uri': request.build_absolute_uri(reverse('mp_callback'))
+        }
+        response = requests.post(url, data=data)
+        response.raise_for_status()
+        tokens = response.json()
+
+        restaurante = request.user
+        restaurante.mp_access_token = tokens['access_token']
+        restaurante.mp_refresh_token = tokens['refresh_token']
+        restaurante.mp_user_id = tokens['user_id']
+        restaurante.mp_token_expires_at = timezone.now() + timedelta(seconds=tokens['expires_in'])
+        restaurante.save()
+
+        messages.success(request, 'Cuenta de Mercado Pago conectada correctamente.')
+    except requests.RequestException as e:
+        logger.error(f"Error al obtener tokens de Mercado Pago: {str(e)}")
+        messages.error(request, 'Error al conectar con Mercado Pago. Intenta nuevamente.')
+    except KeyError as e:
+        logger.error(f"Respuesta inválida de Mercado Pago: {str(e)}")
+        messages.error(request, 'Error en la respuesta de Mercado Pago.')
+
+    return redirect('configuraciones')
+
+@login_required
+@never_cache
+@no_cache_view
+@require_POST
+def disconnect_mp(request):
+    restaurante = request.user
+    restaurante.mp_access_token = None
+    restaurante.mp_refresh_token = None
+    restaurante.mp_user_id = None
+    restaurante.mp_token_expires_at = None
+    restaurante.save()
+    messages.success(request, 'Cuenta de Mercado Pago desconectada correctamente.')
+    return redirect('configuraciones')
+
+# Helper function to refresh MP token if expired
+def refresh_mp_token(restaurante):
+    if not restaurante.mp_refresh_token or not restaurante.mp_token_expires_at:
+        raise ValueError("No refresh token available.")
+
+    if timezone.now() < restaurante.mp_token_expires_at:
+        return  # Token still valid
+
+    url = "https://api.mercadopago.com/oauth/token"
+    data = {
+        'client_id': settings.MERCADO_PAGO_APP_ID,
+        'client_secret': settings.MERCADO_PAGO_CLIENT_SECRET,
+        'grant_type': 'refresh_token',
+        'refresh_token': restaurante.mp_refresh_token
+    }
+    response = requests.post(url, data=data)
+    response.raise_for_status()
+    tokens = response.json()
+
+    restaurante.mp_access_token = tokens['access_token']
+    restaurante.mp_refresh_token = tokens.get('refresh_token', restaurante.mp_refresh_token)  # May or may not return new refresh
+    restaurante.mp_token_expires_at = timezone.now() + timedelta(seconds=tokens['expires_in'])
+    restaurante.save()
+
+
 @never_cache
 @no_cache_view
 @csrf_protect
@@ -1363,6 +1453,14 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 
     try:
         pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
+        restaurante = pedido.restaurante
+
+        if not restaurante.mp_access_token:
+            logger.error(f"Restaurante {restaurante.username} no tiene token de Mercado Pago configurado.")
+            return JsonResponse({'error': 'Mercado Pago no configurado para este restaurante.'}, status=400)
+
+        refresh_mp_token(restaurante)  # Refresh if expired
+
         items = get_list_or_404(ItemPedido, pedido=pedido)
 
         for item in items:
@@ -1411,7 +1509,7 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         log_body['external_reference'] = str(log_body['external_reference'])
         logger.info(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
 
-        headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
+        headers = {"Authorization": f"Bearer {restaurante.mp_access_token}"}
 
         response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
         
@@ -1430,14 +1528,6 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             logger.error(f"No init_point in Mercado Pago response: {json.dumps(data, indent=2)}")
             return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
 
-        pedido.init_point = init_point
-        pedido.save()
-
-        if status is None:
-            # Initial call: Return JSON with init_point for JS to redirect to Mercado Pago
-            return JsonResponse({'init_point': init_point})
-
-        # Callback with status: Render confirmation HTML
         params = {
             'pedido': pedido,
             'restaurante': pedido.restaurante,
@@ -1445,6 +1535,9 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             'confirmado': status == "approved",
             'init_point': init_point
         }
+
+        pedido.init_point = init_point
+        pedido.save()
 
         if status in ["pending", "in_process"]:
             params['confirmado'] = False
@@ -1456,6 +1549,9 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         logger.info(f"Rendering confirmation page for pedido {pedido.numero_pedido} with init_point: {init_point}")
         return render(request, 'core/confirmacion_pedido.html', params)
 
+    except ValueError as e:
+        logger.error(f"Token refresh error: {str(e)}")
+        return JsonResponse({'error': 'Error de autenticación con Mercado Pago.'}, status=500)
     except Exception as e:
         logger.error(f"Unexpected error in confirmacion_pedido: {str(e)}", exc_info=True)
         return JsonResponse({'error': 'Internal server error'}, status=500)
@@ -1720,11 +1816,13 @@ def configuraciones(request):
     config_form = ConfigRestauranteForm(instance=restaurante)
     descuento_form = CodigoDescuentoForm()
     restaurant_qr = generate_qr_for_restaurant(restaurante.nombre_local)
+    mp_connected = bool(restaurante.mp_access_token)
     return render(request, 'core/configuraciones.html', {
         'config_form': config_form,
         'descuento_form': descuento_form,
         'restaurante': restaurante,
         'restaurant_qr': restaurant_qr,
+        'mp_connected': mp_connected,
     })
 
 @login_required
@@ -1995,6 +2093,13 @@ def hello(request):
 
     try:
         pedido = get_object_or_404(Pedido, token=token)
+        restaurante = pedido.restaurante
+
+        if not restaurante.mp_access_token:
+            logger.error(f"Restaurante {restaurante.username} no tiene token de Mercado Pago configurado.")
+            return redirect('home')
+
+        refresh_mp_token(restaurante)  # Refresh if expired
 
         if not payment_id or not token:
             logger.error("Missing payment_id or token in hello view")
@@ -2007,7 +2112,7 @@ def hello(request):
             logger.error(f"Payment ID mismatch: {pedido.payment_id} != {payment_id}")
             return redirect('home')
 
-        headers = {'Authorization': f'Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}'}
+        headers = {'Authorization': f'Bearer {restaurante.mp_access_token}'}
         ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
         data = ml_response.json()
         status = data.get('status', None)
@@ -2064,6 +2169,9 @@ def hello(request):
         redirect_url += f"?status={status}&external_reference={token}"
         return redirect(redirect_url)
 
+    except ValueError as e:
+        logger.error(f"Token refresh error: {str(e)}")
+        return redirect('home')
     except Exception as e:
         logger.error(f"Error in hello view: {str(e)}", exc_info=True)
         return redirect('home')

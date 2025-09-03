@@ -41,6 +41,10 @@ class Restaurante(AbstractUser):
     logo = models.ImageField(upload_to=get_restaurante_media_path, blank=True, null=True, storage=MediaStorage())
     color_principal = models.CharField(max_length=7, default='#f85c2b')
     activo = models.BooleanField(default=True)
+    mp_access_token = models.TextField(blank=True, null=True, verbose_name="Mercado Pago Access Token")
+    mp_refresh_token = models.TextField(blank=True, null=True, verbose_name="Mercado Pago Refresh Token")
+    mp_user_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Mercado Pago User ID")
+    mp_token_expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Mercado Pago Token Expiration")
     tiene_demora = models.BooleanField(default=False, verbose_name="¿Hay demora en los pedidos?")
     tiempo_demora = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tiempo estimado de demora")
     estado_control = models.CharField(

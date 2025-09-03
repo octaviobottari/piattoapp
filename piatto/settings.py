@@ -178,6 +178,8 @@ CORS_ALLOWED_ORIGINS = [
 
 # Mercado Pago
 MERCADO_PAGO_ACCESS_TOKEN = os.getenv('MP_ACCESS_TOKEN')
+MERCADO_PAGO_APP_ID = os.getenv('MP_APP_ID')
+MERCADO_PAGO_CLIENT_SECRET = os.getenv('MP_CLIENT_SECRET')
 
 # Default primary key
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -1353,6 +1353,7 @@ def validar_codigo_descuento(request, nombre_restaurante):
 
 
 @never_cache
+@no_cache_view
 @csrf_protect
 def confirmacion_pedido(request, nombre_restaurante, token):
     status = request.GET.get("status", None)
@@ -1369,14 +1370,15 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
                 return JsonResponse({'error': 'Invalid item price'}, status=400)
 
+        # Prepare Mercado Pago items
         mp_items = [
             {
-                "id": str(item.producto.id) if item.producto else f"item-{item.id}",
-                "title": item.nombre_producto,
-                "description": item.producto.descripcion if item.producto and item.producto.descripcion else item.nombre_producto,
-                "quantity": item.cantidad,
-                "unit_price": float(item.precio_unitario),
-                "category_id": str(item.producto.categoria.id) if item.producto and item.producto.categoria else "others",
+                "id": str(item.producto.id) if item.producto else f"item_{item.id}",  # items.id
+                "title": item.nombre_producto,  # items.title
+                "description": f"{item.nombre_producto} ({', '.join(opcion['nombre'] for opcion in item.opciones_seleccionadas)})" if item.opciones_seleccionadas else item.nombre_producto,  # items.description
+                "category_id": "food_and_beverage",  # items.category_id
+                "quantity": item.cantidad,  # items.quantity
+                "unit_price": float(item.precio_unitario),  # items.unit_price
             } for item in items
         ]
 
@@ -1385,55 +1387,56 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 "id": "shipping",
                 "title": "Costo de envío",
                 "description": "Costo de envío del pedido",
+                "category_id": "delivery",
                 "quantity": 1,
-                "unit_price": float(pedido.costo_envio),
-                "category_id": "shipping",
+                "unit_price": float(pedido.costo_envio)
             })
 
         total_descuento = Decimal('0.00')
         if pedido.monto_descuento:
-            total_descuento += pedido.monto_descuento
+            total_descuento += pedido.monto_descuento  
 
         if total_descuento > 0:
             mp_items.append({
                 "id": "discount",
                 "title": "Descuento",
-                "description": f"Descuento aplicado ({pedido.codigo_descuento or 'Efectivo'})",
-                "quantity": 1,
-                "unit_price": -float(total_descuento),
+                "description": f"Descuento aplicado ({pedido.codigo_descuento})" if pedido.codigo_descuento else "Descuento aplicado",
                 "category_id": "discount",
+                "quantity": 1,
+                "unit_price": -float(total_descuento)
             })
 
-        # Generar first_name y last_name a partir de cliente
-        nombre_completo = pedido.cliente.strip().split()
-        first_name = nombre_completo[0] if nombre_completo else "Cliente"
-        last_name = " ".join(nombre_completo[1:]) if len(nombre_completo) > 1 else "Desconocido"
-        # Generar email ficticio a partir de telefono
-        email = f"{pedido.telefono}@piattoweb.com"
+        # Split cliente name for first_name and last_name
+        cliente_parts = pedido.cliente.strip().split(" ", 1)
+        first_name = cliente_parts[0]
+        last_name = cliente_parts[1] if len(cliente_parts) > 1 else ""
 
-        # Forzar https en back_urls
-        base_url = request.build_absolute_uri(pedido.get_absolute_url())
-        if base_url.startswith('http://'):
-            base_url = base_url.replace('http://', 'https://')
+        # Generate a dummy email based on pedido.id
+        payer_email = f"cliente_{pedido.id}@piattoweb.com"
+
+        # Use restaurante.nombre_local for statement_descriptor (max 22 chars)
+        statement_descriptor = (pedido.restaurante.nombre_local[:22]).strip()
+
+        # Construct absolute back URLs
+        base_url = "https://piattoweb.com"
+        redirect_url = f"{base_url}{reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])}"
 
         body = {
             "items": mp_items,
             "payer": {
-                "first_name": first_name,
-                "last_name": last_name,
-                "email": email,
-                "phone": {
-                    "number": pedido.telefono
-                }
+                "first_name": first_name,  # payer.first_name
+                "last_name": last_name,    # payer.last_name
+                "email": payer_email,      # payer.email
             },
-            "statement_descriptor": f"Piatto - {pedido.restaurante.nombre_local}",
+            "statement_descriptor": statement_descriptor,  # statement_descriptor
             "back_urls": {
-                "success": base_url,
-                "failure": base_url,
-                "pending": base_url
+                "success": redirect_url,
+                "failure": redirect_url,
+                "pending": redirect_url
             },
+            "notification_url": f"{base_url}{reverse('hello')}?external_reference={pedido.token}",  # notification_url
             "auto_return": "approved",
-            "external_reference": str(pedido.token)
+            "external_reference": str(pedido.token)  # external_reference
         }
 
         log_body = body.copy()
@@ -1460,20 +1463,13 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
 
         pedido.init_point = init_point
-        # Actualizar el estado del pedido según el status
-        if status == "approved":
-            pedido.estado = "pendiente"
-        elif status in ["pending", "in_process"]:
-            pedido.estado = "procesando_pago"
-        elif status in ["cancelled", "rejected"]:
-            pedido.estado = "error_pago"
-            pedido.fecha_error_pago = timezone.now()
-            pedido.motivo_error_pago = f"Pago {status} por Mercado Pago"
         pedido.save()
 
         if status is None:
+            # Initial call: Return JSON with init_point for JS to redirect to Mercado Pago
             return JsonResponse({'init_point': init_point})
 
+        # Callback with status: Render confirmation HTML
         params = {
             'pedido': pedido,
             'restaurante': pedido.restaurante,
@@ -2029,12 +2025,14 @@ def hello(request):
     payment_id = request.GET.get("payment_id", None)
     status = request.GET.get("status", None)
 
-    try:
-        pedido = get_object_or_404(Pedido, token=token)
+    logger.info(f"Webhook called with token={token}, payment_id={payment_id}, status={status}")
 
+    try:
         if not payment_id or not token:
             logger.error("Missing payment_id or token in hello view")
             return redirect('home')
+
+        pedido = get_object_or_404(Pedido, token=token)
 
         if not pedido.payment_id:
             pedido.payment_id = payment_id
@@ -2045,9 +2043,17 @@ def hello(request):
 
         headers = {'Authorization': f'Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}'}
         ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
-        data = ml_response.json()
-        status = data.get('status', None)
+        if not ml_response.ok:
+            logger.error(f"Mercado Pago API error: Status {ml_response.status_code}, Response: {ml_response.text}")
+            return redirect('home')
 
+        try:
+            data = ml_response.json()
+        except ValueError:
+            logger.error(f"Invalid JSON response from Mercado Pago: {ml_response.text}")
+            return redirect('home')
+
+        status = data.get('status', None)
         if not status:
             logger.error(f"No status in Mercado Pago response: {data}")
             return redirect('home')
@@ -2098,7 +2104,9 @@ def hello(request):
         # Redirect to confirmacion_pedido with query parameters
         redirect_url = reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])
         redirect_url += f"?status={status}&external_reference={token}"
+        logger.info(f"Redirecting to: {redirect_url}")
         return redirect(redirect_url)
 
     except Exception as e:
         logger.error(f"Error in hello view: {str(e)}", exc_info=True)
+        return redirect('home')

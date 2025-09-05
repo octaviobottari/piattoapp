@@ -1353,7 +1353,6 @@ def validar_codigo_descuento(request, nombre_restaurante):
 
 
 @never_cache
-@no_cache_view
 @csrf_protect
 def confirmacion_pedido(request, nombre_restaurante, token):
     status = request.GET.get("status", None)
@@ -1372,12 +1371,12 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 
         mp_items = [
             {
-                "id": str(item.producto.id) if item.producto else f"item-{item.id}",  # Código del item
-                "title": item.nombre_producto,  # Nombre del item
-                "description": item.producto.descripcion if item.producto and item.producto.descripcion else item.nombre_producto,  # Descripción del item
-                "quantity": item.cantidad,  # Cantidad del producto
-                "unit_price": float(item.precio_unitario),  # Precio unitario
-                "category_id": str(item.producto.categoria.id) if item.producto and item.producto.categoria else "others",  # Categoría del item
+                "id": str(item.producto.id) if item.producto else f"item-{item.id}",
+                "title": item.nombre_producto,
+                "description": item.producto.descripcion if item.producto and item.producto.descripcion else item.nombre_producto,
+                "quantity": item.cantidad,
+                "unit_price": float(item.precio_unitario),
+                "category_id": str(item.producto.categoria.id) if item.producto and item.producto.categoria else "others",
             } for item in items
         ]
 
@@ -1405,29 +1404,22 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 "category_id": "discount",
             })
 
-        # Dividir el nombre del cliente en first_name y last_name
-        nombre_completo = pedido.cliente.strip().split()
-        first_name = nombre_completo[0] if nombre_completo else "Cliente"
-        last_name = " ".join(nombre_completo[1:]) if len(nombre_completo) > 1 else "Desconocido"
-
-        # Generar un email basado en el teléfono para cumplir con la acción obligatoria
-        email = f"{pedido.telefono.replace('+', '').replace(' ', '')}@piattoweb.com"
-
+        # Usar los campos first_name, last_name y email del modelo Pedido
         body = {
             "items": mp_items,
             "payer": {
-                "first_name": first_name,  # Nombre del comprador
-                "last_name": last_name,    # Apellido del comprador
-                "email": email,            # Email del comprador (generado)
+                "first_name": pedido.first_name or "Cliente",
+                "last_name": pedido.last_name or "Desconocido",
+                "email": pedido.email or f"{pedido.telefono}@piattoweb.com",
                 "phone": {
-                    "number": pedido.telefono  # Teléfono ya lo tenés
+                    "number": pedido.telefono
                 }
             },
-            "statement_descriptor": f"Piatto - {pedido.restaurante.nombre_local}",  # Resumen de tarjeta
+            "statement_descriptor": f"Piatto - {pedido.restaurante.nombre_local}",
             "back_urls": {
-                "success": request.build_absolute_uri(reverse('hello')),
-                "failure": request.build_absolute_uri(reverse('hello')),
-                "pending": request.build_absolute_uri(reverse('hello'))
+                "success": request.build_absolute_uri(pedido.get_absolute_url()),
+                "failure": request.build_absolute_uri(pedido.get_absolute_url()),
+                "pending": request.build_absolute_uri(pedido.get_absolute_url())
             },
             "auto_return": "approved",
             "external_reference": str(pedido.token)

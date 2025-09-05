@@ -1369,89 +1369,88 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             if not isinstance(item.precio_unitario, (int, float, Decimal)) or item.precio_unitario <= 0:
                 logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
                 return JsonResponse({'error': 'Invalid item price'}, status=400)
+            if float(item.precio_unitario) < 10.0 and "Descuento" not in item.nombre_producto:
+                logger.warning(f"Low unit_price for item {item.nombre_producto}: {item.precio_unitario}")
+                return JsonResponse({'error': f'Item {item.nombre_producto} has a unit price below the minimum allowed (10.0)'}, status=400)
 
-        # Check if init_point already exists
-        if pedido.init_point and status is None:
-            logger.info(f"Using existing init_point for pedido {pedido.id}: {pedido.init_point}")
-            return JsonResponse({'init_point': pedido.init_point})
+        init_point = None  # Default to None; generate only if needed
 
-        # Prepare Mercado Pago items
-        mp_items = [
-            {
-                "id": str(item.producto.id) if item.producto else f"item_{item.id}",  # items.id
-                "title": item.nombre_producto,  # items.title
-                "description": f"{item.nombre_producto} ({', '.join(opcion['nombre'] for opcion in item.opciones_seleccionadas)})" if item.opciones_seleccionadas else item.nombre_producto,  # items.description
-                "category_id": "food_and_beverage",  # items.category_id
-                "quantity": item.cantidad,  # items.quantity
-                "unit_price": float(item.precio_unitario),  # items.unit_price
-            } for item in items
-        ]
+        if status is None:
+            # Prepare Mercado Pago items (unchanged)
+            mp_items = [
+                {
+                    "id": str(item.producto.id) if item.producto else f"item_{item.id}",  # items.id
+                    "title": item.nombre_producto,  # items.title
+                    "description": f"{item.nombre_producto} ({', '.join(opcion['nombre'] for opcion in item.opciones_seleccionadas)})" if item.opciones_seleccionadas else item.nombre_producto,  # items.description
+                    "category_id": "food_and_beverage",  # items.category_id
+                    "quantity": item.cantidad,  # items.quantity
+                    "unit_price": float(item.precio_unitario),  # items.unit_price
+                } for item in items
+            ]
 
-        if pedido.costo_envio and pedido.costo_envio > 0:
-            mp_items.append({
-                "id": "shipping",
-                "title": "Costo de envío",
-                "description": "Costo de envío del pedido",
-                "category_id": "delivery",
-                "quantity": 1,
-                "unit_price": float(pedido.costo_envio)
-            })
+            if pedido.costo_envio and pedido.costo_envio > 0:
+                mp_items.append({
+                    "id": "shipping",
+                    "title": "Costo de envío",
+                    "description": "Costo de envío del pedido",
+                    "category_id": "delivery",
+                    "quantity": 1,
+                    "unit_price": float(pedido.costo_envio)
+                })
 
-        total_descuento = Decimal('0.00')
-        if pedido.monto_descuento:
-            total_descuento += pedido.monto_descuento  
+            total_descuento = Decimal('0.00')
+            if pedido.monto_descuento:
+                total_descuento += pedido.monto_descuento  
 
-        if total_descuento > 0:
-            mp_items.append({
-                "id": "discount",
-                "title": "Descuento",
-                "description": f"Descuento aplicado ({pedido.codigo_descuento})" if pedido.codigo_descuento else "Descuento aplicado",
-                "category_id": "discount",
-                "quantity": 1,
-                "unit_price": -float(total_descuento)
-            })
+            if total_descuento > 0:
+                mp_items.append({
+                    "id": "discount",
+                    "title": "Descuento",
+                    "description": f"Descuento aplicado ({pedido.codigo_descuento})" if pedido.codigo_descuento else "Descuento aplicado",
+                    "category_id": "discount",
+                    "quantity": 1,
+                    "unit_price": -float(total_descuento)
+                })
 
-        # Split cliente name for first_name and last_name
-        cliente_parts = pedido.cliente.strip().split(" ", 1)
-        first_name = cliente_parts[0]
-        last_name = cliente_parts[1] if len(cliente_parts) > 1 else ""
+            # Split cliente name for first_name and last_name (unchanged)
+            cliente_parts = pedido.cliente.strip().split(" ", 1)
+            first_name = cliente_parts[0]
+            last_name = cliente_parts[1] if len(cliente_parts) > 1 else ""
 
-        # Generate a dummy email based on pedido.id
-        payer_email = f"cliente_{pedido.id}@piattoweb.com"
+            # Generate a dummy email based on pedido.id (unchanged)
+            payer_email = f"cliente_{pedido.id}@piattoweb.com"
 
-        # Use restaurante.nombre_local for statement_descriptor (max 22 chars)
-        statement_descriptor = (pedido.restaurante.nombre_local[:22]).strip()
+            # Use restaurante.nombre_local for statement_descriptor (max 22 chars) (unchanged)
+            statement_descriptor = (pedido.restaurante.nombre_local[:22]).strip()
 
-        # Construct absolute back URLs
-        base_url = "https://piattoweb.com"
-        redirect_url = f"{base_url}{reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])}"
+            # Construct absolute back URLs (unchanged)
+            base_url = "https://piattoweb.com"
+            redirect_url = f"{base_url}{reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])}"
 
-        body = {
-            "items": mp_items,
-            "payer": {
-                "first_name": first_name,  # payer.first_name
-                "last_name": last_name,    # payer.last_name
-                "email": payer_email,      # payer.email
-            },
-            "statement_descriptor": statement_descriptor,  # statement_descriptor
-            "back_urls": {
-                "success": redirect_url,
-                "failure": redirect_url,
-                "pending": redirect_url
-            },
-            "notification_url": f"{base_url}{reverse('hello')}?external_reference={pedido.token}",  # notification_url
-            "auto_return": "approved",
-            "external_reference": str(pedido.token)  # external_reference
-        }
+            body = {
+                "items": mp_items,
+                "payer": {
+                    "first_name": first_name,  # payer.first_name
+                    "last_name": last_name,    # payer.last_name
+                    "email": payer_email,      # payer.email
+                },
+                "statement_descriptor": statement_descriptor,  # statement_descriptor
+                "back_urls": {
+                    "success": redirect_url,
+                    "failure": redirect_url,
+                    "pending": redirect_url
+                },
+                "notification_url": f"{base_url}{reverse('hello')}?external_reference={pedido.token}",  # notification_url
+                "auto_return": "approved",
+                "external_reference": str(pedido.token)  # external_reference
+            }
 
-        log_body = body.copy()
-        log_body['external_reference'] = str(log_body['external_reference'])
-        logger.info(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
+            log_body = body.copy()
+            log_body['external_reference'] = str(log_body['external_reference'])
+            logger.info(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
 
-        headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
+            headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
 
-        # Only create a new preference if init_point doesn't exist
-        if not pedido.init_point:
             response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
 
             if not response.ok:
@@ -1469,22 +1468,16 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 logger.error(f"No init_point in Mercado Pago response: {json.dumps(data, indent=2)}")
                 return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
 
-            pedido.init_point = init_point
-            pedido.save()
-        else:
-            init_point = pedido.init_point
-
-        if status is None:
             # Initial call: Return JSON with init_point for JS to redirect to Mercado Pago
             return JsonResponse({'init_point': init_point})
 
-        # Callback with status: Render confirmation HTML
+        # Callback with status: Render confirmation HTML (init_point not needed here)
         params = {
             'pedido': pedido,
             'restaurante': pedido.restaurante,
             'color_principal': pedido.restaurante.color_principal or '#A3E1BE',
             'confirmado': status == "approved",
-            'init_point': init_point
+            'init_point': init_point  # Will be None, but template can handle it (e.g., hide if None)
         }
 
         if status in ["pending", "in_process"]:

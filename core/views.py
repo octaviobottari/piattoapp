@@ -1404,13 +1404,19 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 "category_id": "discount",
             })
 
-        # Usar los campos first_name, last_name y email del modelo Pedido
+        # Generar first_name y last_name a partir de cliente
+        nombre_completo = pedido.cliente.strip().split()
+        first_name = nombre_completo[0] if nombre_completo else "Cliente"
+        last_name = " ".join(nombre_completo[1:]) if len(nombre_completo) > 1 else "Desconocido"
+        # Generar email ficticio a partir de telefono
+        email = f"{pedido.telefono}@piattoweb.com"
+
         body = {
             "items": mp_items,
             "payer": {
-                "first_name": pedido.first_name or "Cliente",
-                "last_name": pedido.last_name or "Desconocido",
-                "email": pedido.email or f"{pedido.telefono}@piattoweb.com",
+                "first_name": first_name,
+                "last_name": last_name,
+                "email": email,
                 "phone": {
                     "number": pedido.telefono
                 }

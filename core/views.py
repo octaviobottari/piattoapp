@@ -1460,6 +1460,15 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
 
         pedido.init_point = init_point
+        # Actualizar el estado del pedido según el status
+        if status == "approved":
+            pedido.estado = "pagado"
+        elif status in ["pending", "in_process"]:
+            pedido.estado = "procesando_pago"
+        elif status in ["cancelled", "rejected"]:
+            pedido.estado = "error_pago"
+            pedido.fecha_error_pago = timezone.now()
+            pedido.motivo_error_pago = f"Pago {status} por Mercado Pago"
         pedido.save()
 
         if status is None:

@@ -52,9 +52,6 @@ urlpatterns = [
     path('panel/eliminar_codigo_descuento/', views.eliminar_codigo_descuento, name='eliminar_codigo_descuento'),    
     path('producto/<int:producto_id>/aplicar-descuento/', views.aplicar_descuento_producto, name='aplicar_descuento_producto'),
     path('update-cash-discount/', views.update_cash_discount, name='update_cash_discount'),
-    path('connect_mp/', views.connect_mp, name='connect_mp'),
-    path('mp_callback/', views.mp_callback, name='mp_callback'),
-    path('disconnect_mp/', views.disconnect_mp, name='disconnect_mp'),
     # Public restaurant routes
     path('<str:nombre_restaurante>/', views.restaurante_publico, name='restaurante_publico'),
     path('restaurante/<str:username>/estado/', views.obtener_estado_restaurante, name='obtener_estado_restaurante'),

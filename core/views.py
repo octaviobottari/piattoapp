@@ -1369,115 +1369,105 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             if not isinstance(item.precio_unitario, (int, float, Decimal)) or item.precio_unitario <= 0:
                 logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
                 return JsonResponse({'error': 'Invalid item price'}, status=400)
-            if float(item.precio_unitario) < 10.0 and "Descuento" not in item.nombre_producto:
-                logger.warning(f"Low unit_price for item {item.nombre_producto}: {item.precio_unitario}")
-                return JsonResponse({'error': f'Item {item.nombre_producto} has a unit price below the minimum allowed (10.0)'}, status=400)
 
-        init_point = None  # Default to None; generate only if needed
+        # Preparar items para Mercado Pago
+        mp_items = []
+        for i in items:
+            mp_item = {
+                "id": str(i.producto.id) if i.producto else str(i.id),  # Código del item
+                "title": i.nombre_producto,  # Nombre del item
+                "description": i.producto.descripcion[:500] if i.producto and i.producto.descripcion else "Sin descripción",  # Descripción (limitada a 500 chars)
+                "category_id": "food",  # Categoría fija para alimentos
+                "quantity": i.cantidad,
+                "unit_price": float(i.precio_unitario)
+            }
+            mp_items.append(mp_item)
+
+        if pedido.costo_envio and pedido.costo_envio > 0:
+            mp_items.append({
+                "id": "shipping",
+                "title": "Costo de envío",
+                "description": "Costo de envío del pedido",
+                "category_id": "shipping",
+                "quantity": 1,
+                "unit_price": float(pedido.costo_envio)
+            })
+
+        total_descuento = Decimal('0.00')
+        if pedido.monto_descuento:
+            total_descuento += pedido.monto_descuento  
+
+        if total_descuento > 0:
+            mp_items.append({
+                "id": "discount",
+                "title": "Descuento",
+                "description": "Descuento aplicado al pedido",
+                "category_id": "discount",
+                "quantity": 1,
+                "unit_price": -float(total_descuento)
+            })
+
+        # Obtener datos del payer desde el pedido
+        payer_info = {
+            "name": pedido.cliente.split()[0] if pedido.cliente else "Cliente",
+            "surname": " ".join(pedido.cliente.split()[1:]) if pedido.cliente and len(pedido.cliente.split()) > 1 else "Sin apellido",
+            "email": "cliente@example.com",  # Email por defecto (ya que no tenemos este dato)
+            "phone": {
+                "area_code": "11",  # Código de área por defecto
+                "number": pedido.telefono[-8:] if pedido.telefono and len(pedido.telefono) >= 8 else "12345678"
+            }
+        }
+
+        # Construir el cuerpo de la preferencia
+        body = {
+            "items": mp_items,
+            "payer": payer_info,
+            "back_urls": {
+                "success": f"https://{request.get_host()}/hello",
+                "failure": f"https://{request.get_host()}/hello",
+                "pending": f"https://{request.get_host()}/hello"
+            },
+            "auto_return": "approved",
+            "external_reference": str(pedido.token),
+            "notification_url": f"https://{request.get_host()}/hello",
+            "statement_descriptor": f"PIATTO {pedido.restaurante.nombre_local[:12]}",  # Máximo 22 caracteres
+        }
+
+        log_body = body.copy()
+        log_body['external_reference'] = str(log_body['external_reference'])
+        logger.info(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
+
+        headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
+
+        response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
+
+        if not response.ok:
+            logger.error(f"Mercado Pago API error: Status {response.status_code}, Response: {response.text}")
+            return JsonResponse({'error': 'Failed to create payment preference'}, status=500)
+
+        try:
+            data = response.json()
+        except ValueError:
+            logger.error(f"Invalid JSON response from Mercado Pago: {response.text}")
+            return JsonResponse({'error': 'Invalid response from payment provider'}, status=500)
+
+        init_point = data.get('init_point', None)
+        if not init_point:
+            logger.error(f"No init_point in Mercado Pago response: {json.dumps(data, indent=2)}")
+            return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
+
+        pedido.init_point = init_point
+        pedido.save()
 
         if status is None:
-            # Prepare Mercado Pago items (unchanged)
-            mp_items = [
-                {
-                    "id": str(item.producto.id) if item.producto else f"item_{item.id}",  # items.id
-                    "title": item.nombre_producto,  # items.title
-                    "description": f"{item.nombre_producto} ({', '.join(opcion['nombre'] for opcion in item.opciones_seleccionadas)})" if item.opciones_seleccionadas else item.nombre_producto,  # items.description
-                    "category_id": "food_and_beverage",  # items.category_id
-                    "quantity": item.cantidad,  # items.quantity
-                    "unit_price": float(item.precio_unitario),  # items.unit_price
-                } for item in items
-            ]
-
-            if pedido.costo_envio and pedido.costo_envio > 0:
-                mp_items.append({
-                    "id": "shipping",
-                    "title": "Costo de envío",
-                    "description": "Costo de envío del pedido",
-                    "category_id": "delivery",
-                    "quantity": 1,
-                    "unit_price": float(pedido.costo_envio)
-                })
-
-            total_descuento = Decimal('0.00')
-            if pedido.monto_descuento:
-                total_descuento += pedido.monto_descuento  
-
-            if total_descuento > 0:
-                mp_items.append({
-                    "id": "discount",
-                    "title": "Descuento",
-                    "description": f"Descuento aplicado ({pedido.codigo_descuento})" if pedido.codigo_descuento else "Descuento aplicado",
-                    "category_id": "discount",
-                    "quantity": 1,
-                    "unit_price": -float(total_descuento)
-                })
-
-            # Split cliente name for first_name and last_name (unchanged)
-            cliente_parts = pedido.cliente.strip().split(" ", 1)
-            first_name = cliente_parts[0]
-            last_name = cliente_parts[1] if len(cliente_parts) > 1 else ""
-
-            # Generate a dummy email based on pedido.id (unchanged)
-            payer_email = f"cliente_{pedido.id}@piattoweb.com"
-
-            # Use restaurante.nombre_local for statement_descriptor (max 22 chars) (unchanged)
-            statement_descriptor = (pedido.restaurante.nombre_local[:22]).strip()
-
-            # Construct absolute back URLs (unchanged)
-            base_url = "https://piattoweb.com"
-            redirect_url = f"{base_url}{reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])}"
-
-            body = {
-                "items": mp_items,
-                "payer": {
-                    "first_name": first_name,  # payer.first_name
-                    "last_name": last_name,    # payer.last_name
-                    "email": payer_email,      # payer.email
-                },
-                "statement_descriptor": statement_descriptor,  # statement_descriptor
-                "back_urls": {
-                    "success": redirect_url,
-                    "failure": redirect_url,
-                    "pending": redirect_url
-                },
-                "notification_url": f"{base_url}{reverse('hello')}?external_reference={pedido.token}",  # notification_url
-                "auto_return": "approved",
-                "external_reference": str(pedido.token)  # external_reference
-            }
-
-            log_body = body.copy()
-            log_body['external_reference'] = str(log_body['external_reference'])
-            logger.info(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
-
-            headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
-
-            response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
-
-            if not response.ok:
-                logger.error(f"Mercado Pago API error: Status {response.status_code}, Response: {response.text}")
-                return JsonResponse({'error': 'Failed to create payment preference'}, status=500)
-
-            try:
-                data = response.json()
-            except ValueError:
-                logger.error(f"Invalid JSON response from Mercado Pago: {response.text}")
-                return JsonResponse({'error': 'Invalid response from payment provider'}, status=500)
-
-            init_point = data.get('init_point', None)
-            if not init_point:
-                logger.error(f"No init_point in Mercado Pago response: {json.dumps(data, indent=2)}")
-                return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
-
-            # Initial call: Return JSON with init_point for JS to redirect to Mercado Pago
             return JsonResponse({'init_point': init_point})
 
-        # Callback with status: Render confirmation HTML (init_point not needed here)
         params = {
             'pedido': pedido,
             'restaurante': pedido.restaurante,
             'color_principal': pedido.restaurante.color_principal or '#A3E1BE',
             'confirmado': status == "approved",
-            'init_point': init_point  # Will be None, but template can handle it (e.g., hide if None)
+            'init_point': init_point
         }
 
         if status in ["pending", "in_process"]:
@@ -1493,7 +1483,6 @@ def confirmacion_pedido(request, nombre_restaurante, token):
     except Exception as e:
         logger.error(f"Unexpected error in confirmacion_pedido: {str(e)}", exc_info=True)
         return JsonResponse({'error': 'Internal server error'}, status=500)
-
 
 @login_required
 @never_cache
@@ -2020,19 +2009,19 @@ def generate_qr_for_restaurant(restaurant_name):
     print(f"QR image saved to S3: s3://piatto-media-2025/media/qrcodes/{filename}")
     return restaurant_qr
 
-@api_view(['POST', 'GET'])
+@api_view(['GET'])
 @never_cache
 def hello(request):
-    logger.info(f"Webhook called with method {request.method}, data: {request.GET if request.method == 'GET' else request.POST}")
+    token = request.GET.get("external_reference", None)
+    payment_id = request.GET.get("payment_id", None)
+    status = request.GET.get("status", None)
 
-    token = request.GET.get("external_reference", None) if request.method == 'GET' else request.POST.get("external_reference", None)
-    payment_id = request.GET.get("payment_id", None) if request.method == 'GET' else request.POST.get("id", None)
-    status = request.GET.get("status", None) if request.method == 'GET' else None
+    logger.info(f"Webhook called with token={token}, payment_id={payment_id}, status={status}")
 
     try:
         if not payment_id or not token:
-            logger.error(f"Missing payment_id or token in hello view: payment_id={payment_id}, token={token}")
-            return Response({'error': 'Missing payment_id or token'}, status=400) if request.method == 'POST' else redirect('home')
+            logger.error("Missing payment_id or token in hello view")
+            return redirect('home')
 
         pedido = get_object_or_404(Pedido, token=token)
 
@@ -2041,32 +2030,31 @@ def hello(request):
             pedido.save()
         elif pedido.payment_id != payment_id:
             logger.error(f"Payment ID mismatch: {pedido.payment_id} != {payment_id}")
-            return Response({'error': 'Payment ID mismatch'}, status=400) if request.method == 'POST' else redirect('home')
+            return redirect('home')
 
-        # Fetch payment status from Mercado Pago
         headers = {'Authorization': f'Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}'}
         ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
         if not ml_response.ok:
             logger.error(f"Mercado Pago API error: Status {ml_response.status_code}, Response: {ml_response.text}")
-            return Response({'error': 'Failed to fetch payment status'}, status=500) if request.method == 'POST' else redirect('home')
+            return redirect('home')
 
         try:
             data = ml_response.json()
         except ValueError:
             logger.error(f"Invalid JSON response from Mercado Pago: {ml_response.text}")
-            return Response({'error': 'Invalid response from payment provider'}, status=500) if request.method == 'POST' else redirect('home')
+            return redirect('home')
 
         status = data.get('status', None)
         if not status:
             logger.error(f"No status in Mercado Pago response: {data}")
-            return Response({'error': 'No status in payment response'}, status=400) if request.method == 'POST' else redirect('home')
+            return redirect('home')
 
         channel_layer = get_channel_layer()
         send_event = async_to_sync(channel_layer.group_send)
 
         if pedido.estado != 'procesando_pago':
             logger.warning(f"Pedido {pedido.id} not in procesando_pago state: {pedido.estado}")
-            return Response({'error': f'Invalid state: {pedido.estado}'}, status=400) if request.method == 'POST' else redirect('home')
+            return redirect('home')
 
         if status == "approved":
             pedido.estado = 'pendiente'
@@ -2079,7 +2067,6 @@ def hello(request):
                     'message': 'Pago confirmado, pedido pendiente'
                 }
             )
-            logger.info(f"Pedido {pedido.id} updated to pendiente")
         elif status in ('pending', 'in_process'):
             pedido.estado = 'procesando_pago'
             pedido.save()
@@ -2091,7 +2078,6 @@ def hello(request):
                     'message': 'Pedido confirmado, pago pendiente'
                 }
             )
-            logger.info(f"Pedido {pedido.id} remains in procesando_pago")
         elif status in ("cancelled", "rejected"):
             pedido.estado = 'error_pago'
             pedido.motivo_error_pago = "No se pudo procesar el pago"
@@ -2105,13 +2091,8 @@ def hello(request):
                     'message': 'Pago rechazado o cancelado'
                 }
             )
-            logger.info(f"Pedido {pedido.id} updated to error_pago")
 
-        # For POST (webhook), return a response to Mercado Pago
-        if request.method == 'POST':
-            return Response({'status': 'ok'}, status=200)
-
-        # For GET (browser redirect), redirect to confirmacion_pedido
+        # Redirect to confirmacion_pedido with query parameters
         redirect_url = reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])
         redirect_url += f"?status={status}&external_reference={token}"
         logger.info(f"Redirecting to: {redirect_url}")
@@ -2119,4 +2100,4 @@ def hello(request):
 
     except Exception as e:
         logger.error(f"Error in hello view: {str(e)}", exc_info=True)
-        return Response({'error': 'Internal server error'}, status=500) if request.method == 'POST' else redirect('home')
+        return redirect('home')

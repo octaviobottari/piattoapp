@@ -65,7 +65,7 @@ def no_cache_view(view_func):
 def error_view(request, exception=None):
     # Log del error
     logger.error(f"Error occurred for URL {request.path}: {str(exception)}", exc_info=True)
-    
+
     # Determinar el mensaje y el código de estado según el tipo de error
     if isinstance(exception, Http404):
         error_message = "La página que buscas no existe."
@@ -226,7 +226,7 @@ def agregar_producto(request):
         form = ProductoForm(user=request.user)
     return render(request, 'core/mi_menu.html', {'form': form})
 
-        
+
 @login_required
 @require_POST
 @never_cache
@@ -262,7 +262,7 @@ def mi_menu(request):
         'productos_sin_categoria': productos_sin_categoria,
         'form': ProductoForm(user=restaurante),  # Pass the user to the form
         'percentage_range': range(51),
-        
+
     }
     return render(request, 'core/mi_menu.html', context)
 
@@ -275,7 +275,7 @@ def clonar_producto(request, producto_id):
     logger.info(f"Original precio: {producto_original.precio}, precio_original: {producto_original.precio_original}, tiene_descuento: {producto_original.tiene_descuento}")
     logger.info(f"Original discount_percentage: {producto_original.discount_percentage}")
     logger.info(f"Option categories: {[oc.nombre for oc in producto_original.opcion_categorias.all()]}")
-    
+
     nuevo_producto = Producto(
         restaurante=producto_original.restaurante,
         categoria=producto_original.categoria,
@@ -298,7 +298,7 @@ def clonar_producto(request, producto_id):
         logger.error(f"Validation error cloning product: {e}")
         messages.error(request, f'Error al clonar el producto: {e}')
         return redirect('mi_menu')
-    
+
     for opcion_categoria_original in producto_original.opcion_categorias.all():
         nueva_opcion_categoria = OpcionCategoria(
             producto=nuevo_producto,
@@ -320,7 +320,7 @@ def clonar_producto(request, producto_id):
                 logger.info(f"Cloned OpcionProducto: {nueva_opcion.nombre}, precio_adicional: {nueva_opcion.precio_adicional}, precio_adicional_original: {nueva_opcion.precio_adicional_original}, tiene_descuento: {nueva_opcion.tiene_descuento}")
             except ValidationError as e:
                 logger.error(f"Validation error cloning OpcionProducto: {e}")
-    
+
     logger.info(f"Cloned product: {nuevo_producto.nombre}")
     logger.info(f"Cloned precio: {nuevo_producto.precio}, precio_original: {nuevo_producto.precio_original}, tiene_descuento: {nuevo_producto.tiene_descuento}")
     messages.success(request, "Producto clonado correctamente.")
@@ -467,7 +467,7 @@ def eliminar_producto(request, producto_id):
 @no_cache_view
 def editar_producto(request, producto_id):
     producto = get_object_or_404(Producto, id=producto_id, restaurante=request.user)
-    
+
     try:
         form = ProductoForm(request.POST, request.FILES, user=request.user, instance=producto)
         if form.is_valid():
@@ -825,7 +825,7 @@ def marcar_en_entrega(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     if pedido.estado != 'listo':
         return JsonResponse({'success': False, 'error': 'El pedido no está listo para entrega'})
-    
+
     pedido.estado = 'en_entrega'
     pedido.fecha_en_entrega = timezone.now()
     pedido.save()
@@ -839,7 +839,7 @@ def archivar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     if pedido.estado not in ['listo', 'en_entrega']:
         return JsonResponse({'success': False, 'error': 'El pedido no puede ser archivado'})
-    
+
     pedido.estado = 'archivado'
     pedido.save()
     return JsonResponse({'success': True})
@@ -915,11 +915,11 @@ def aceptar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     if pedido.estado != 'pendiente':
         return JsonResponse({'success': False, 'error': 'El pedido no está pendiente'})
-    
+
     tiempo_estimado = request.POST.get('tiempo_estimado')
     if not tiempo_estimado or tiempo_estimado not in dict(Pedido.TIEMPO_ESTIMADO_CHOICES):
         return JsonResponse({'success': False, 'error': 'Tiempo estimado inválido'})
-    
+
     pedido.estado = 'en_preparacion'
     pedido.tiempo_estimado = tiempo_estimado
     pedido.save()
@@ -934,7 +934,7 @@ def rechazar_pedido(request, pedido_id):
     motivo = request.POST.get('motivo')
     if not motivo or motivo not in dict(Pedido.MOTIVO_CANCELACION_CHOICES):
         return JsonResponse({'success': False, 'error': 'Motivo de cancelación inválido'})
-    
+
     pedido.estado = 'cancelado'
     pedido.motivo_cancelacion = motivo
     pedido.fecha_cancelado = timezone.now()
@@ -950,7 +950,7 @@ def actualizar_estado(request, pedido_id):
     estado = request.POST.get('estado')
     if estado not in ['listo']:
         return JsonResponse({'success': False, 'error': 'Estado no válido'})
-    
+
     pedido.estado = estado
     pedido.save()
     return JsonResponse({'success': True})
@@ -1029,20 +1029,20 @@ def restaurante_publico(request, nombre_restaurante):
 
     restaurante = get_object_or_404(Restaurante, username=nombre_restaurante, activo=True)
     restaurante.refresh_from_db()
-    
+
     if request.method == 'POST':
         return procesar_pedido(request, restaurante)
-    
+
     categorias = Categoria.objects.filter(restaurante=restaurante).prefetch_related(
         Prefetch('producto_set', queryset=Producto.objects.filter(disponible=True).order_by('nombre'))
     )
-    
+
     response = render(request, 'core/restaurante_publico.html', {
         'restaurante': restaurante,
         'categorias': categorias,
         'color_principal': restaurante.color_principal or '#A3E1BE',
     })
-    
+
     response['Cache-Control'] = 'no-store, no-cache, must-revalidate, proxy-revalidate'
     response['Pragma'] = 'no-cache'
     response['Expires'] = '0'
@@ -1121,7 +1121,7 @@ def rechazar_pago(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     if pedido.estado != 'procesando_pago':
         return JsonResponse({'success': False, 'error': 'El pedido no está en estado de procesamiento de pago'}, status=400)
-    
+
     motivo_error = request.POST.get('motivo_error', 'Error desconocido en el procesamiento del pago')
     pedido.estado = 'error_pago'
     pedido.motivo_error_pago = motivo_error
@@ -1162,8 +1162,6 @@ def procesar_pedido(request, restaurante):
                 direccion = datos_cliente.get('direccion', '').strip()
                 aclaraciones = datos_cliente.get('aclaraciones', '').strip()
                 metodo_pago = datos_cliente.get('metodo_pago', 'efectivo')
-                if metodo_pago == 'mercadopago' and not restaurante.mp_access_token:
-                    return JsonResponse({'error': 'Mercado Pago no está configurado para este restaurante.'}, status=400)
 
                 # Validate required fields
                 if not nombre:
@@ -1318,7 +1316,7 @@ def validar_codigo_descuento(request, nombre_restaurante):
     if request.method != 'POST':
         logger.error("Método no permitido")
         return JsonResponse({'valid': False, 'error': 'Método no permitido'}, status=405)
-    
+
     restaurante = get_object_or_404(Restaurante, username=nombre_restaurante, activo=True)
     codigo = request.POST.get('codigo', '').strip().upper()
     logger.info(f"Verificando código: {codigo}")
@@ -1346,102 +1344,12 @@ def validar_codigo_descuento(request, nombre_restaurante):
                     'valid': True,
                     'porcentaje': float(porcentaje)
                 })
-    
+
     logger.warning(f"Código no válido o no encontrado: {codigo}")
     return JsonResponse({
         'valid': False,
         'error': 'Código no válido o no disponible'
     }, status=400)
-
-
-
-@login_required
-def connect_mp(request):
-    logger.info("Entrando a connect_mp")
-    logger.info(f"MERCADO_PAGO_APP_ID: {settings.MERCADO_PAGO_APP_ID}")
-    logger.info(f"MERCADO_PAGO_CLIENT_SECRET: {settings.MERCADO_PAGO_CLIENT_SECRET}")
-    try:
-        app_id = settings.MERCADO_PAGO_APP_ID
-        redirect_uri = request.build_absolute_uri(reverse('mp_callback'))
-        auth_url = f"https://auth.mercadopago.com.ar/authorization?client_id={app_id}&response_type=code&platform_id=mp&redirect_uri={redirect_uri}"
-        logger.info(f"Redirecting to: {auth_url}")
-        return redirect(auth_url)
-    except Exception as e:
-        logger.error(f"Error in connect_mp: {str(e)}")
-        raise
-
-@login_required
-def mp_callback(request):
-    code = request.GET.get('code')
-    if not code:
-        messages.error(request, 'Error en la autorización de Mercado Pago.')
-        return redirect('configuraciones')
-
-    try:
-        url = "https://api.mercadopago.com/oauth/token"
-        data = {
-            'client_id': settings.MERCADO_PAGO_APP_ID,
-            'client_secret': settings.MERCADO_PAGO_CLIENT_SECRET,
-            'code': code,
-            'grant_type': 'authorization_code',
-            'redirect_uri': request.build_absolute_uri(reverse('mp_callback'))
-        }
-        response = requests.post(url, data=data)
-        response.raise_for_status()
-        tokens = response.json()
-
-        restaurante = request.user
-        restaurante.mp_access_token = tokens['access_token']
-        restaurante.mp_refresh_token = tokens['refresh_token']
-        restaurante.mp_user_id = tokens['user_id']
-        restaurante.mp_token_expires_at = timezone.now() + timedelta(seconds=tokens['expires_in'])
-        restaurante.save()
-
-        messages.success(request, 'Cuenta de Mercado Pago conectada correctamente.')
-    except requests.RequestException as e:
-        logger.error(f"Error al obtener tokens de Mercado Pago: {str(e)}")
-        messages.error(request, 'Error al conectar con Mercado Pago. Intenta nuevamente.')
-    except KeyError as e:
-        logger.error(f"Respuesta inválida de Mercado Pago: {str(e)}")
-        messages.error(request, 'Error en la respuesta de Mercado Pago.')
-
-    return redirect('configuraciones')
-
-@login_required
-@require_POST
-def disconnect_mp(request):
-    restaurante = request.user
-    restaurante.mp_access_token = None
-    restaurante.mp_refresh_token = None
-    restaurante.mp_user_id = None
-    restaurante.mp_token_expires_at = None
-    restaurante.save()
-    messages.success(request, 'Cuenta de Mercado Pago desconectada correctamente.')
-    return redirect('configuraciones')
-
-# Helper function to refresh MP token if expired
-def refresh_mp_token(restaurante):
-    if not restaurante.mp_refresh_token or not restaurante.mp_token_expires_at:
-        raise ValueError("No refresh token available.")
-
-    if timezone.now() < restaurante.mp_token_expires_at:
-        return  # Token still valid
-
-    url = "https://api.mercadopago.com/oauth/token"
-    data = {
-        'client_id': settings.MERCADO_PAGO_APP_ID,
-        'client_secret': settings.MERCADO_PAGO_CLIENT_SECRET,
-        'grant_type': 'refresh_token',
-        'refresh_token': restaurante.mp_refresh_token
-    }
-    response = requests.post(url, data=data)
-    response.raise_for_status()
-    tokens = response.json()
-
-    restaurante.mp_access_token = tokens['access_token']
-    restaurante.mp_refresh_token = tokens.get('refresh_token', restaurante.mp_refresh_token)  # May or may not return new refresh
-    restaurante.mp_token_expires_at = timezone.now() + timedelta(seconds=tokens['expires_in'])
-    restaurante.save()
 
 
 @never_cache
@@ -1455,14 +1363,6 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 
     try:
         pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
-        restaurante = pedido.restaurante
-
-        if not restaurante.mp_access_token:
-            logger.error(f"Restaurante {restaurante.username} no tiene token de Mercado Pago configurado.")
-            return JsonResponse({'error': 'Mercado Pago no configurado para este restaurante.'}, status=400)
-
-        refresh_mp_token(restaurante)  # Refresh if expired
-
         items = get_list_or_404(ItemPedido, pedido=pedido)
 
         for item in items:
@@ -1472,36 +1372,62 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 
         mp_items = [
             {
-                "title": i.nombre_producto,
-                "quantity": i.cantidad,
-                "unit_price": float(i.precio_unitario)
-            } for i in items
+                "id": str(item.producto.id) if item.producto else f"item-{item.id}",  # Código del item
+                "title": item.nombre_producto,  # Nombre del item
+                "description": item.producto.descripcion if item.producto and item.producto.descripcion else item.nombre_producto,  # Descripción del item
+                "quantity": item.cantidad,  # Cantidad del producto
+                "unit_price": float(item.precio_unitario),  # Precio unitario
+                "category_id": str(item.producto.categoria.id) if item.producto and item.producto.categoria else "others",  # Categoría del item
+            } for item in items
         ]
 
         if pedido.costo_envio and pedido.costo_envio > 0:
             mp_items.append({
+                "id": "shipping",
                 "title": "Costo de envío",
+                "description": "Costo de envío del pedido",
                 "quantity": 1,
-                "unit_price": float(pedido.costo_envio)
+                "unit_price": float(pedido.costo_envio),
+                "category_id": "shipping",
             })
 
         total_descuento = Decimal('0.00')
         if pedido.monto_descuento:
-            total_descuento += pedido.monto_descuento  
+            total_descuento += pedido.monto_descuento
 
         if total_descuento > 0:
             mp_items.append({
+                "id": "discount",
                 "title": "Descuento",
+                "description": f"Descuento aplicado ({pedido.codigo_descuento or 'Efectivo'})",
                 "quantity": 1,
-                "unit_price": -float(total_descuento)
+                "unit_price": -float(total_descuento),
+                "category_id": "discount",
             })
+
+        # Dividir el nombre del cliente en first_name y last_name
+        nombre_completo = pedido.cliente.strip().split()
+        first_name = nombre_completo[0] if nombre_completo else "Cliente"
+        last_name = " ".join(nombre_completo[1:]) if len(nombre_completo) > 1 else "Desconocido"
+
+        # Generar un email basado en el teléfono para cumplir con la acción obligatoria
+        email = f"{pedido.telefono.replace('+', '').replace(' ', '')}@piattoweb.com"
 
         body = {
             "items": mp_items,
+            "payer": {
+                "first_name": first_name,  # Nombre del comprador
+                "last_name": last_name,    # Apellido del comprador
+                "email": email,            # Email del comprador (generado)
+                "phone": {
+                    "number": pedido.telefono  # Teléfono ya lo tenés
+                }
+            },
+            "statement_descriptor": f"Piatto - {pedido.restaurante.nombre_local}",  # Resumen de tarjeta
             "back_urls": {
-                "success": "https://piattoweb.com/hello",
-                "failure": "https://piattoweb.com/hello",
-                "pending": "https://piattoweb.com/hello"
+                "success": request.build_absolute_uri(reverse('hello')),
+                "failure": request.build_absolute_uri(reverse('hello')),
+                "pending": request.build_absolute_uri(reverse('hello'))
             },
             "auto_return": "approved",
             "external_reference": str(pedido.token)
@@ -1511,10 +1437,10 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         log_body['external_reference'] = str(log_body['external_reference'])
         logger.info(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
 
-        headers = {"Authorization": f"Bearer {restaurante.mp_access_token}"}
+        headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
 
         response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
-        
+
         if not response.ok:
             logger.error(f"Mercado Pago API error: Status {response.status_code}, Response: {response.text}")
             return JsonResponse({'error': 'Failed to create payment preference'}, status=500)
@@ -1530,6 +1456,12 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             logger.error(f"No init_point in Mercado Pago response: {json.dumps(data, indent=2)}")
             return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
 
+        pedido.init_point = init_point
+        pedido.save()
+
+        if status is None:
+            return JsonResponse({'init_point': init_point})
+
         params = {
             'pedido': pedido,
             'restaurante': pedido.restaurante,
@@ -1537,9 +1469,6 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             'confirmado': status == "approved",
             'init_point': init_point
         }
-
-        pedido.init_point = init_point
-        pedido.save()
 
         if status in ["pending", "in_process"]:
             params['confirmado'] = False
@@ -1551,9 +1480,6 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         logger.info(f"Rendering confirmation page for pedido {pedido.numero_pedido} with init_point: {init_point}")
         return render(request, 'core/confirmacion_pedido.html', params)
 
-    except ValueError as e:
-        logger.error(f"Token refresh error: {str(e)}")
-        return JsonResponse({'error': 'Error de autenticación con Mercado Pago.'}, status=500)
     except Exception as e:
         logger.error(f"Unexpected error in confirmacion_pedido: {str(e)}", exc_info=True)
         return JsonResponse({'error': 'Internal server error'}, status=500)
@@ -1564,26 +1490,26 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 @no_cache_view
 def imprimir_ticket(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
-    
+
     # Marcar como impreso
     pedido.impreso = True
     pedido.save()
-    
+
     # Configurar respuesta PDF
     response = HttpResponse(content_type='application/pdf')
     response['Content-Disposition'] = f'filename=ticket_pedido_{pedido.id}.pdf'
-    
+
     # Crear PDF
     p = canvas.Canvas(response, pagesize=letter)
     width, height = letter
-    
+
     # Encabezado
     p.setFont("Helvetica-Bold", 16)
     p.drawString(100, height - 50, f"Ticket Pedido #{pedido.id}")
     p.setFont("Helvetica", 12)
     p.drawString(100, height - 80, f"Restaurante: {pedido.restaurante.nombre_local}")
     p.drawString(100, height - 100, f"Fecha: {pedido.fecha.strftime('%d/%m/%Y %H:%M')}")
-    
+
     # Información del cliente
     p.setFont("Helvetica-Bold", 14)
     p.drawString(100, height - 140, "Datos del Cliente")
@@ -1592,7 +1518,7 @@ def imprimir_ticket(request, pedido_id):
     p.drawString(100, height - 180, f"Teléfono: {pedido.telefono}")
     if pedido.direccion:
         p.drawString(100, height - 200, f"Dirección: {pedido.direccion}")
-    
+
     # Productos
     p.setFont("Helvetica-Bold", 14)
     p.drawString(100, height - 240, "Productos:")
@@ -1609,7 +1535,7 @@ def imprimir_ticket(request, pedido_id):
                 y_position -= 20
         subtotal += item.subtotal
         y_position -= 60
-    
+
     # Costos
     p.setFont("Helvetica", 12)
     p.drawString(100, y_position - 20, f"Subtotal: ${subtotal:.2f}")
@@ -1621,14 +1547,14 @@ def imprimir_ticket(request, pedido_id):
         y_position -= 20
     p.setFont("Helvetica-Bold", 14)
     p.drawString(100, y_position - 60, f"Total: ${pedido.total:.2f}")
-    
+
     # Estado del pedido
     p.drawString(100, y_position - 80, f"Estado: {pedido.get_estado_display()}")
-    
+
     # Pie de página
     p.setFont("Helvetica", 10)
     p.drawString(100, 50, "¡Gracias por su pedido!")
-    
+
     p.showPage()
     p.save()
     return response
@@ -1639,11 +1565,11 @@ def imprimir_ticket(request, pedido_id):
 @no_cache_view
 def configuracion_horarios(request):
     restaurante = get_object_or_404(Restaurante, id=request.user.id)
-    
+
     if request.method == 'POST':
         demora_form = RestauranteDemoraForm(request.POST, instance=restaurante)
         formset = HorarioRestauranteFormSet(request.POST, instance=restaurante, prefix='horarios')
-        
+
         if demora_form.is_valid() and formset.is_valid():
             demora_form.save()
             formset.save()
@@ -1662,10 +1588,10 @@ def configuracion_horarios(request):
     horarios_por_dia = {dia: [] for dia, _ in HorarioRestaurante.DIA_SEMANA_CHOICES}
     for horario in horarios:
         horarios_por_dia[horario.dia_semana].append(horario)
-    
+
     horas = [hour for hour, _ in HOUR_CHOICES]
     minutos = [minute for minute, _ in MINUTE_CHOICES]
-    
+
     return render(request, 'core/configuracion_horarios.html', {
         'demora_form': demora_form,
         'formset': formset,
@@ -1818,13 +1744,11 @@ def configuraciones(request):
     config_form = ConfigRestauranteForm(instance=restaurante)
     descuento_form = CodigoDescuentoForm()
     restaurant_qr = generate_qr_for_restaurant(restaurante.nombre_local)
-    mp_connected = bool(restaurante.mp_access_token)
     return render(request, 'core/configuraciones.html', {
         'config_form': config_form,
         'descuento_form': descuento_form,
         'restaurante': restaurante,
         'restaurant_qr': restaurant_qr,
-        'mp_connected': mp_connected,
     })
 
 @login_required
@@ -1992,7 +1916,7 @@ def aplicar_descuento_producto(request, producto_id):
         logger.error(f"Unexpected error in aplicar_descuento_producto: {str(e)}")
         return JsonResponse({'success': False, 'error': f'Error inesperado: {str(e)}'}, status=500)
 
-    
+
 
 @login_required
 @require_POST
@@ -2003,7 +1927,7 @@ def update_cash_discount(request):
     try:
         cash_discount_enabled = request.POST.get('enabled') == 'true'
         cash_discount_percentage = int(request.POST.get('percentage', 0))
-        
+
         if not (0 <= cash_discount_percentage <= 50):
             return JsonResponse({
                 'success': False,
@@ -2042,13 +1966,13 @@ def csrf_failure(request, reason=""):
     Returns JSON for AJAX requests and renders a template for others.
     """
     logger.warning(f"CSRF failure for request {request.path}: {reason}")
-    
+
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return JsonResponse({
             'success': False,
             'error': 'CSRF verification failed. Please refresh the page and try again.'
         }, status=403)
-    
+
     return render(request, 'core/csrf_failure.html', {
         'reason': reason,
         'mensaje': 'CSRF verification failed. Please refresh the page.'
@@ -2056,11 +1980,11 @@ def csrf_failure(request, reason=""):
 
 def generate_qr_for_restaurant(restaurant_name):
     restaurant_qr, created = RestaurantQR.objects.get_or_create(name=restaurant_name)
-    
+
     # Generar el slug a partir de restaurant_name
     slug = restaurant_name.replace(' ', '').lower()
     qr_url = f"https://piattoweb.com/{slug}"
-    
+
     # Crear el código QR
     qr = qrcode.QRCode(
         version=1,
@@ -2070,19 +1994,19 @@ def generate_qr_for_restaurant(restaurant_name):
     )
     qr.add_data(qr_url)
     qr.make(fit=True)
-    
+
     # Generar la imagen QR
     qr_image = qr.make_image(fill_color="black", back_color="white")
     qr_image_io = io.BytesIO()
     qr_image.save(qr_image_io, format='PNG')
     qr_image_io.seek(0)
-    
+
     # Guardar en S3
     filename = f"{slug}_qr.png"
     restaurant_qr.qr_image.save(filename, ContentFile(qr_image_io.getvalue()), save=True)
     restaurant_qr.url = qr_url
     restaurant_qr.save()
-    
+
     print(f"QR image saved to S3: s3://piatto-media-2025/media/qrcodes/{filename}")
     return restaurant_qr
 
@@ -2095,13 +2019,6 @@ def hello(request):
 
     try:
         pedido = get_object_or_404(Pedido, token=token)
-        restaurante = pedido.restaurante
-
-        if not restaurante.mp_access_token:
-            logger.error(f"Restaurante {restaurante.username} no tiene token de Mercado Pago configurado.")
-            return redirect('home')
-
-        refresh_mp_token(restaurante)  # Refresh if expired
 
         if not payment_id or not token:
             logger.error("Missing payment_id or token in hello view")
@@ -2114,7 +2031,7 @@ def hello(request):
             logger.error(f"Payment ID mismatch: {pedido.payment_id} != {payment_id}")
             return redirect('home')
 
-        headers = {'Authorization': f'Bearer {restaurante.mp_access_token}'}
+        headers = {'Authorization': f'Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}'}
         ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
         data = ml_response.json()
         status = data.get('status', None)
@@ -2171,9 +2088,5 @@ def hello(request):
         redirect_url += f"?status={status}&external_reference={token}"
         return redirect(redirect_url)
 
-    except ValueError as e:
-        logger.error(f"Token refresh error: {str(e)}")
-        return redirect('home')
     except Exception as e:
         logger.error(f"Error in hello view: {str(e)}", exc_info=True)
-        return redirect('home')

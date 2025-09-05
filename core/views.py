@@ -1411,6 +1411,11 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         # Generar email ficticio a partir de telefono
         email = f"{pedido.telefono}@piattoweb.com"
 
+        # Forzar https en back_urls
+        base_url = request.build_absolute_uri(pedido.get_absolute_url())
+        if base_url.startswith('http://'):
+            base_url = base_url.replace('http://', 'https://')
+
         body = {
             "items": mp_items,
             "payer": {
@@ -1423,9 +1428,9 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             },
             "statement_descriptor": f"Piatto - {pedido.restaurante.nombre_local}",
             "back_urls": {
-                "success": request.build_absolute_uri(pedido.get_absolute_url()),
-                "failure": request.build_absolute_uri(pedido.get_absolute_url()),
-                "pending": request.build_absolute_uri(pedido.get_absolute_url())
+                "success": base_url,
+                "failure": base_url,
+                "pending": base_url
             },
             "auto_return": "approved",
             "external_reference": str(pedido.token)

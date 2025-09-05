@@ -7,7 +7,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
-<link rel="icon" type="image/png" href="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-icon.png{% endif %}">
+<link rel="icon" type="image/png" href="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-faviconpng{% endif %}">
 
 <!-- SEO Meta Tags -->
 <meta name="title" content="{{ restaurante.meta_title|default:restaurante.nombre_local }}">
@@ -86,42 +86,41 @@
         display: none !important;
     }
     .cash-discount-banner {
-    background-color: #E9F9F1;
-    color: #10B981;
-    font-weight: bold;
-    padding: 8px 15px;
-    margin: 10px auto;
-    border-radius: 5px;
-    font-size: 14px;
-    max-width: 400px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;
-    border-width: 1px;
-    border-style: solid;
-    border-color: rgb(222, 226, 230);
-}
-
+        background-color: #E9F9F1;
+        color: #10B981;
+        font-weight: bold;
+        padding: 8px 15px;
+        margin: 10px auto;
+        border-radius: 5px;
+        font-size: 14px;
+        max-width: 400px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;
+        border-width: 1px;
+        border-style: solid;
+        border-color: rgb(222, 226, 230);
+    }
     .free-shipping-banner {
-    background-color: rgb(255 200 183 / 72%);
-    color: rgb(253 61 0);
-    font-weight: bold;
-    padding: 8px 15px;
-    margin: 10px auto;
-    border-radius: 5px;
-    font-size: 14px;
-    max-width: 400px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;
-    border-width: 1px;
-    border-style: solid;
-    border-color: rgb(222, 226, 230);
-}
+        background-color: rgb(255 200 183 / 72%);
+        color: rgb(253 61 0);
+        font-weight: bold;
+        padding: 8px 15px;
+        margin: 10px auto;
+        border-radius: 5px;
+        font-size: 14px;
+        max-width: 400px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        box-shadow: rgba(0, 0, 0, 0.1) 0px 2px 4px;
+        border-width: 1px;
+        border-style: solid;
+        border-color: rgb(222, 226, 230);
+    }
     .cash-discount-price {
         color: #28a745;
         font-weight: bold;
@@ -142,7 +141,6 @@
         border-top: none;
         padding-top: 0;
     }
-
     .category-boxes {
         display: flex;
         flex-wrap: wrap;
@@ -167,11 +165,63 @@
         background-color: #e9ecef;
         transform: translateY(-2px);
     }
-
     .pb-4 {
-    padding-bottom: 0 !important;
+        padding-bottom: 0 !important;
     }
-    
+    .go-up-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1000;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .go-up-button.visible {
+        opacity: 1;
+    }
+    .go-up-button img {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    }
+    @media (max-width: 576px) {
+        .go-up-button img {
+            width: 40px;
+            height: 40px;
+        }
+    }
+    /* Collapsible Category Styles */
+    .category-title {
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        transition: background-color 0.3s ease;
+    }
+    .category-title:hover {
+        background-color: #f8f9fa;
+    }
+    .category-title .fas {
+        transition: transform 0.3s ease;
+    }
+    .category-title.collapsed .fas {
+        transform: rotate(-90deg);
+    }
+    .category-content {
+        transition: max-height 0.3s ease, opacity 0.3s ease;
+        overflow: hidden;
+    }
+    .category-content.collapsed {
+        max-height: 0;
+        opacity: 0;
+    }
+    .category-content:not(.collapsed) {
+        max-height: 10000px; /* Large enough to accommodate content */
+        opacity: 1;
+    }
 </style>
 {% endblock %}
 {% endblock %}
@@ -265,160 +315,167 @@
         <input type="text" id="search-product" class="form-control" placeholder="Buscar productos por nombre">
     </div>
     {% for categoria in categorias %}
-        <h3 class="category-title" id="categoria-{{ categoria.id }}">{{ categoria.nombre }}</h3>
-        <img src="{% if categoria.banner %}{{ categoria.banner.url }}{% else %}https://via.placeholder.com/1161x226.png?text={{ categoria.nombre|urlencode }}{% endif %}" 
-             class="category-banner mx-auto d-block" 
-             alt="Banner de {{ categoria.nombre }}"
-             loading="lazy">
-        <hr>
-        {% for producto in categoria.producto_set.all %}
-            <div class="product d-flex align-items-start" 
-                 {% if producto.agotado or not restaurante.esta_abierto %}style="opacity: 0.6; pointer-events: none;"{% endif %}
-                 data-precio-base="{{ producto.precio|floatformat:2|default:'0.00' }}"
-                 data-precio-original="{{ producto.precio_original|floatformat:2|default:producto.precio|floatformat:2 }}"
-                 data-tiene-descuento="{{ producto.tiene_descuento|yesno:'true,false' }}"
-                 data-tiene-opciones="{{ producto.opcion_categorias.exists|yesno:'true,false' }}"
-                 data-cash-discount-percentage="{{ restaurante.cash_discount_percentage }}">
-                <div class="card-product-container">
-                    <div class="card-product-image-wrapper">
-                        <img alt="{{ producto.nombre }}" 
-                             src="{% if producto.imagen %}{{ producto.imagen.url }}{% else %}https://via.placeholder.com/150x150.png?text=Sin+Imagen{% endif %}" 
-                             loading="lazy"
-                             data-bs-toggle="modal" 
-                             data-bs-target="#productoModal{{ producto.id }}">
-                        {% if producto.opcion_categorias.exists %}
-                            <button class="card-btn-add" 
-                                    data-bs-toggle="modal" 
-                                    data-bs-target="#productoModal{{ producto.id }}">
-                                OPCIONES
-                            </button>
-                        {% else %}
-                            <button class="card-btn-add" 
-                                    onclick="addToOrder('{{ producto.id }}', '{{ producto.nombre|escapejs }}', {{ producto.precio|floatformat:2 }}, 1)">
-                                AÑADIR
-                            </button>
-                        {% endif %}
-                    </div>
-                </div>
-                <div class="card-product-info">
-                    <h3 class="item-title" 
-                        data-bs-toggle="modal" 
-                        data-bs-target="#productoModal{{ producto.id }}">
-                        {{ producto.nombre }}
-                        {% if producto.es_nuevo %}
-                            <span class="badge bg-success ms-2">Nuevo</span>
-                        {% endif %}
-                        {% if producto.agotado %}
-                            <span class="badge bg-danger ms-2">Agotado</span>
-                        {% endif %}
-                    </h3>
-                    <p class="item-desc">{{ producto.descripcion }}</p>
-                    <p class="item-price">
-                        ${{ producto.precio|floatformat:2 }}
-                        {% if producto.tiene_descuento %}
-                            <span class="item-price-old">${{ producto.precio_original|floatformat:2 }}</span>
-                        {% endif %}
-                    </p>
-                </div>
-            </div>
+        <div class="category-section">
+            <h3 class="category-title collapsed" id="categoria-{{ categoria.id }}" data-category-id="{{ categoria.id }}" aria-expanded="false">
+                {{ categoria.nombre }}
+                <i class="fas fa-chevron-right"></i>
+            </h3>
+            <img src="{% if categoria.banner %}{{ categoria.banner.url }}{% else %}https://via.placeholder.com/1161x226.png?text={{ categoria.nombre|urlencode }}{% endif %}" 
+                 class="category-banner mx-auto d-block" 
+                 alt="Banner de {{ categoria.nombre }}"
+                 loading="lazy">
             <hr>
-
-            <!-- Modal Producto -->
-            <div class="modal fade" id="productoModal{{ producto.id }}" tabindex="-1">
-                <div class="modal-dialog modal-dialog-centered">
-                    <div class="modal-content">
-                        <div class="back-arrow-container">
-                            <a aria-label="Volver" type="button" data-bs-dismiss="modal" href="#">
-                                <i class="fas fa-chevron-left"></i>
-                            </a>
+            <div class="category-content collapsed" id="category-content-{{ categoria.id }}">
+                {% for producto in categoria.producto_set.all %}
+                    <div class="product d-flex align-items-start" 
+                         {% if producto.agotado or not restaurante.esta_abierto %}style="opacity: 0.6; pointer-events: none;"{% endif %}
+                         data-precio-base="{{ producto.precio|floatformat:2|default:'0.00' }}"
+                         data-precio-original="{{ producto.precio_original|floatformat:2|default:producto.precio|floatformat:2 }}"
+                         data-tiene-descuento="{{ producto.tiene_descuento|yesno:'true,false' }}"
+                         data-tiene-opciones="{{ producto.opcion_categorias.exists|yesno:'true,false' }}"
+                         data-cash-discount-percentage="{{ restaurante.cash_discount_percentage }}"
+                         data-category-id="{{ categoria.id }}">
+                        <div class="card-product-container">
+                            <div class="card-product-image-wrapper">
+                                <img alt="{{ producto.nombre }}" 
+                                     src="{% if producto.imagen %}{{ producto.imagen.url }}{% else %}https://via.placeholder.com/150x150.png?text=Sin+Imagen{% endif %}" 
+                                     loading="lazy"
+                                     data-bs-toggle="modal" 
+                                     data-bs-target="#productoModal{{ producto.id }}">
+                                {% if producto.opcion_categorias.exists %}
+                                    <button class="card-btn-add" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#productoModal{{ producto.id }}">
+                                        OPCIONES
+                                    </button>
+                                {% else %}
+                                    <button class="card-btn-add" 
+                                            onclick="addToOrder('{{ producto.id }}', '{{ producto.nombre|escapejs }}', {{ producto.precio|floatformat:2 }}, 1)">
+                                        AÑADIR
+                                    </button>
+                                {% endif %}
+                            </div>
                         </div>
-                        <img src="{% if producto.imagen %}{{ producto.imagen.url }}{% else %}https://via.placeholder.com/300x200.png?text=Sin+Imagen{% endif %}" 
-                             class="img-fluid mb-3" 
-                             alt="{{ producto.nombre }}"
-                             loading="lazy">
-                        <div class="modal-body">
-                            <div class="title-price-row mb-3">
-                                <h5 class="modal-title">{{ producto.nombre }}</h5>
-                                <p class="text-success mb-0 text-end">
-                                    {% if producto.tiene_descuento %}
-                                        <span class="price-old me-2 text-muted">${{ producto.precio_original|floatformat:2 }}</span>
-                                        <span class="price-current text-success">${{ producto.precio|floatformat:2 }}</span>
-                                    {% else %}
-                                        <span class="price-current text-success">${{ producto.precio|floatformat:2 }}</span>
+                        <div class="card-product-info">
+                            <h3 class="item-title" 
+                                data-bs-toggle="modal" 
+                                data-bs-target="#productoModal{{ producto.id }}">
+                                {{ producto.nombre }}
+                                {% if producto.es_nuevo %}
+                                    <span class="badge bg-success ms-2">Nuevo</span>
+                                {% endif %}
+                                {% if producto.agotado %}
+                                    <span class="badge bg-danger ms-2">Agotado</span>
+                                {% endif %}
+                            </h3>
+                            <p class="item-desc">{{ producto.descripcion }}</p>
+                            <p class="item-price">
+                                ${{ producto.precio|floatformat:2 }}
+                                {% if producto.tiene_descuento %}
+                                    <span class="item-price-old">${{ producto.precio_original|floatformat:2 }}</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <hr>
+                    <!-- Modal Producto -->
+                    <div class="modal fade" id="productoModal{{ producto.id }}" tabindex="-1">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="back-arrow-container">
+                                    <a aria-label="Volver" type="button" data-bs-dismiss="modal" href="#">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </div>
+                                <img src="{% if producto.imagen %}{{ producto.imagen.url }}{% else %}https://via.placeholder.com/300x200.png?text=Sin+Imagen{% endif %}" 
+                                     class="img-fluid mb-3" 
+                                     alt="{{ producto.nombre }}"
+                                     loading="lazy">
+                                <div class="modal-body">
+                                    <div class="title-price-row mb-3">
+                                        <h5 class="modal-title">{{ producto.nombre }}</h5>
+                                        <p class="text-success mb-0 text-end">
+                                            {% if producto.tiene_descuento %}
+                                                <span class="price-old me-2 text-muted">${{ producto.precio_original|floatformat:2 }}</span>
+                                                <span class="price-current text-success">${{ producto.precio|floatformat:2 }}</span>
+                                            {% else %}
+                                                <span class="price-current text-success">${{ producto.precio|floatformat:2 }}</span>
+                                            {% endif %}
+                                        </p>
+                                    </div>
+                                    <div class="description-row mb-3">
+                                        <p class="text-start">{{ producto.descripcion }}</p>
+                                    </div>
+                                    <div class="quantity-section mb-3">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="updateQuantity('{{ producto.id }}', -1)">-</button>
+                                        <input type="number" 
+                                               class="form-control d-inline-block w-25 text-center mx-2" 
+                                               id="cantidad_{{ producto.id }}"
+                                               min="1" 
+                                               value="1"
+                                               {% if producto.stock is not None %}max="{{ producto.stock }}"{% endif %}
+                                               readonly>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="updateQuantity('{{ producto.id }}', 1)">+</button>
+                                    </div>
+                                    {% if restaurante.cash_discount_enabled and restaurante.cash_discount_percentage > 0 %}
+                                        <p class="text-muted mb-3">
+                                            Pagando en efectivo: <span class="cash-discount-price" id="cash-discount-price-{{ producto.id }}">$0.00</span> ({{ restaurante.cash_discount_percentage }}% OFF)
+                                        </p>
                                     {% endif %}
-                                </p>
-                            </div>
-                            <div class="description-row mb-3">
-                                <p class="text-start">{{ producto.descripcion }}</p>
-                            </div>
-                            <div class="quantity-section mb-3">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="updateQuantity('{{ producto.id }}', -1)">-</button>
-                                <input type="number" 
-                                       class="form-control d-inline-block w-25 text-center mx-2" 
-                                       id="cantidad_{{ producto.id }}"
-                                       min="1" 
-                                       value="1"
-                                       {% if producto.stock is not None %}max="{{ producto.stock }}"{% endif %}
-                                       readonly>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="updateQuantity('{{ producto.id }}', 1)">+</button>
-                            </div>
-                            {% if restaurante.cash_discount_enabled and restaurante.cash_discount_percentage > 0 %}
-                                <p class="text-muted mb-3">
-                                    Pagando en efectivo: <span class="cash-discount-price" id="cash-discount-price-{{ producto.id }}">$0.00</span> ({{ restaurante.cash_discount_percentage }}% OFF)
-                                </p>
-                            {% endif %}
-                            {% if producto.opcion_categorias.exists %}
-                                <div id="opciones-container-{{ producto.id }}" class="mt-3">
-                                    {% for opcion_categoria in producto.opcion_categorias.all %}
-                                        <div class="opcion-categoria">
-                                            <h6>{{ opcion_categoria.nombre }} (Elige hasta {{ opcion_categoria.max_selecciones }})</h6>
-                                            {% for opcion in opcion_categoria.opciones.all %}
-                                                <div class="form-check mb-2" {% if opcion.agotado %}style="opacity: ресурсов0.6;"{% endif %}>
-                                                    <input class="form-check-input" 
-                                                           type="{% if opcion_categoria.max_selecciones == 1 %}radio{% else %}checkbox{% endif %}" 
-                                                           name="opciones_{{ producto.id }}_{{ opcion_categoria.id }}"
-                                                           id="opcion_{{ opcion.id }}" 
-                                                           value="{{ opcion.id }}"
-                                                           data-precio-adicional="{{ opcion.precio_adicional|floatformat:2|default:'0.00' }}"
-                                                           data-categoria-id="{{ opcion_categoria.id }}"
-                                                           data-max-selecciones="{{ opcion_categoria.max_selecciones }}"
-                                                           {% if opcion.agotado %}disabled{% endif %}
-                                                           onchange="actualizarPrecioModal('{{ producto.id }}')">
-                                                    <label class="form-check-label" for="opcion_{{ opcion.id }}">
-                                                        {{ opcion.nombre }}
-                                                        {% if opcion.precio_adicional > 0 %}
-                                                            <span class="price">(+${{ opcion.precio_adicional|floatformat:2 }})</span>
-                                                        {% endif %}
-                                                        {% if opcion.tiene_descuento and opcion.precio_adicional_original %}
-                                                            <span class="price-old ms-2">+${{ opcion.precio_adicional_original|floatformat:2 }}</span>
-                                                        {% endif %}
-                                                        {% if opcion.agotado %}
-                                                            <span class="badge bg-danger ms-2">Agotado</span>
-                                                        {% endif %}
-                                                    </label>
-                                                    {% if opcion.descripcion %}
-                                                        <p class="text-muted small ms-4">{{ opcion.descripcion }}</p>
-                                                    {% endif %}
+                                    {% if producto.opcion_categorias.exists %}
+                                        <div id="opciones-container-{{ producto.id }}" class="mt-3">
+                                            {% for opcion_categoria in producto.opcion_categorias.all %}
+                                                <div class="opcion-categoria">
+                                                    <h6>{{ opcion_categoria.nombre }} (Elige hasta {{ opcion_categoria.max_selecciones }})</h6>
+                                                    {% for opcion in opcion_categoria.opciones.all %}
+                                                        <div class="form-check mb-2" {% if opcion.agotado %}style="opacity: 0.6;"{% endif %}>
+                                                            <input class="form-check-input" 
+                                                                   type="{% if opcion_categoria.max_selecciones == 1 %}radio{% else %}checkbox{% endif %}" 
+                                                                   name="opciones_{{ producto.id }}_{{ opcion_categoria.id }}"
+                                                                   id="opcion_{{ opcion.id }}" 
+                                                                   value="{{ opcion.id }}"
+                                                                   data-precio-adicional="{{ opcion.precio_adicional|floatformat:2|default:'0.00' }}"
+                                                                   data-categoria-id="{{ opcion_categoria.id }}"
+                                                                   data-max-selecciones="{{ opcion_categoria.max_selecciones }}"
+                                                                   {% if opcion.agotado %}disabled{% endif %}
+                                                                   onchange="actualizarPrecioModal('{{ producto.id }}')">
+                                                            <label class="form-check-label" for="opcion_{{ opcion.id }}">
+                                                                {{ opcion.nombre }}
+                                                                {% if opcion.precio_adicional > 0 %}
+                                                                    <span class="price">(+${{ opcion.precio_adicional|floatformat:2 }})</span>
+                                                                {% endif %}
+                                                                {% if opcion.tiene_descuento and opcion.precio_adicional_original %}
+                                                                    <span class="price-old ms-2">+${{ opcion.precio_adicional_original|floatformat:2 }}</span>
+                                                                {% endif %}
+                                                                {% if opcion.agotado %}
+                                                                    <span class="badge bg-danger ms-2">Agotado</span>
+                                                                {% endif %}
+                                                            </label>
+                                                            {% if opcion.descripcion %}
+                                                                <p class="text-muted small ms-4">{{ opcion.descripcion }}</p>
+                                                            {% endif %}
+                                                        </div>
+                                                    {% endfor %}
+                                                    <div id="opcion-error-{{ producto.id }}-{{ opcion_categoria.id }}" class="text-danger mb-2" style="display: none;">
+                                                        Por favor, selecciona al menos una opción en esta categoría.
+                                                    </div>
                                                 </div>
                                             {% endfor %}
-                                            <div id="opcion-error-{{ producto.id }}-{{ opcion_categoria.id }}" class="text-danger mb-2" style="display: none;">
-                                                Por favor, selecciona al menos una opción en esta categoría.
-                                            </div>
                                         </div>
-                                    {% endfor %}
+                                    {% endif %}
+                                    <button type="button" class="btn btn-primary w-100" 
+                                            onclick="addToOrderFromModal('{{ producto.id }}', '{{ producto.nombre|escapejs }}', {{ producto.precio|floatformat:2 }})">
+                                        Agregar a mi pedido &nbsp; &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span id="total-modal-{{ producto.id }}">${{ producto.precio|floatformat:2 }}</span>
+                                    </button>
                                 </div>
-                            {% endif %}
-                            <button type="button" class="btn btn-primary w-100" 
-                                    onclick="addToOrderFromModal('{{ producto.id }}', '{{ producto.nombre|escapejs }}', {{ producto.precio|floatformat:2 }})">
-                                Agregar a mi pedido &nbsp; &nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span id="total-modal-{{ producto.id }}">${{ producto.precio|floatformat:2 }}</span>
-                            </button>
+                            </div>
                         </div>
                     </div>
-                </div>
+                {% empty %}
+                    <p class="text-muted">No hay productos disponibles en esta categoría.</p>
+                {% endfor %}
             </div>
-        {% empty %}
-            <p class="text-muted">No hay productos disponibles en esta categoría.</p>
-        {% endfor %}
+        </div>
     {% empty %}
         <p class="text-muted text-center">No hay categorías ni productos disponibles en este momento.</p>
     {% endfor %}
@@ -622,6 +679,10 @@
             </div>
         </div>
     </div>
+
+    <div class="go-up-button" id="goUpButton" onclick="scrollToTop()">
+        <img src="{{ MEDIA_URL }}images/go_up_button.png" alt="Go to top" title="Volver al menú">
+    </div>
 </main>
 {% endblock %}
 
@@ -643,6 +704,49 @@ console.log('Script initialized:', {
     restauranteDireccion: window.restauranteDireccion,
     cashDiscountEnabled: window.cashDiscountEnabled,
     cashDiscountPercentage: window.cashDiscountPercentage
+});
+
+// Scroll to top function
+function scrollToTop() {
+    const categoryBoxes = document.querySelector('.category-boxes');
+    if (categoryBoxes) {
+        categoryBoxes.scrollIntoView({ behavior: 'smooth' });
+    } else {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+// Show/hide go-up button based on scroll position
+window.addEventListener('scroll', function() {
+    const goUpButton = document.getElementById('goUpButton');
+    if (goUpButton) {
+        if (window.scrollY > 200) {
+            goUpButton.classList.add('visible');
+        } else {
+            goUpButton.classList.remove('visible');
+        }
+    }
+});
+
+// Toggle category content
+function toggleCategory(categoryId) {
+    const categoryTitle = document.querySelector(`#categoria-${categoryId}`);
+    const categoryContent = document.querySelector(`#category-content-${categoryId}`);
+    if (categoryTitle && categoryContent) {
+        const isCollapsed = categoryTitle.classList.toggle('collapsed');
+        categoryContent.classList.toggle('collapsed', isCollapsed);
+        categoryTitle.setAttribute('aria-expanded', !isCollapsed);
+    }
+}
+
+// Initialize collapsible categories
+window.addEventListener('load', () => {
+    document.querySelectorAll('.category-title').forEach(title => {
+        title.addEventListener('click', () => {
+            const categoryId = title.getAttribute('data-category-id');
+            toggleCategory(categoryId);
+        });
+    });
 });
 
 function filterProducts() {
@@ -685,6 +789,17 @@ function filterProducts() {
         if (matches || searchTerm === '') {
             product.classList.remove('hide');
             anyProductVisible = true;
+            // Expand the category if a product matches
+            if (searchTerm !== '') {
+                const categoryId = product.getAttribute('data-category-id');
+                const categoryTitle = document.querySelector(`#categoria-${categoryId}`);
+                const categoryContent = document.querySelector(`#category-content-${categoryId}`);
+                if (categoryTitle && categoryContent) {
+                    categoryTitle.classList.remove('collapsed');
+                    categoryContent.classList.remove('collapsed');
+                    categoryTitle.setAttribute('aria-expanded', 'true');
+                }
+            }
         } else {
             product.classList.add('hide');
         }
@@ -718,19 +833,12 @@ function filterProducts() {
             hrAfterBanner = nextElement;
         }
 
-        // Find all products until the next category or end
-        const categoryProducts = [];
-        let currentElement = hrAfterBanner ? hrAfterBanner.nextElementSibling : banner ? banner.nextElementSibling : category.nextElementSibling;
-
-        while (currentElement && !currentElement.classList.contains('category-title')) {
-            if (currentElement.classList.contains('product')) {
-                categoryProducts.push(currentElement);
-            }
-            currentElement = currentElement.nextElementSibling;
-        }
+        // Find all products in the category-content
+        const categoryContent = document.querySelector(`#category-content-${category.getAttribute('data-category-id')}`);
+        const categoryProducts = categoryContent ? categoryContent.querySelectorAll('.product') : [];
 
         // Check if any product in this category is visible
-        const hasVisibleProduct = categoryProducts.some(product => !product.classList.contains('hide'));
+        const hasVisibleProduct = Array.from(categoryProducts).some(product => !product.classList.contains('hide'));
 
         const shouldShow = searchTerm === '' || hasVisibleProduct;
         category.classList.toggle('hide', !shouldShow);
@@ -760,6 +868,7 @@ function filterProducts() {
 
     console.log('filterProducts completed');
 }
+
 window.addEventListener('load', () => {
     console.log('Window loaded for search bar');
     const searchInput = document.getElementById('search-product');
@@ -785,6 +894,5 @@ window.addEventListener('load', () => {
     filterProducts();
 });
 </script>
-
 <script src="{% static 'js/order.js' %}?v=3" defer></script>
 {% endblock %}

@@ -1370,6 +1370,11 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 logger.error(f"Invalid precio_unitario for item {item.nombre_producto}: {item.precio_unitario}")
                 return JsonResponse({'error': 'Invalid item price'}, status=400)
 
+        # Check if init_point already exists
+        if pedido.init_point and status is None:
+            logger.info(f"Using existing init_point for pedido {pedido.id}: {pedido.init_point}")
+            return JsonResponse({'init_point': pedido.init_point})
+
         # Prepare Mercado Pago items
         mp_items = [
             {
@@ -1445,25 +1450,29 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 
         headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
 
-        response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
+        # Only create a new preference if init_point doesn't exist
+        if not pedido.init_point:
+            response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
 
-        if not response.ok:
-            logger.error(f"Mercado Pago API error: Status {response.status_code}, Response: {response.text}")
-            return JsonResponse({'error': 'Failed to create payment preference'}, status=500)
+            if not response.ok:
+                logger.error(f"Mercado Pago API error: Status {response.status_code}, Response: {response.text}")
+                return JsonResponse({'error': 'Failed to create payment preference'}, status=500)
 
-        try:
-            data = response.json()
-        except ValueError:
-            logger.error(f"Invalid JSON response from Mercado Pago: {response.text}")
-            return JsonResponse({'error': 'Invalid response from payment provider'}, status=500)
+            try:
+                data = response.json()
+            except ValueError:
+                logger.error(f"Invalid JSON response from Mercado Pago: {response.text}")
+                return JsonResponse({'error': 'Invalid response from payment provider'}, status=500)
 
-        init_point = data.get('init_point', None)
-        if not init_point:
-            logger.error(f"No init_point in Mercado Pago response: {json.dumps(data, indent=2)}")
-            return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
+            init_point = data.get('init_point', None)
+            if not init_point:
+                logger.error(f"No init_point in Mercado Pago response: {json.dumps(data, indent=2)}")
+                return JsonResponse({'error': 'Failed to retrieve payment link'}, status=500)
 
-        pedido.init_point = init_point
-        pedido.save()
+            pedido.init_point = init_point
+            pedido.save()
+        else:
+            init_point = pedido.init_point
 
         if status is None:
             # Initial call: Return JSON with init_point for JS to redirect to Mercado Pago
@@ -2018,19 +2027,19 @@ def generate_qr_for_restaurant(restaurant_name):
     print(f"QR image saved to S3: s3://piatto-media-2025/media/qrcodes/{filename}")
     return restaurant_qr
 
-@api_view(['GET'])
+@api_view(['POST', 'GET'])
 @never_cache
 def hello(request):
-    token = request.GET.get("external_reference", None)
-    payment_id = request.GET.get("payment_id", None)
-    status = request.GET.get("status", None)
+    logger.info(f"Webhook called with method {request.method}, data: {request.GET if request.method == 'GET' else request.POST}")
 
-    logger.info(f"Webhook called with token={token}, payment_id={payment_id}, status={status}")
+    token = request.GET.get("external_reference", None) if request.method == 'GET' else request.POST.get("external_reference", None)
+    payment_id = request.GET.get("payment_id", None) if request.method == 'GET' else request.POST.get("id", None)
+    status = request.GET.get("status", None) if request.method == 'GET' else None
 
     try:
         if not payment_id or not token:
-            logger.error("Missing payment_id or token in hello view")
-            return redirect('home')
+            logger.error(f"Missing payment_id or token in hello view: payment_id={payment_id}, token={token}")
+            return Response({'error': 'Missing payment_id or token'}, status=400) if request.method == 'POST' else redirect('home')
 
         pedido = get_object_or_404(Pedido, token=token)
 
@@ -2039,31 +2048,32 @@ def hello(request):
             pedido.save()
         elif pedido.payment_id != payment_id:
             logger.error(f"Payment ID mismatch: {pedido.payment_id} != {payment_id}")
-            return redirect('home')
+            return Response({'error': 'Payment ID mismatch'}, status=400) if request.method == 'POST' else redirect('home')
 
+        # Fetch payment status from Mercado Pago
         headers = {'Authorization': f'Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}'}
         ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
         if not ml_response.ok:
             logger.error(f"Mercado Pago API error: Status {ml_response.status_code}, Response: {ml_response.text}")
-            return redirect('home')
+            return Response({'error': 'Failed to fetch payment status'}, status=500) if request.method == 'POST' else redirect('home')
 
         try:
             data = ml_response.json()
         except ValueError:
             logger.error(f"Invalid JSON response from Mercado Pago: {ml_response.text}")
-            return redirect('home')
+            return Response({'error': 'Invalid response from payment provider'}, status=500) if request.method == 'POST' else redirect('home')
 
         status = data.get('status', None)
         if not status:
             logger.error(f"No status in Mercado Pago response: {data}")
-            return redirect('home')
+            return Response({'error': 'No status in payment response'}, status=400) if request.method == 'POST' else redirect('home')
 
         channel_layer = get_channel_layer()
         send_event = async_to_sync(channel_layer.group_send)
 
         if pedido.estado != 'procesando_pago':
             logger.warning(f"Pedido {pedido.id} not in procesando_pago state: {pedido.estado}")
-            return redirect('home')
+            return Response({'error': f'Invalid state: {pedido.estado}'}, status=400) if request.method == 'POST' else redirect('home')
 
         if status == "approved":
             pedido.estado = 'pendiente'
@@ -2076,6 +2086,7 @@ def hello(request):
                     'message': 'Pago confirmado, pedido pendiente'
                 }
             )
+            logger.info(f"Pedido {pedido.id} updated to pendiente")
         elif status in ('pending', 'in_process'):
             pedido.estado = 'procesando_pago'
             pedido.save()
@@ -2087,6 +2098,7 @@ def hello(request):
                     'message': 'Pedido confirmado, pago pendiente'
                 }
             )
+            logger.info(f"Pedido {pedido.id} remains in procesando_pago")
         elif status in ("cancelled", "rejected"):
             pedido.estado = 'error_pago'
             pedido.motivo_error_pago = "No se pudo procesar el pago"
@@ -2100,8 +2112,13 @@ def hello(request):
                     'message': 'Pago rechazado o cancelado'
                 }
             )
+            logger.info(f"Pedido {pedido.id} updated to error_pago")
 
-        # Redirect to confirmacion_pedido with query parameters
+        # For POST (webhook), return a response to Mercado Pago
+        if request.method == 'POST':
+            return Response({'status': 'ok'}, status=200)
+
+        # For GET (browser redirect), redirect to confirmacion_pedido
         redirect_url = reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])
         redirect_url += f"?status={status}&external_reference={token}"
         logger.info(f"Redirecting to: {redirect_url}")
@@ -2109,4 +2126,4 @@ def hello(request):
 
     except Exception as e:
         logger.error(f"Error in hello view: {str(e)}", exc_info=True)
-        return redirect('home')
+        return Response({'error': 'Internal server error'}, status=500) if request.method == 'POST' else redirect('home')

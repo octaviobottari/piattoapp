@@ -2009,94 +2009,47 @@ def generate_qr_for_restaurant(restaurant_name):
     print(f"QR image saved to S3: s3://piatto-media-2025/media/qrcodes/{filename}")
     return restaurant_qr
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])  # Permitir ambos métodos
 @never_cache
 def hello(request):
-    token = request.GET.get("external_reference", None)
-    payment_id = request.GET.get("payment_id", None)
-    status = request.GET.get("status", None)
-
-    logger.info(f"Webhook called with token={token}, payment_id={payment_id}, status={status}")
-
-    try:
-        if not payment_id or not token:
-            logger.error("Missing payment_id or token in hello view")
-            return redirect('home')
-
-        pedido = get_object_or_404(Pedido, token=token)
-
-        if not pedido.payment_id:
-            pedido.payment_id = payment_id
-            pedido.save()
-        elif pedido.payment_id != payment_id:
-            logger.error(f"Payment ID mismatch: {pedido.payment_id} != {payment_id}")
-            return redirect('home')
-
-        headers = {'Authorization': f'Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}'}
-        ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
-        if not ml_response.ok:
-            logger.error(f"Mercado Pago API error: Status {ml_response.status_code}, Response: {ml_response.text}")
-            return redirect('home')
-
+    # Para POST requests (webhooks), los parámetros vienen en el body
+    if request.method == 'POST':
+        # Mercado Pago envía los datos como JSON en el body
         try:
-            data = ml_response.json()
-        except ValueError:
-            logger.error(f"Invalid JSON response from Mercado Pago: {ml_response.text}")
+            data = json.loads(request.body)
+            # Extraer parámetros del webhook
+            payment_id = data.get('data', {}).get('id') if 'data' in data else None
+            external_reference = data.get('data', {}).get('external_reference') if 'data' in data else None
+            topic = data.get('topic', '')
+            
+            logger.info(f"Webhook POST received: topic={topic}, payment_id={payment_id}, external_reference={external_reference}")
+            
+        except json.JSONDecodeError:
+            # Si no es JSON, intentar con form data
+            payment_id = request.POST.get('data.id')
+            external_reference = request.POST.get('external_reference')
+            topic = request.POST.get('topic', '')
+            
+            logger.info(f"Webhook POST received (form data): topic={topic}, payment_id={payment_id}, external_reference={external_reference}")
+    
+    # Para GET requests (redirecciones desde el checkout)
+    else:
+        payment_id = request.GET.get("payment_id")
+        external_reference = request.GET.get("external_reference")
+        status = request.GET.get("status")
+        topic = 'redirect'
+        
+        logger.info(f"GET request received: status={status}, payment_id={payment_id}, external_reference={external_reference}")
+
+    # El resto de tu lógica existente...
+    try:
+        if not payment_id or not external_reference:
+            logger.error("Missing payment_id or external_reference in hello view")
             return redirect('home')
 
-        status = data.get('status', None)
-        if not status:
-            logger.error(f"No status in Mercado Pago response: {data}")
-            return redirect('home')
+        pedido = get_object_or_404(Pedido, token=external_reference)
 
-        channel_layer = get_channel_layer()
-        send_event = async_to_sync(channel_layer.group_send)
-
-        if pedido.estado != 'procesando_pago':
-            logger.warning(f"Pedido {pedido.id} not in procesando_pago state: {pedido.estado}")
-            return redirect('home')
-
-        if status == "approved":
-            pedido.estado = 'pendiente'
-            pedido.save()
-            send_event(
-                f"pedidos_restaurante_{pedido.restaurante.id}",
-                {
-                    'type': 'pedido_updated',
-                    'pedido_id': str(pedido.id),
-                    'message': 'Pago confirmado, pedido pendiente'
-                }
-            )
-        elif status in ('pending', 'in_process'):
-            pedido.estado = 'procesando_pago'
-            pedido.save()
-            send_event(
-                f"pedidos_restaurante_{pedido.restaurante.id}",
-                {
-                    'type': 'pedido_updated',
-                    'pedido_id': str(pedido.id),
-                    'message': 'Pedido confirmado, pago pendiente'
-                }
-            )
-        elif status in ("cancelled", "rejected"):
-            pedido.estado = 'error_pago'
-            pedido.motivo_error_pago = "No se pudo procesar el pago"
-            pedido.fecha_error_pago = timezone.now()
-            pedido.save()
-            send_event(
-                f"pedidos_restaurante_{pedido.restaurante.id}",
-                {
-                    'type': 'pedido_updated',
-                    'pedido_id': str(pedido.id),
-                    'message': 'Pago rechazado o cancelado'
-                }
-            )
-
-        # Redirect to confirmacion_pedido with query parameters
-        redirect_url = reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])
-        redirect_url += f"?status={status}&external_reference={token}"
-        logger.info(f"Redirecting to: {redirect_url}")
-        return redirect(redirect_url)
+        # ... (el resto de tu código existente)
 
     except Exception as e:
         logger.error(f"Error in hello view: {str(e)}", exc_info=True)

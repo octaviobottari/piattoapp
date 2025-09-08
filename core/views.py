@@ -25,7 +25,7 @@ from .models import Producto, Categoria, Pedido, ItemPedido, Restaurante, Horari
 from channels.layers import get_channel_layer
 from asgiref.sync import async_to_sync
 from django.forms import formset_factory, inlineformset_factory
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 import json
 from decimal import Decimal, InvalidOperation
 import decimal
@@ -2009,48 +2009,145 @@ def generate_qr_for_restaurant(restaurant_name):
     print(f"QR image saved to S3: s3://piatto-media-2025/media/qrcodes/{filename}")
     return restaurant_qr
 
-@api_view(['GET', 'POST'])  # Permitir ambos métodos
+@api_view(['GET', 'POST'])  # Permite ambos métodos
+@csrf_exempt  # Necesario para webhooks externos
 @never_cache
 def hello(request):
-    # Para POST requests (webhooks), los parámetros vienen en el body
+    # Obtener parámetros según el método
     if request.method == 'POST':
-        # Mercado Pago envía los datos como JSON en el body
-        try:
-            data = json.loads(request.body)
-            # Extraer parámetros del webhook
-            payment_id = data.get('data', {}).get('id') if 'data' in data else None
-            external_reference = data.get('data', {}).get('external_reference') if 'data' in data else None
-            topic = data.get('topic', '')
-            
-            logger.info(f"Webhook POST received: topic={topic}, payment_id={payment_id}, external_reference={external_reference}")
-            
-        except json.JSONDecodeError:
-            # Si no es JSON, intentar con form data
-            payment_id = request.POST.get('data.id')
-            external_reference = request.POST.get('external_reference')
-            topic = request.POST.get('topic', '')
-            
-            logger.info(f"Webhook POST received (form data): topic={topic}, payment_id={payment_id}, external_reference={external_reference}")
-    
-    # Para GET requests (redirecciones desde el checkout)
+        # Manejar diferentes formatos de webhook de Mercado Pago
+        if request.content_type == 'application/json':
+            try:
+                data = json.loads(request.body)
+                # Para webhooks de payment
+                if 'data' in data and 'id' in data:
+                    payment_id = data['data']['id']
+                else:
+                    payment_id = data.get('id')
+                
+                token = data.get('external_reference')
+                status = data.get('status')
+            except json.JSONDecodeError:
+                # Si falla el JSON, intentar con query params o form data
+                token = request.POST.get("external_reference") or request.GET.get("external_reference")
+                payment_id = request.POST.get("payment_id") or request.GET.get("payment_id") or request.GET.get("data.id")
+                status = request.POST.get("status") or request.GET.get("status")
+        else:
+            # Para POST con form data
+            token = request.POST.get("external_reference") or request.GET.get("external_reference")
+            payment_id = request.POST.get("payment_id") or request.GET.get("payment_id") or request.GET.get("data.id")
+            status = request.POST.get("status") or request.GET.get("status")
     else:
+        # Para GET (redirecciones del usuario)
+        token = request.GET.get("external_reference")
         payment_id = request.GET.get("payment_id")
-        external_reference = request.GET.get("external_reference")
         status = request.GET.get("status")
-        topic = 'redirect'
-        
-        logger.info(f"GET request received: status={status}, payment_id={payment_id}, external_reference={external_reference}")
 
-    # El resto de tu lógica existente...
+    logger.info(f"Webhook called with token={token}, payment_id={payment_id}, status={status}")
+
     try:
-        if not payment_id or not external_reference:
-            logger.error("Missing payment_id or external_reference in hello view")
+        if not payment_id or not token:
+            logger.error("Missing payment_id or token in hello view")
+            if request.method == 'POST':
+                return JsonResponse({'status': 'error', 'message': 'Missing parameters'}, status=400)
             return redirect('home')
 
-        pedido = get_object_or_404(Pedido, token=external_reference)
+        pedido = get_object_or_404(Pedido, token=token)
 
-        # ... (el resto de tu código existente)
+        if not pedido.payment_id:
+            pedido.payment_id = payment_id
+            pedido.save()
+        elif pedido.payment_id != payment_id:
+            logger.error(f"Payment ID mismatch: {pedido.payment_id} != {payment_id}")
+            if request.method == 'POST':
+                return JsonResponse({'status': 'error', 'message': 'Payment ID mismatch'}, status=400)
+            return redirect('home')
+
+        headers = {'Authorization': f'Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}'}
+        ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
+        if not ml_response.ok:
+            logger.error(f"Mercado Pago API error: Status {ml_response.status_code}, Response: {ml_response.text}")
+            if request.method == 'POST':
+                return JsonResponse({'status': 'error', 'message': 'Mercado Pago API error'}, status=500)
+            return redirect('home')
+
+        try:
+            data = ml_response.json()
+        except ValueError:
+            logger.error(f"Invalid JSON response from Mercado Pago: {ml_response.text}")
+            if request.method == 'POST':
+                return JsonResponse({'status': 'error', 'message': 'Invalid JSON response'}, status=500)
+            return redirect('home')
+
+        status = data.get('status', None)
+        if not status:
+            logger.error(f"No status in Mercado Pago response: {data}")
+            if request.method == 'POST':
+                return JsonResponse({'status': 'error', 'message': 'No status in response'}, status=500)
+            return redirect('home')
+
+        channel_layer = get_channel_layer()
+        send_event = async_to_sync(channel_layer.group_send)
+
+        if pedido.estado != 'procesando_pago':
+            logger.warning(f"Pedido {pedido.id} not in procesando_pago state: {pedido.estado}")
+            if request.method == 'POST':
+                return JsonResponse({'status': 'warning', 'message': 'Order not in processing state'})
+            return redirect('home')
+
+        if status == "approved":
+            pedido.estado = 'pendiente'
+            pedido.save()
+            send_event(
+                f"pedidos_restaurante_{pedido.restaurante.id}",
+                {
+                    'type': 'pedido_updated',
+                    'pedido_id': str(pedido.id),
+                    'message': 'Pago confirmado, pedido pendiente'
+                }
+            )
+        elif status in ('pending', 'in_process'):
+            pedido.estado = 'procesando_pago'
+            pedido.save()
+            send_event(
+                f"pedidos_restaurante_{pedido.restaurante.id}",
+                {
+                    'type': 'pedido_updated',
+                    'pedido_id': str(pedido.id),
+                    'message': 'Pedido confirmado, pago pendiente'
+                }
+            )
+        elif status in ("cancelled", "rejected"):
+            pedido.estado = 'error_pago'
+            pedido.motivo_error_pago = "No se pudo procesar el pago"
+            pedido.fecha_error_pago = timezone.now()
+            pedido.save()
+            send_event(
+                f"pedidos_restaurante_{pedido.restaurante.id}",
+                {
+                    'type': 'pedido_updated',
+                    'pedido_id': str(pedido.id),
+                    'message': 'Pago rechazado o cancelado'
+                }
+            )
+
+        # Para webhooks POST, retornar JSON en lugar de redirect
+        if request.method == 'POST':
+            return JsonResponse({
+                'status': 'success', 
+                'message': 'Webhook processed successfully',
+                'order_id': pedido.id,
+                'order_status': pedido.estado
+            })
+
+        # Para GET (redirecciones de usuario), hacer redirect
+        redirect_url = reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])
+        redirect_url += f"?status={status}&external_reference={token}"
+        logger.info(f"Redirecting to: {redirect_url}")
+        return redirect(redirect_url)
 
     except Exception as e:
         logger.error(f"Error in hello view: {str(e)}", exc_info=True)
+        if request.method == 'POST':
+            return JsonResponse({'status': 'error', 'message': str(e)}, status=500)
         return redirect('home')

@@ -2020,13 +2020,20 @@ def hello(request):
             try:
                 data = json.loads(request.body)
                 # Para webhooks de payment
-                if 'data' in data and 'id' in data:
+                if 'data' in data and 'id' in data.get('data', {}):
                     payment_id = data['data']['id']
                 else:
                     payment_id = data.get('id')
                 
                 token = data.get('external_reference')
                 status = data.get('status')
+                
+                # Verificar si es una notificación de merchant_order (que no tiene los datos que necesitamos)
+                topic = data.get('topic')
+                if topic == 'merchant_order':
+                    logger.debug("Merchant order notification received (ignoring)")
+                    return JsonResponse({'status': 'ignored', 'message': 'Merchant order notification'}, status=200)
+                    
             except json.JSONDecodeError:
                 # Si falla el JSON, intentar con query params o form data
                 token = request.POST.get("external_reference") or request.GET.get("external_reference")
@@ -2043,13 +2050,21 @@ def hello(request):
         payment_id = request.GET.get("payment_id")
         status = request.GET.get("status")
 
-    logger.info(f"Webhook called with token={token}, payment_id={payment_id}, status={status}")
+    # Log solo si tenemos al menos algún dato útil
+    if token or payment_id or status:
+        logger.info(f"Webhook called with token={token}, payment_id={payment_id}, status={status}")
+    else:
+        logger.debug("Webhook received without relevant data")
+        if request.method == 'POST':
+            return JsonResponse({'status': 'ignored', 'message': 'No relevant data'}, status=200)
+        return redirect('home')
 
     try:
         if not payment_id or not token:
-            logger.error("Missing payment_id or token in hello view")
+            # Cambiar de ERROR a WARNING para webhooks incompletos esperados
+            logger.warning("Webhook received without payment_id or token (expected for some Mercado Pago notifications)")
             if request.method == 'POST':
-                return JsonResponse({'status': 'error', 'message': 'Missing parameters'}, status=400)
+                return JsonResponse({'status': 'ignored', 'message': 'Incomplete webhook data'}, status=200)
             return redirect('home')
 
         pedido = get_object_or_404(Pedido, token=token)

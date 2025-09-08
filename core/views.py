@@ -1363,6 +1363,21 @@ def confirmacion_pedido(request, nombre_restaurante, token):
 
     try:
         pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
+
+        # SI ES PAGO EN EFECTIVO, MOSTRAR CONFIRMACIÓN DIRECTAMENTE SIN MERCADO PAGO
+        if pedido.metodo_pago == 'efectivo' or status is None:
+            params = {
+                'pedido': pedido,
+                'restaurante': pedido.restaurante,
+                'color_principal': pedido.restaurante.color_principal or '#A3E1BE',
+                'confirmado': True,  # Para efectivo siempre es confirmado
+                'init_point': None,  # No hay link de pago
+                'efectivo': True  # Flag para identificar pago en efectivo
+            }
+            
+            logger.info(f"Rendering confirmation page for EFECTIVO pedido {pedido.numero_pedido}")
+            return render(request, 'core/confirmacion_pedido.html', params)
+        
         items = get_list_or_404(ItemPedido, pedido=pedido)
 
         for item in items:

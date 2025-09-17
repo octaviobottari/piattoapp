@@ -436,17 +436,88 @@ textarea.form-control {
   </div>
 
 
-  <h2>Mercado Pago</h2>
-{% if mp_connected %}
-    <p>Cuenta conectada (User ID: {{ restaurante.mp_user_id }})</p>
-    <form method="post" action="{% url 'disconnect_mp' %}">
-        {% csrf_token %}
-        <button type="submit" class="btn btn-danger">Desconectar Mercado Pago</button>
-    </form>
-{% else %}
-    <p>No conectado. Haz clic para conectar tu cuenta de Mercado Pago.</p>
-    <a href="{% url 'connect_mp' %}" class="btn btn-primary">Conectar con Mercado Pago</a>
-{% endif %}
+<div class="card">
+    <h2>Integración con Mercado Pago</h2>
+    {% if restaurante.mp_access_token %}
+        <p>Cuenta vinculada: Sí (User ID: {{ restaurante.mp_user_id }})</p>
+        <h3>Comisiones de Mercado Pago para Checkout Pro (unificadas para tarjeta de crédito, débito, prepaga, efectivo, cuotas sin tarjeta, dinero en cuenta):</h3>
+        <p>Los costos varían ligeramente por provincia (excluyen IVA 21% y retenciones como Ingresos Brutos, que pueden agregar hasta 5% dependiendo de la provincia). Ejemplos:</p>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Provincias (mayoría, e.g., Buenos Aires, CABA)</th>
+                    <th>Al instante</th>
+                    <th>10 días</th>
+                    <th>18 días</th>
+                    <th>35 días</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Costo base</td>
+                    <td>6,29% + IVA</td>
+                    <td>4,39% + IVA</td>
+                    <td>3,39% + IVA</td>
+                    <td>1,49% + IVA</td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Provincias (e.g., Córdoba)</th>
+                    <th>Al instante</th>
+                    <th>10 días</th>
+                    <th>18 días</th>
+                    <th>35 días</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Costo base</td>
+                    <td>6,53% + IVA</td>
+                    <td>4,56% + IVA</td>
+                    <td>3,52% + IVA</td>
+                    <td>1,55% + IVA</td>
+                </tr>
+            </tbody>
+        </table>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Provincias (e.g., Formosa, Río Negro)</th>
+                    <th>Al instante</th>
+                    <th>10 días</th>
+                    <th>18 días</th>
+                    <th>35 días</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Costo base</td>
+                    <td>6,19% + IVA</td>
+                    <td>4,32% + IVA</td>
+                    <td>3,34% + IVA</td>
+                    <td>1,47% + IVA</td>
+                </tr>
+            </tbody>
+        </table>
+        <h3>Impuestos aplicables:</h3>
+        <ul>
+            <li>IVA: 21% sobre la comisión base.</li>
+            <li>Retenciones provinciales (e.g., Ingresos Brutos): Varían por provincia (0% a 5%), aplicadas sobre el monto total cobrado.</li>
+            <li>Otras retenciones: Dependiendo de tu situación fiscal (e.g., Ganancias, IVA si no estás inscripto).</li>
+        </ul>
+        <p>Nota: Estos valores son para septiembre 2025. Consulta tu cuenta de Mercado Pago para detalles personalizados por tu domicilio y simulaciones exactas. Piatto no cobra comisiones adicionales.</p>
+        <form method="post" action="{% url 'desvincular_mercado_pago' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Desvincular Mercado Pago</button>
+        </form>
+    {% else %}
+        <p>Cuenta vinculada: No</p>
+        <a href="{% url 'vincular_mercado_pago' %}" class="btn btn-primary">Vincular Mercado Pago</a>
+    {% endif %}
+</div>
 
   <!-- QR del Local -->
   <div class="card">

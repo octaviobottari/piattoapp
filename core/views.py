@@ -1169,6 +1169,9 @@ def procesar_pedido(request, restaurante):
                 if not telefono:
                     return JsonResponse({'error': 'El teléfono del cliente es requerido.'}, status=400)
 
+                if metodo_pago == 'mercadopago' and not restaurante.mp_access_token:
+                    return JsonResponse({'error': 'El restaurante no tiene cuenta de Mercado Pago vinculada.'}, status=400)
+
                 # Extract productos
                 productos_raw = request.POST.get('productos', '')
                 if isinstance(productos_raw, list):
@@ -1351,6 +1354,84 @@ def validar_codigo_descuento(request, nombre_restaurante):
         'error': 'Código no válido o no disponible'
     }, status=400)
 
+@login_required
+@never_cache
+@no_cache_view
+def vincular_mercado_pago(request):
+    app_id = settings.MERCADO_PAGO_APP_ID
+    redirect_uri = request.build_absolute_uri(reverse('mercado_pago_callback'))
+    auth_url = f"https://auth.mercadopago.com.ar/authorization?client_id={app_id}&response_type=code&redirect_uri={redirect_uri}"
+    return redirect(auth_url)
+
+@login_required
+@never_cache
+@no_cache_view
+def mercado_pago_callback(request):
+    code = request.GET.get('code')
+    if not code:
+        messages.error(request, 'Error en la vinculación de Mercado Pago.')
+        return redirect('configuraciones')
+
+    url = "https://api.mercadopago.com/oauth/token"
+    data = {
+        'client_id': settings.MERCADO_PAGO_APP_ID,
+        'client_secret': settings.MERCADO_PAGO_CLIENT_SECRET,
+        'grant_type': 'authorization_code',
+        'code': code,
+        'redirect_uri': request.build_absolute_uri(reverse('mercado_pago_callback'))
+    }
+    response = requests.post(url, data=data)
+    if response.status_code == 200:
+        token_data = response.json()
+        restaurante = request.user
+        restaurante.mp_access_token = token_data['access_token']
+        restaurante.mp_refresh_token = token_data['refresh_token']
+        restaurante.mp_user_id = str(token_data['user_id'])
+        restaurante.mp_token_expires_at = timezone.now() + timedelta(seconds=token_data['expires_in'])
+        restaurante.save()
+        messages.success(request, 'Cuenta de Mercado Pago vinculada correctamente.')
+    else:
+        messages.error(request, 'Error al obtener los tokens de Mercado Pago.')
+    return redirect('configuraciones')
+
+@login_required
+@require_POST
+@never_cache
+@no_cache_view
+def desvincular_mercado_pago(request):
+    restaurante = request.user
+    restaurante.mp_access_token = None
+    restaurante.mp_refresh_token = None
+    restaurante.mp_user_id = None
+    restaurante.mp_token_expires_at = None
+    restaurante.save()
+    messages.success(request, 'Cuenta de Mercado Pago desvinculada correctamente.')
+    return redirect('configuraciones')
+
+
+def get_mp_access_token(restaurante):
+    if not restaurante.mp_access_token:
+        raise ValueError("No hay cuenta de Mercado Pago vinculada.")
+    if restaurante.mp_token_expires_at > timezone.now() + timedelta(minutes=5):
+        return restaurante.mp_access_token
+    else:
+        url = "https://api.mercadopago.com/oauth/token"
+        data = {
+            'client_id': settings.MERCADO_PAGO_APP_ID,
+            'client_secret': settings.MERCADO_PAGO_CLIENT_SECRET,
+            'grant_type': 'refresh_token',
+            'refresh_token': restaurante.mp_refresh_token
+        }
+        response = requests.post(url, data=data)
+        if response.status_code == 200:
+            token_data = response.json()
+            restaurante.mp_access_token = token_data['access_token']
+            restaurante.mp_refresh_token = token_data.get('refresh_token', restaurante.mp_refresh_token)
+            restaurante.mp_token_expires_at = timezone.now() + timedelta(seconds=token_data['expires_in'])
+            restaurante.save()
+            return token_data['access_token']
+        else:
+            raise ValueError("Error al refrescar el token de Mercado Pago.")
 
 @never_cache
 @no_cache_view
@@ -1453,7 +1534,8 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         log_body['external_reference'] = str(log_body['external_reference'])
         logger.info(f"Sending request to Mercado Pago: {json.dumps(log_body, indent=2)}")
 
-        headers = {"Authorization": f"Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}"}
+        access_token = get_mp_access_token(pedido.restaurante)
+        headers = {"Authorization": f"Bearer {access_token}"}
 
         response = requests.post("https://api.mercadopago.com/checkout/preferences", json=body, headers=headers)
 
@@ -1496,6 +1578,9 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         logger.info(f"Rendering confirmation page for pedido {pedido.numero_pedido} with init_point: {init_point}")
         return render(request, 'core/confirmacion_pedido.html', params)
 
+    except ValueError as ve:
+        logger.error(f"Error de token en confirmacion_pedido: {str(ve)}")
+        return JsonResponse({'error': 'No se pudo procesar el pago: cuenta de Mercado Pago no vinculada o token inválido.'}, status=400)
     except Exception as e:
         logger.error(f"Unexpected error in confirmacion_pedido: {str(e)}", exc_info=True)
         return JsonResponse({'error': 'Internal server error'}, status=500)
@@ -2094,7 +2179,8 @@ def hello(request):
                 return JsonResponse({'status': 'error', 'message': 'Payment ID mismatch'}, status=400)
             return redirect('home')
 
-        headers = {'Authorization': f'Bearer {settings.MERCADO_PAGO_ACCESS_TOKEN}'}
+        access_token = get_mp_access_token(pedido.restaurante)
+        headers = {'Authorization': f'Bearer {access_token}'}
         ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)
         if not ml_response.ok:
             logger.error(f"Mercado Pago API error: Status {ml_response.status_code}, Response: {ml_response.text}")
@@ -2177,6 +2263,11 @@ def hello(request):
         logger.info(f"Redirecting to: {redirect_url}")
         return redirect(redirect_url)
 
+    except ValueError as ve:
+        logger.error(f"Error de token en hello: {str(ve)}")
+        if request.method == 'POST':
+            return JsonResponse({'status': 'error', 'message': 'No se pudo procesar: cuenta de Mercado Pago no vinculada o token inválido.'}, status=400)
+        return redirect('home')
     except Exception as e:
         logger.error(f"Error in hello view: {str(e)}", exc_info=True)
         if request.method == 'POST':

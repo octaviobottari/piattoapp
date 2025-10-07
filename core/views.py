@@ -35,6 +35,8 @@ from operator import attrgetter
 from django.utils import timezone
 from calendar import month_name
 import qrcode
+import base64
+import hashlib
 import os
 from django.conf import settings
 import io
@@ -1374,44 +1376,77 @@ def validar_codigo_descuento(request, nombre_restaurante):
 @no_cache_view
 def vincular_mercado_pago(request):
     app_id = settings.MERCADO_PAGO_APP_ID
+    # Generar code_verifier (string aleatorio de 43-128 caracteres)
+    code_verifier = base64.urlsafe_b64encode(os.urandom(32)).decode('utf-8').rstrip('=')
+    # Generar code_challenge (SHA-256 del code_verifier)
+    code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode('utf-8')).digest()).decode('utf-8').rstrip('=')
+    # Almacenar code_verifier en la sesión
+    request.session['mp_code_verifier'] = code_verifier
     if settings.DEBUG:
         redirect_uri = request.build_absolute_uri(reverse('mercado_pago_callback'))
     else:
         redirect_uri = f"https://piattoweb.com{reverse('mercado_pago_callback')}"
-    auth_url = f"https://auth.mercadopago.com.ar/authorization?client_id={app_id}&response_type=code&redirect_uri={redirect_uri}"
+    auth_url = (
+        f"https://auth.mercadopago.com.ar/authorization?"
+        f"client_id={app_id}&"
+        f"response_type=code&"
+        f"redirect_uri={redirect_uri}&"
+        f"code_challenge={code_challenge}&"
+        f"code_challenge_method=S256"
+    )
+    logger.info(f"Generando URL de autorización con redirect_uri: {redirect_uri}, code_challenge: {code_challenge}")
     return redirect(auth_url)
 
 @login_required
 @never_cache
 @no_cache_view
 def mercado_pago_callback(request):
+    logger.info(f"Callback recibido con GET: {request.GET}")
     code = request.GET.get('code')
     if not code:
+        logger.error("No se recibió el código de autorización")
         messages.error(request, 'Error en la vinculación de Mercado Pago.')
         return redirect('configuraciones')
 
+    code_verifier = request.session.get('mp_code_verifier')
+    if not code_verifier:
+        logger.error("No se encontró code_verifier en la sesión")
+        messages.error(request, 'Error interno al procesar la vinculación.')
+        return redirect('configuraciones')
+
     url = "https://api.mercadopago.com/oauth/token"
+    redirect_uri = request.build_absolute_uri(reverse('mercado_pago_callback'))
+    logger.info(f"Enviando solicitud a Mercado Pago con redirect_uri: {redirect_uri}, code_verifier: {code_verifier}")
     data = {
         'client_id': settings.MERCADO_PAGO_APP_ID,
         'client_secret': settings.MERCADO_PAGO_CLIENT_SECRET,
         'grant_type': 'authorization_code',
         'code': code,
-        'redirect_uri': request.build_absolute_uri(reverse('mercado_pago_callback'))
+        'redirect_uri': redirect_uri,
+        'code_verifier': code_verifier
     }
     response = requests.post(url, data=data)
+    logger.info(f"Respuesta de Mercado Pago: status={response.status_code}, texto={response.text}")
     if response.status_code == 200:
-        token_data = response.json()
-        restaurante = request.user
-        restaurante.mp_access_token = token_data['access_token']
-        restaurante.mp_refresh_token = token_data['refresh_token']
-        restaurante.mp_user_id = str(token_data['user_id'])
-        restaurante.mp_token_expires_at = timezone.now() + timedelta(seconds=token_data['expires_in'])
-        restaurante.save()
-        messages.success(request, 'Cuenta de Mercado Pago vinculada correctamente.')
+        try:
+            token_data = response.json()
+            logger.info(f"Datos de token recibidos: {token_data}")
+            restaurante = request.user
+            restaurante.mp_access_token = token_data.get('access_token')
+            restaurante.mp_refresh_token = token_data.get('refresh_token')
+            restaurante.mp_user_id = str(token_data.get('user_id', ''))
+            restaurante.mp_token_expires_at = timezone.now() + timedelta(seconds=token_data.get('expires_in', 0))
+            restaurante.save()
+            # Limpiar code_verifier de la sesión después de usarlo
+            del request.session['mp_code_verifier']
+            logger.info(f"Tokens guardados para restaurante {restaurante.id}")
+            messages.success(request, 'Cuenta de Mercado Pago vinculada correctamente.')
+        except (KeyError, ValueError) as e:
+            logger.error(f"Error al procesar token_data: {str(e)}")
+            messages.error(request, 'Error al procesar los datos de Mercado Pago.')
     else:
-        error_msg = f"Error al obtener los tokens de Mercado Pago. Status: {response.status_code}, Response: {response.text}"
-        logger.error(error_msg)
-        messages.error(request, 'Error al vincular la cuenta de Mercado Pago. Consulta los logs para más detalles.')
+        logger.error(f"Error en la API de Mercado Pago: {response.text}")
+        messages.error(request, 'Error al obtener los tokens de Mercado Pago.')
     return redirect('configuraciones')
 
 @login_required

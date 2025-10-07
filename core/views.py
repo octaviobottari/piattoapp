@@ -1374,7 +1374,10 @@ def validar_codigo_descuento(request, nombre_restaurante):
 @no_cache_view
 def vincular_mercado_pago(request):
     app_id = settings.MERCADO_PAGO_APP_ID
-    redirect_uri = request.build_absolute_uri(reverse('mercado_pago_callback'))
+    if settings.DEBUG:
+        redirect_uri = request.build_absolute_uri(reverse('mercado_pago_callback'))
+    else:
+        redirect_uri = f"https://piattoweb.com{reverse('mercado_pago_callback')}"
     auth_url = f"https://auth.mercadopago.com.ar/authorization?client_id={app_id}&response_type=code&redirect_uri={redirect_uri}"
     return redirect(auth_url)
 
@@ -1462,6 +1465,18 @@ def confirmacion_pedido(request, nombre_restaurante, token):
     try:
         pedido = get_object_or_404(Pedido, token=token, restaurante__username=nombre_restaurante)
 
+        if pedido.metodo_pago == 'alias':
+            params = {
+                'pedido': pedido,
+                'restaurante': pedido.restaurante,
+                'color_principal': pedido.restaurante.color_principal or '#A3E1BE',
+                'confirmado': True,
+                'init_point': None,
+                'alias': True  # Nuevo parámetro para identificar pago por alias
+            }
+            logger.info(f"Rendering confirmation page for ALIAS pedido {pedido.numero_pedido}")
+            return render(request, 'core/confirmacion_pedido.html', params)
+        
         # SOLO PARA EFECTIVO - condición corregida
         if pedido.metodo_pago == 'efectivo':
             params = {

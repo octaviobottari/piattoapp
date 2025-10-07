@@ -116,6 +116,38 @@
             border: none;
             cursor: pointer;
         }
+        .alert-info {
+            background-color: #e6f3ff;
+            border: 1px solid #b3d9ff;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+            text-align: left;
+        }
+        .alert-info h5 {
+            color: #0066cc;
+            margin-bottom: 1rem;
+            font-weight: 700;
+        }
+        .alert-info .text-primary {
+            color: #0066cc !important;
+            font-weight: 700;
+            font-size: 1.2rem;
+        }
+        .alert-success {
+            background-color: #e6f4ea;
+            border: 1px solid #c3e6cb;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        .alert-warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
         @media (max-width: 576px) {
             .confirmation-container {
                 padding: 1.5rem 0.75rem;
@@ -137,6 +169,9 @@
                 padding: 0.65rem 1.5rem;
                 font-size: 17px;
             }
+            .alert-info, .alert-success {
+                padding: 1rem;
+            }
         }
     </style>
 </head>
@@ -153,10 +188,12 @@
         <button class="close-btn" aria-label="Cerrar" onclick="window.location.href='{% url 'restaurante_publico' restaurante.username %}'">
             <i class="fas fa-times"></i>
         </button>
+        
         <h1 class="confirmation-header">
             Realizamos con éxito tu <strong><br>pedido #{{ pedido.numero_pedido }}</strong>! 
             El estado es <strong>{{ pedido.get_estado_display }}</strong>
         </h1>
+        
         {% if restaurante.logo %}
             <img src="{{ restaurante.logo.url }}" alt="Logo de {{ restaurante.nombre_local }}" class="restaurant-logo">
         {% else %}
@@ -164,41 +201,73 @@
                 {{ restaurante.nombre_local|first }}
             </div>
         {% endif %}
-        <p class="confirmation-text">
-            {% if confirmado %}
-                El restaurante se pondrá en <br> contacto con vos de 1-5 minutos!
-            {% else %}
-                Por favor, completa el pago para confirmar tu pedido.
-            {% endif %}
-        </p>
-        {% if error %}
-            <p class="confirmation-text" style="color: #ff0000;">
-                Hubo un error con el pago. Por favor, intenta de nuevo.
-            </p>
-        {% endif %}
+        
+        <!-- SECCIÓN PARA PAGO POR ALIAS -->
         {% if pedido.metodo_pago == 'alias' and restaurante.alias_cbu %}
-<div class="alert alert-info mt-4">
-    <h5 class="alert-heading">Información para el Pago</h5>
-    <p class="mb-2">Por favor, realiza la transferencia al siguiente alias/CBU:</p>
-    <div class="text-center">
-        <h4 class="text-primary">{{ restaurante.alias_cbu }}</h4>
-        <p class="mb-2"><strong>Monto a transferir: ${{ pedido.total|floatformat:2 }}</strong></p>
-    </div>
-    <hr>
-    <p class="mb-0">
-        <strong>Una vez realizada la transferencia:</strong><br>
-        1. Toma un screenshot del comprobante<br>
-        2. Envíalo por WhatsApp al restaurante<br>
-        3. Tu pedido será confirmado y preparado
-    </p>
-</div>
-{% endif %}
+            <div class="alert alert-info">
+                <h5 class="alert-heading">Información para el Pago por Transferencia</h5>
+                <p class="mb-2">Por favor, realiza la transferencia al siguiente alias/CBU:</p>
+                <div class="text-center">
+                    <h4 class="text-primary">{{ restaurante.alias_cbu }}</h4>
+                    <p class="mb-2"><strong>Monto a transferir: ${{ pedido.total|floatformat:2 }}</strong></p>
+                </div>
+                <hr>
+                <p class="mb-0">
+                    <strong>Una vez realizada la transferencia:</strong><br>
+                    1. Toma un screenshot del comprobante<br>
+                    2. Envíalo por WhatsApp al restaurante al <strong>{{ restaurante.telefono }}</strong><br>
+                    3. Tu pedido será confirmado y preparado
+                </p>
+            </div>
+
+            <div class="alert alert-warning">
+                <small>
+                    <strong>Nota:</strong> Tu pedido estará en estado "pendiente" hasta que el restaurante confirme la recepción del pago.
+                </small>
+            </div>
+
+            <p class="confirmation-text">
+                El restaurante se pondrá en contacto contigo una vez confirmado el pago.
+            </p>
+
+        <!-- SECCIÓN PARA PAGO EN EFECTIVO -->
+        {% elif pedido.metodo_pago == 'efectivo' %}
+            <div class="alert alert-success">
+                <h5 class="alert-heading">¡Pedido Confirmado!</h5>
+                <p>Tu pedido ha sido recibido correctamente. Paga en efectivo al momento de la entrega/retiro.</p>
+                <hr>
+                <p class="mb-0"><strong>Total a pagar: ${{ pedido.total|floatformat:2 }}</strong></p>
+            </div>
+
+            <p class="confirmation-text">
+                El restaurante se pondrá en <br> contacto con vos en 1-5 minutos!
+            </p>
+
+        <!-- SECCIÓN PARA MERCADO PAGO -->
+        {% else %}
+            <p class="confirmation-text">
+                {% if confirmado %}
+                    El restaurante se pondrá en <br> contacto con vos de 1-5 minutos!
+                {% else %}
+                    Por favor, completa el pago para confirmar tu pedido.
+                {% endif %}
+            </p>
+            
+            {% if error %}
+                <p class="confirmation-text" style="color: #ff0000;">
+                    Hubo un error con el pago. Por favor, intenta de nuevo.
+                </p>
+            {% endif %}
+        {% endif %}
+
         <a href="tel:{{ pedido.telefono }}" class="contact-link">
             ¿Necesitás cambiar algo o tenés alguna duda? <br><span style="color: #10B981;">{{ restaurante.telefono }}</span>
         </a>
+        
         <a href="https://wa.me/54{{ restaurante.telefono|urlencode }}?text={{ 'Hola, tengo una consulta sobre mi pedido #'|urlencode }}{{ pedido.numero_pedido|urlencode }}" class="whatsapp-link">
             Contactar por WhatsApp
         </a>
+        
         <a href="{% url 'restaurante_publico' restaurante.username %}" class="btn btn-primary-custom">
             Volver a pedir
         </a>

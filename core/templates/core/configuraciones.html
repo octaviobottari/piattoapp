@@ -235,6 +235,33 @@ textarea.form-control {
     font-weight: bold;
 }
 
+/* Nuevos estilos para métodos de pago deshabilitados */
+.payment-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.payment-disabled-message {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 5px;
+    padding: 10px;
+    margin-top: 10px;
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+.mercado-pago-disabled {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.mercado-pago-disabled .btn {
+    background-color: #6c757d !important;
+    border-color: #6c757d !important;
+    cursor: not-allowed;
+}
+
 /* Responsividad */
 @media (max-width: 768px) {
     .container {
@@ -326,35 +353,35 @@ textarea.form-control {
         <!-- Meta Tags -->
         <h6 class="mt-4">Optimización para Buscadores (SEO)</h6>
         <div class="mb-3">
-  <label class="form-label">Meta Título</label>
-  {{ config_form.meta_title }}
-  <small class="text-muted">Título que aparece en Google (máx. 60 caracteres, {{ config_form.meta_title.value|default:''|length }} usados).</small>
-  <small id="meta-title-warning" class="text-danger" style="display: none;">El título excede los 60 caracteres.</small>
-</div>
-<div class="mb-3">
-  <label class="form-label">Meta Descripción</label>
-  {{ config_form.meta_description }}
-  <small class="text-muted">Descripción que aparece en Google (máx. 160 caracteres, {{ config_form.meta_description.value|default:''|length }} usados).</small>
-  <small id="meta-description-warning" class="text-danger" style="display: none;">La descripción excede los 160 caracteres.</small>
-</div>
-<div class="mb-3">
-  <label class="form-label">Meta Palabras Clave</label>
-  {{ config_form.meta_keywords }}
-  <small class="text-muted">Palabras clave separadas por comas (ej. comida, delivery, {{ restaurante.nombre_local|lower }}).</small>
-</div>
-<!-- Vista previa de SEO -->
-<div class="card mt-3">
-  <div class="card-header">
-    <h5 class="mb-0">Vista Previa de SEO</h5>
-  </div>
-  <div class="card-body">
-    <div class="seo-preview">
-      <p class="seo-title" id="seo-title-preview">{{ restaurante.meta_title|default:restaurante.nombre_local }} | Piatto</p>
-      <p class="seo-url">https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}</p>
-      <p class="seo-description" id="seo-description-preview">{{ restaurante.meta_description|default:'Disfruta de los mejores platos de ' }}{{ restaurante.nombre_local }} con entrega rápida.</p>
-    </div>
-  </div>
-</div>
+          <label class="form-label">Meta Título</label>
+          {{ config_form.meta_title }}
+          <small class="text-muted">Título que aparece en Google (máx. 60 caracteres, {{ config_form.meta_title.value|default:''|length }} usados).</small>
+          <small id="meta-title-warning" class="text-danger" style="display: none;">El título excede los 60 caracteres.</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Meta Descripción</label>
+          {{ config_form.meta_description }}
+          <small class="text-muted">Descripción que aparece en Google (máx. 160 caracteres, {{ config_form.meta_description.value|default:''|length }} usados).</small>
+          <small id="meta-description-warning" class="text-danger" style="display: none;">La descripción excede los 160 caracteres.</small>
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Meta Palabras Clave</label>
+          {{ config_form.meta_keywords }}
+          <small class="text-muted">Palabras clave separadas por comas (ej. comida, delivery, {{ restaurante.nombre_local|lower }}).</small>
+        </div>
+        <!-- Vista previa de SEO -->
+        <div class="card mt-3">
+          <div class="card-header">
+            <h5 class="mb-0">Vista Previa de SEO</h5>
+          </div>
+          <div class="card-body">
+            <div class="seo-preview">
+              <p class="seo-title" id="seo-title-preview">{{ restaurante.meta_title|default:restaurante.nombre_local }} | Piatto</p>
+              <p class="seo-url">https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}</p>
+              <p class="seo-description" id="seo-description-preview">{{ restaurante.meta_description|default:'Disfruta de los mejores platos de ' }}{{ restaurante.nombre_local }} con entrega rápida.</p>
+            </div>
+          </div>
+        </div>
         <!-- Dirección -->
         <div class="mb-3">
           <label class="form-label">Dirección</label>
@@ -435,92 +462,8 @@ textarea.form-control {
     </div>
   </div>
 
-
-<div class="card">
-    <h2>Integración con Mercado Pago</h2>
-    {% if restaurante.mp_access_token %}
-        <p>Cuenta vinculada: Sí (User ID: {{ restaurante.mp_user_id }})</p>
-        <h3>Comisiones de Mercado Pago para Checkout Pro (unificadas para tarjeta de crédito, débito, prepaga, efectivo, cuotas sin tarjeta, dinero en cuenta):</h3>
-        <p>Los costos varían ligeramente por provincia (excluyen IVA 21% y retenciones como Ingresos Brutos, que pueden agregar hasta 5% dependiendo de la provincia). Ejemplos:</p>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Provincias (mayoría, e.g., Buenos Aires, CABA)</th>
-                    <th>Al instante</th>
-                    <th>10 días</th>
-                    <th>18 días</th>
-                    <th>35 días</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Costo base</td>
-                    <td>6,29% + IVA</td>
-                    <td>4,39% + IVA</td>
-                    <td>3,39% + IVA</td>
-                    <td>1,49% + IVA</td>
-                </tr>
-            </tbody>
-        </table>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Provincias (e.g., Córdoba)</th>
-                    <th>Al instante</th>
-                    <th>10 días</th>
-                    <th>18 días</th>
-                    <th>35 días</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Costo base</td>
-                    <td>6,53% + IVA</td>
-                    <td>4,56% + IVA</td>
-                    <td>3,52% + IVA</td>
-                    <td>1,55% + IVA</td>
-                </tr>
-            </tbody>
-        </table>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Provincias (e.g., Formosa, Río Negro)</th>
-                    <th>Al instante</th>
-                    <th>10 días</th>
-                    <th>18 días</th>
-                    <th>35 días</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>Costo base</td>
-                    <td>6,19% + IVA</td>
-                    <td>4,32% + IVA</td>
-                    <td>3,34% + IVA</td>
-                    <td>1,47% + IVA</td>
-                </tr>
-            </tbody>
-        </table>
-        <h3>Impuestos aplicables:</h3>
-        <ul>
-            <li>IVA: 21% sobre la comisión base.</li>
-            <li>Retenciones provinciales (e.g., Ingresos Brutos): Varían por provincia (0% a 5%), aplicadas sobre el monto total cobrado.</li>
-            <li>Otras retenciones: Dependiendo de tu situación fiscal (e.g., Ganancias, IVA si no estás inscripto).</li>
-        </ul>
-        <p>Nota: Estos valores son para septiembre 2025. Consulta tu cuenta de Mercado Pago para detalles personalizados por tu domicilio y simulaciones exactas. Piatto no cobra comisiones adicionales.</p>
-        <form method="post" action="{% url 'desvincular_mercado_pago' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-danger">Desvincular Mercado Pago</button>
-        </form>
-    {% else %}
-        <p>Cuenta vinculada: No</p>
-        <a href="{% url 'vincular_mercado_pago' %}" class="btn btn-primary">Vincular Mercado Pago</a>
-    {% endif %}
-</div>
-
-<!-- Sección Métodos de Pago -->
-<div class="card">
+  <!-- Sección Métodos de Pago -->
+  <div class="card">
     <div class="card-header">
         <h5 class="mb-0">Configuración de Métodos de Pago</h5>
     </div>
@@ -529,21 +472,28 @@ textarea.form-control {
             {% csrf_token %}
             
             <!-- Mercado Pago -->
-            <div class="mb-3 form-check form-switch">
+            <div class="mb-3 form-check form-switch {% if restaurante.metodo_pago_alias %}payment-disabled{% endif %}" id="mercado-pago-switch">
                 <input class="form-check-input" type="checkbox" name="metodo_pago_mercadopago" 
-                       id="metodo_pago_mercadopago" {% if restaurante.metodo_pago_mercadopago %}checked{% endif %}>
+                       id="metodo_pago_mercadopago" {% if restaurante.metodo_pago_mercadopago %}checked{% endif %}
+                       {% if restaurante.metodo_pago_alias %}disabled{% endif %}>
                 <label class="form-check-label" for="metodo_pago_mercadopago">
                     Habilitar Mercado Pago
                 </label>
                 <small class="form-text text-muted d-block">
                     Los clientes podrán pagar con tarjetas, efectivo y otros métodos a través de Mercado Pago.
                 </small>
+                {% if restaurante.metodo_pago_alias %}
+                <div class="payment-disabled-message">
+                    <i class="fas fa-info-circle"></i> Desactiva el pago por Alias para habilitar Mercado Pago.
+                </div>
+                {% endif %}
             </div>
 
             <!-- Pago por Alias -->
-            <div class="mb-3 form-check form-switch">
+            <div class="mb-3 form-check form-switch {% if restaurante.metodo_pago_mercadopago %}payment-disabled{% endif %}" id="alias-switch">
                 <input class="form-check-input" type="checkbox" name="metodo_pago_alias" 
                        id="metodo_pago_alias" {% if restaurante.metodo_pago_alias %}checked{% endif %}
+                       {% if restaurante.metodo_pago_mercadopago %}disabled{% endif %}
                        onchange="toggleAliasField()">
                 <label class="form-check-label" for="metodo_pago_alias">
                     Habilitar Pago por Alias/CBU
@@ -551,6 +501,11 @@ textarea.form-control {
                 <small class="form-text text-muted d-block">
                     Los clientes podrán pagar mediante transferencia bancaria.
                 </small>
+                {% if restaurante.metodo_pago_mercadopago %}
+                <div class="payment-disabled-message">
+                    <i class="fas fa-info-circle"></i> Desactiva Mercado Pago para habilitar el pago por Alias.
+                </div>
+                {% endif %}
             </div>
 
             <!-- Campo Alias/CBU -->
@@ -567,20 +522,102 @@ textarea.form-control {
             <button type="submit" class="btn btn-success">Guardar Configuración de Pagos</button>
         </form>
     </div>
-</div>
+  </div>
 
-<script>
-function toggleAliasField() {
-    const aliasCheckbox = document.getElementById('metodo_pago_alias');
-    const aliasField = document.getElementById('alias-field');
-    
-    if (aliasCheckbox.checked) {
-        aliasField.style.display = 'block';
-    } else {
-        aliasField.style.display = 'none';
-    }
-}
-</script>
+  <!-- Integración con Mercado Pago -->
+  <div class="card {% if not restaurante.metodo_pago_mercadopago %}mercado-pago-disabled{% endif %}" id="mercado-pago-section">
+    <div class="card-header">
+        <h5 class="mb-0">Integración con Mercado Pago</h5>
+    </div>
+    <div class="card-body">
+        {% if not restaurante.metodo_pago_mercadopago %}
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i> 
+                La integración con Mercado Pago está deshabilitada. Activa "Habilitar Mercado Pago" en la sección de Métodos de Pago para usar esta funcionalidad.
+            </div>
+        {% else %}
+            {% if restaurante.mp_access_token %}
+                <p>Cuenta vinculada: Sí (User ID: {{ restaurante.mp_user_id }})</p>
+                <h3>Comisiones de Mercado Pago para Checkout Pro (unificadas para tarjeta de crédito, débito, prepaga, efectivo, cuotas sin tarjeta, dinero en cuenta):</h3>
+                <p>Los costos varían ligeramente por provincia (excluyen IVA 21% y retenciones como Ingresos Brutos, que pueden agregar hasta 5% dependiendo de la provincia). Ejemplos:</p>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Provincias (mayoría, e.g., Buenos Aires, CABA)</th>
+                            <th>Al instante</th>
+                            <th>10 días</th>
+                            <th>18 días</th>
+                            <th>35 días</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Costo base</td>
+                            <td>6,29% + IVA</td>
+                            <td>4,39% + IVA</td>
+                            <td>3,39% + IVA</td>
+                            <td>1,49% + IVA</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Provincias (e.g., Córdoba)</th>
+                            <th>Al instante</th>
+                            <th>10 días</th>
+                            <th>18 días</th>
+                            <th>35 días</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Costo base</td>
+                            <td>6,53% + IVA</td>
+                            <td>4,56% + IVA</td>
+                            <td>3,52% + IVA</td>
+                            <td>1,55% + IVA</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Provincias (e.g., Formosa, Río Negro)</th>
+                            <th>Al instante</th>
+                            <th>10 días</th>
+                            <th>18 días</th>
+                            <th>35 días</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Costo base</td>
+                            <td>6,19% + IVA</td>
+                            <td>4,32% + IVA</td>
+                            <td>3,34% + IVA</td>
+                            <td>1,47% + IVA</td>
+                        </tr>
+                    </tbody>
+                </table>
+                <h3>Impuestos aplicables:</h3>
+                <ul>
+                    <li>IVA: 21% sobre la comisión base.</li>
+                    <li>Retenciones provinciales (e.g., Ingresos Brutos): Varían por provincia (0% a 5%), aplicadas sobre el monto total cobrado.</li>
+                    <li>Otras retenciones: Dependiendo de tu situación fiscal (e.g., Ganancias, IVA si no estás inscripto).</li>
+                </ul>
+                <p>Nota: Estos valores son para septiembre 2025. Consulta tu cuenta de Mercado Pago para detalles personalizados por tu domicilio y simulaciones exactas. Piatto no cobra comisiones adicionales.</p>
+                <form method="post" action="{% url 'desvincular_mercado_pago' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Desvincular Mercado Pago</button>
+                </form>
+            {% else %}
+                <p>Cuenta vinculada: No</p>
+                <a href="{% url 'vincular_mercado_pago' %}" class="btn btn-primary">Vincular Mercado Pago</a>
+            {% endif %}
+        {% endif %}
+    </div>
+  </div>
 
   <!-- QR del Local -->
   <div class="card">
@@ -617,216 +654,268 @@ function toggleAliasField() {
 </div>
 
 <script>
-  // Discount codes handling
-  document.getElementById('descuentoForm').addEventListener('submit', function(e) {
+function toggleAliasField() {
+    const aliasCheckbox = document.getElementById('metodo_pago_alias');
+    const aliasField = document.getElementById('alias-field');
+    
+    if (aliasCheckbox.checked) {
+        aliasField.style.display = 'block';
+    } else {
+        aliasField.style.display = 'none';
+    }
+}
+
+// Validación de exclusividad entre métodos de pago
+document.addEventListener('DOMContentLoaded', function() {
+    const mercadoPagoSwitch = document.getElementById('metodo_pago_mercadopago');
+    const aliasSwitch = document.getElementById('metodo_pago_alias');
+    const mercadoPagoSection = document.getElementById('mercado-pago-section');
+    const mercadoPagoSwitchContainer = document.getElementById('mercado-pago-switch');
+    const aliasSwitchContainer = document.getElementById('alias-switch');
+
+    function updatePaymentMethodsState() {
+        // Si Mercado Pago está activado, deshabilitar Alias
+        if (mercadoPagoSwitch.checked) {
+            aliasSwitch.disabled = true;
+            aliasSwitchContainer.classList.add('payment-disabled');
+        } else {
+            aliasSwitch.disabled = false;
+            aliasSwitchContainer.classList.remove('payment-disabled');
+        }
+
+        // Si Alias está activado, deshabilitar Mercado Pago
+        if (aliasSwitch.checked) {
+            mercadoPagoSwitch.disabled = true;
+            mercadoPagoSwitchContainer.classList.add('payment-disabled');
+        } else {
+            mercadoPagoSwitch.disabled = false;
+            mercadoPagoSwitchContainer.classList.remove('payment-disabled');
+        }
+
+        // Actualizar estado de la sección de Mercado Pago
+        if (mercadoPagoSwitch.checked) {
+            mercadoPagoSection.classList.remove('mercado-pago-disabled');
+        } else {
+            mercadoPagoSection.classList.add('mercado-pago-disabled');
+        }
+    }
+
+    // Inicializar estado
+    updatePaymentMethodsState();
+
+    // Escuchar cambios en los switches
+    mercadoPagoSwitch.addEventListener('change', updatePaymentMethodsState);
+    aliasSwitch.addEventListener('change', updatePaymentMethodsState);
+});
+
+// Discount codes handling
+document.getElementById('descuentoForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const formData = new FormData(this);
     fetch("{% url 'agregar_codigo_descuento' %}", {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'X-CSRFToken': '{{ csrf_token }}'
-      }
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}'
+        }
     })
     .then(response => response.json())
     .then(data => {
-      if (data.success) {
-        const listaCodigos = document.getElementById('listaCodigos');
-        const noCodigosMsg = listaCodigos.querySelector('.text-muted');
-        if (noCodigosMsg) noCodigosMsg.remove();
-        const ul = listaCodigos.querySelector('ul') || document.createElement('ul');
-        ul.classList.add('list-group');
-        const li = document.createElement('li');
-        li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
-        li.innerHTML = `${data.codigo.nombre} - ${data.codigo.porcentaje}% <button class="btn btn-sm btn-danger eliminar-codigo" data-codigo="${data.codigo.nombre}">Eliminar</button>`;
-        ul.appendChild(li);
-        if (!listaCodigos.querySelector('ul')) listaCodigos.appendChild(ul);
-        document.getElementById('descuentoForm').reset();
-      } else {
-        alert('Error: ' + (data.error || 'No se pudo añadir el código.'));
-      }
+        if (data.success) {
+            const listaCodigos = document.getElementById('listaCodigos');
+            const noCodigosMsg = listaCodigos.querySelector('.text-muted');
+            if (noCodigosMsg) noCodigosMsg.remove();
+            const ul = listaCodigos.querySelector('ul') || document.createElement('ul');
+            ul.classList.add('list-group');
+            const li = document.createElement('li');
+            li.classList.add('list-group-item', 'd-flex', 'justify-content-between', 'align-items-center');
+            li.innerHTML = `${data.codigo.nombre} - ${data.codigo.porcentaje}% <button class="btn btn-sm btn-danger eliminar-codigo" data-codigo="${data.codigo.nombre}">Eliminar</button>`;
+            ul.appendChild(li);
+            if (!listaCodigos.querySelector('ul')) listaCodigos.appendChild(ul);
+            document.getElementById('descuentoForm').reset();
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo añadir el código.'));
+        }
     })
     .catch(error => {
-      console.error('Error:', error);
-      alert('Ocurrió un error al añadir el código.');
+        console.error('Error:', error);
+        alert('Ocurrió un error al añadir el código.');
     });
-  });
+});
 
-  document.addEventListener('click', function(e) {
+document.addEventListener('click', function(e) {
     if (e.target.classList.contains('eliminar-codigo')) {
-      const nombreCodigo = e.target.dataset.codigo;
-      if (confirm(`¿Eliminar el código ${nombreCodigo}?`)) {
-        fetch("{% url 'eliminar_codigo_descuento' %}", {
-          method: 'POST',
-          body: new URLSearchParams({ 'nombre_codigo': nombreCodigo }),
-          headers: {
-            'X-CSRFToken': '{{ csrf_token }}',
-            'Content-Type': 'application/x-www-form-urlencoded'
-          }
-        })
-        .then(response => response.json())
-        .then(data => {
-          if (data.success) {
-            e.target.parentElement.remove();
-            const listaCodigos = document.getElementById('listaCodigos');
-            if (!listaCodigos.querySelector('li')) {
-              listaCodigos.innerHTML = '<p class="text-muted">No hay códigos de descuento creados.</p>';
-            }
-          } else {
-            alert('Error: ' + (data.error || 'No se pudo eliminar el código.'));
-          }
-        })
-        .catch(error => {
-          console.error('Error:', error);
-          alert('Ocurrió un error al eliminar el código.');
-        });
-      }
+        const nombreCodigo = e.target.dataset.codigo;
+        if (confirm(`¿Eliminar el código ${nombreCodigo}?`)) {
+            fetch("{% url 'eliminar_codigo_descuento' %}", {
+                method: 'POST',
+                body: new URLSearchParams({ 'nombre_codigo': nombreCodigo }),
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    e.target.parentElement.remove();
+                    const listaCodigos = document.getElementById('listaCodigos');
+                    if (!listaCodigos.querySelector('li')) {
+                        listaCodigos.innerHTML = '<p class="text-muted">No hay códigos de descuento creados.</p>';
+                    }
+                } else {
+                    alert('Error: ' + (data.error || 'No se pudo eliminar el código.'));
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Ocurrió un error al eliminar el código.');
+            });
+        }
     }
-  });
+});
 
- // PDF Download Handler
-  document.getElementById('downloadPdf').addEventListener('click', function() {
+// PDF Download Handler
+document.getElementById('downloadPdf').addEventListener('click', function() {
     const qrCard = document.querySelector('.card:last-child');
     const qrImage = document.getElementById('qrImage');
     const restaurantName = "{{ restaurante.nombre_local|default:'default' }}".replace(/ /g, '-').toLowerCase();
     const restaurantSlug = "{{ restaurante.nombre_local|default:'nombrerestaurante'|lower|slugify }}";
 
     if (!qrImage || !qrImage.src) {
-      alert('No se encontró la imagen QR. Asegúrate de que el QR esté generado.');
-      return;
+        alert('No se encontró la imagen QR. Asegúrate de que el QR esté generado.');
+        return;
     }
 
     const loadImageAsDataURL = (src) => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "Anonymous"; // Ensure this is set
-        img.onload = () => {
-            console.log(`Imagen cargada exitosamente: ${src}`);
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = (err) => {
-            console.error(`Error al cargar imagen: ${src}`, err);
-            reject(new Error(`No se pudo cargar la imagen: ${src}`));
-        };
-        img.src = src;
-    });
-};
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.crossOrigin = "Anonymous";
+            img.onload = () => {
+                console.log(`Imagen cargada exitosamente: ${src}`);
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            };
+            img.onerror = (err) => {
+                console.error(`Error al cargar imagen: ${src}`, err);
+                reject(new Error(`No se pudo cargar la imagen: ${src}`));
+            };
+            img.src = src;
+        });
+    };
 
-    // URLs absolutas para las imágenes
     const qrImageUrl = new URL(qrImage.src, window.location.origin).href;
     const logoImageUrl = new URL('https://piatto-media-2025.s3.us-east-2.amazonaws.com/media/images/piatto-logo-org.png', window.location.origin).href;
 
     console.log('Intentando cargar imágenes para PDF:', { qrImageUrl, logoImageUrl });
 
     Promise.all([
-      loadImageAsDataURL(qrImageUrl).catch(err => {
-        console.error('Error al cargar imagen QR:', err);
-        alert('No se pudo cargar la imagen QR. Intentando generar PDF sin QR.');
-        return null;
-      }),
-      loadImageAsDataURL(logoImageUrl).catch(err => {
-        console.error('Error al cargar logo de Piatto:', err);
-        return null; // Continúa sin el logo
-      })
+        loadImageAsDataURL(qrImageUrl).catch(err => {
+            console.error('Error al cargar imagen QR:', err);
+            alert('No se pudo cargar la imagen QR. Intentando generar PDF sin QR.');
+            return null;
+        }),
+        loadImageAsDataURL(logoImageUrl).catch(err => {
+            console.error('Error al cargar logo de Piatto:', err);
+            return null;
+        })
     ]).then(([qrDataUrl, logoDataUrl]) => {
-      if (!qrDataUrl) {
-        alert('No se pudo cargar la imagen QR. No se puede generar el PDF.');
-        return;
-      }
-
-      const element = document.createElement('div');
-      element.style.textAlign = 'center';
-      element.style.backgroundColor = 'white';
-      element.style.padding = '20px';
-      element.style.borderRadius = '10px';
-      element.style.width = '400px';
-      element.style.height = '650px';
-      element.style.display = 'flex';
-      element.style.flexDirection = 'column';
-      element.style.justifyContent = 'space-between';
-      element.style.alignItems = 'center';
-      element.style.margin = '0 auto';
-      element.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.08)';
-      element.style.fontFamily = 'Arial, sans-serif';
-
-      element.innerHTML = `
-        <div style="padding: 1.75rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
-          <div style="text-align: center; background-color: white; border-radius: 10px; width: 100%; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
-            <div style="text-align: center; margin-bottom: 15px;">
-              <h2 style="font-size: 24px; font-weight: bold; color: #000; margin: 0;">Escaneá y pedí</h2>
-              <h3 style="font-size: 18px; font-weight: normal; color: #000; margin: 5px 0 0 0;">desde tu celular</h3>
-            </div>
-            <h5 style="color: #f85c2b; margin: 10px 0;">{{ restaurante.nombre_local }}</h5>
-            <div style="background-color: white; padding: 15px; margin: 15px 0; border: 1px solid #e0e0e0; border-radius: 8px;">
-              <img src="${qrDataUrl}" style="width: 250px; height: 250px;" />
-            </div>
-            <div style="margin-top: 15px; text-align: center;">
-              <div style="margin-bottom: 10px;">
-                ${logoDataUrl ? `<img src="${logoDataUrl}" style="height: 40px;" />` : '<p style="color: #666;">Logo no disponible</p>'}
-              </div>
-              <div>
-                <p style="margin: 5px 0; font-size: 14px; color: #666; font-weight: bold;">Tu negocio, en piloto automático.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      `;
-
-      document.body.appendChild(element);
-
-      html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: true,
-        allowTaint: false,
-        backgroundColor: null,
-        onclone: (document, element) => {
-          console.log('Clonando elemento para html2canvas');
-          return true;
+        if (!qrDataUrl) {
+            alert('No se pudo cargar la imagen QR. No se puede generar el PDF.');
+            return;
         }
-      }).then(canvas => {
-        document.body.removeChild(element);
-        const imgData = canvas.toDataURL('image/png');
-        console.log('Canvas generado, generando PDF...');
-        const { jsPDF } = window.jspdf;
-        const pdf = new jsPDF({
-          orientation: 'portrait',
-          unit: 'mm',
-          format: 'a4'
+
+        const element = document.createElement('div');
+        element.style.textAlign = 'center';
+        element.style.backgroundColor = 'white';
+        element.style.padding = '20px';
+        element.style.borderRadius = '10px';
+        element.style.width = '400px';
+        element.style.height = '650px';
+        element.style.display = 'flex';
+        element.style.flexDirection = 'column';
+        element.style.justifyContent = 'space-between';
+        element.style.alignItems = 'center';
+        element.style.margin = '0 auto';
+        element.style.boxShadow = '0 4px 16px rgba(0, 0, 0, 0.08)';
+        element.style.fontFamily = 'Arial, sans-serif';
+
+        element.innerHTML = `
+            <div style="padding: 1.75rem; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
+                <div style="text-align: center; background-color: white; border-radius: 10px; width: 100%; flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; align-items: center;">
+                    <div style="text-align: center; margin-bottom: 15px;">
+                        <h2 style="font-size: 24px; font-weight: bold; color: #000; margin: 0;">Escaneá y pedí</h2>
+                        <h3 style="font-size: 18px; font-weight: normal; color: #000; margin: 5px 0 0 0;">desde tu celular</h3>
+                    </div>
+                    <h5 style="color: #f85c2b; margin: 10px 0;">{{ restaurante.nombre_local }}</h5>
+                    <div style="background-color: white; padding: 15px; margin: 15px 0; border: 1px solid #e0e0e0; border-radius: 8px;">
+                        <img src="${qrDataUrl}" style="width: 250px; height: 250px;" />
+                    </div>
+                    <div style="margin-top: 15px; text-align: center;">
+                        <div style="margin-bottom: 10px;">
+                            ${logoDataUrl ? `<img src="${logoDataUrl}" style="height: 40px;" />` : '<p style="color: #666;">Logo no disponible</p>'}
+                        </div>
+                        <div>
+                            <p style="margin: 5px 0; font-size: 14px; color: #666; font-weight: bold;">Tu negocio, en piloto automático.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(element);
+
+        html2canvas(element, {
+            scale: 2,
+            useCORS: true,
+            logging: true,
+            allowTaint: false,
+            backgroundColor: null,
+            onclone: (document, element) => {
+                console.log('Clonando elemento para html2canvas');
+                return true;
+            }
+        }).then(canvas => {
+            document.body.removeChild(element);
+            const imgData = canvas.toDataURL('image/png');
+            console.log('Canvas generado, generando PDF...');
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const imgWidth = 400;
+            const imgHeight = 650;
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const ratio = Math.min(pdfWidth / (imgWidth * 0.264583), pdfHeight / (imgHeight * 0.264583));
+            const scaledWidth = imgWidth * ratio * 0.264583;
+            const scaledHeight = imgHeight * ratio * 0.264583;
+            const x = (pdfWidth - scaledWidth) / 2;
+            const y = (pdfHeight - scaledHeight) / 2;
+
+            pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
+            pdf.save(`qr-menu-${restaurantName}.pdf`);
+            console.log('PDF generado exitosamente:', `qr-menu-${restaurantName}.pdf`);
+        }).catch(err => {
+            document.body.removeChild(element);
+            console.error('Error al generar el PDF:', err);
+            alert('Error al generar el PDF. Detalles en la consola.');
         });
-
-        const imgWidth = 400;
-        const imgHeight = 650;
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        const ratio = Math.min(pdfWidth / (imgWidth * 0.264583), pdfHeight / (imgHeight * 0.264583));
-        const scaledWidth = imgWidth * ratio * 0.264583;
-        const scaledHeight = imgHeight * ratio * 0.264583;
-        const x = (pdfWidth - scaledWidth) / 2;
-        const y = (pdfHeight - scaledHeight) / 2;
-
-        pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
-        pdf.save(`qr-menu-${restaurantName}.pdf`);
-        console.log('PDF generado exitosamente:', `qr-menu-${restaurantName}.pdf`);
-      }).catch(err => {
-        document.body.removeChild(element);
-        console.error('Error al generar el PDF:', err);
-        alert('Error al generar el PDF. Detalles en la consola.');
-      });
     }).catch(err => {
-      console.error('Error al cargar imágenes para PDF:', err);
-      alert(`No se pudieron cargar las imágenes para el PDF: ${err.message}`);
+        console.error('Error al cargar imágenes para PDF:', err);
+        alert(`No se pudieron cargar las imágenes para el PDF: ${err.message}`);
     });
-  });
-</script>
-<script>
-  // Validación de longitud y actualización de vista previa
-  document.addEventListener('DOMContentLoaded', function() {
+});
+
+// Validación de longitud y actualización de vista previa
+document.addEventListener('DOMContentLoaded', function() {
     const metaTitleInput = document.querySelector('input[name="meta_title"]');
     const metaDescriptionInput = document.querySelector('textarea[name="meta_description"]');
     const metaTitleWarning = document.getElementById('meta-title-warning');
@@ -835,15 +924,15 @@ function toggleAliasField() {
     const seoDescriptionPreview = document.getElementById('seo-description-preview');
 
     function updateMetaTitle() {
-      const title = metaTitleInput.value || '{{ restaurante.nombre_local|escapejs }}'; // Fixed typo and added escapejs
-      seoTitlePreview.textContent = title + ' | Piatto';
-      metaTitleWarning.style.display = metaTitleInput.value.length > 60 ? 'block' : 'none';
+        const title = metaTitleInput.value || '{{ restaurante.nombre_local|escapejs }}';
+        seoTitlePreview.textContent = title + ' | Piatto';
+        metaTitleWarning.style.display = metaTitleInput.value.length > 60 ? 'block' : 'none';
     }
 
     function updateMetaDescription() {
-      const description = metaDescriptionInput.value || 'Disfruta de los mejores platos de {{ restaurante.nombre_local|escapejs }} con entrega rápida.'; // Already correct, added escapejs
-      seoDescriptionPreview.textContent = description;
-      metaDescriptionWarning.style.display = metaDescriptionInput.value.length > 160 ? 'block' : 'none';
+        const description = metaDescriptionInput.value || 'Disfruta de los mejores platos de {{ restaurante.nombre_local|escapejs }} con entrega rápida.';
+        seoDescriptionPreview.textContent = description;
+        metaDescriptionWarning.style.display = metaDescriptionInput.value.length > 160 ? 'block' : 'none';
     }
 
     metaTitleInput.addEventListener('input', updateMetaTitle);
@@ -852,6 +941,6 @@ function toggleAliasField() {
     // Inicializar vista previa
     updateMetaTitle();
     updateMetaDescription();
-  });
+});
 </script>
 {% endblock %}

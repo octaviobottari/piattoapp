@@ -657,6 +657,8 @@ textarea.form-control {
 function toggleAliasField() {
     const aliasCheckbox = document.getElementById('metodo_pago_alias');
     const aliasField = document.getElementById('alias-field');
+    const aliasCbuInput = document.getElementById('alias_cbu');
+    const saveButton = document.querySelector('button[type="submit"]');
     
     if (aliasCheckbox.checked) {
         aliasField.style.display = 'block';
@@ -665,47 +667,110 @@ function toggleAliasField() {
     }
 }
 
-// Validación de exclusividad entre métodos de pago
+// Validación de exclusividad entre métodos de pago - VERSIÓN CORREGIDA
 document.addEventListener('DOMContentLoaded', function() {
     const mercadoPagoSwitch = document.getElementById('metodo_pago_mercadopago');
     const aliasSwitch = document.getElementById('metodo_pago_alias');
     const mercadoPagoSection = document.getElementById('mercado-pago-section');
     const mercadoPagoSwitchContainer = document.getElementById('mercado-pago-switch');
     const aliasSwitchContainer = document.getElementById('alias-switch');
+    const aliasField = document.getElementById('alias-field');
+    const aliasCbuInput = document.getElementById('alias_cbu');
+    const saveButton = document.querySelector('button[type="submit"]');
 
     function updatePaymentMethodsState() {
-        // Si Mercado Pago está activado, deshabilitar Alias
+        // Limpiar mensajes existentes
+        document.querySelectorAll('.payment-disabled-message').forEach(msg => msg.remove());
+
+        // Si Mercado Pago está activado, deshabilitar completamente Alias
         if (mercadoPagoSwitch.checked) {
+            // Deshabilitar switch de Alias
             aliasSwitch.disabled = true;
             aliasSwitchContainer.classList.add('payment-disabled');
-        } else {
-            aliasSwitch.disabled = false;
-            aliasSwitchContainer.classList.remove('payment-disabled');
-        }
+            
+            // Ocultar y deshabilitar campo Alias/CBU
+            aliasField.style.display = 'none';
+            aliasCbuInput.disabled = true;
+            
+            // Agregar mensaje informativo
+            const aliasMessage = document.createElement('div');
+            aliasMessage.className = 'payment-disabled-message';
+            aliasMessage.innerHTML = '<i class="fas fa-info-circle"></i> Desactiva Mercado Pago para habilitar el pago por Alias.';
+            aliasSwitchContainer.appendChild(aliasMessage);
+            
+            // Habilitar sección de Mercado Pago
+            mercadoPagoSection.classList.remove('mercado-pago-disabled');
 
-        // Si Alias está activado, deshabilitar Mercado Pago
-        if (aliasSwitch.checked) {
+        } 
+        // Si Alias está activado, deshabilitar completamente Mercado Pago
+        else if (aliasSwitch.checked) {
+            // Deshabilitar switch de Mercado Pago
             mercadoPagoSwitch.disabled = true;
             mercadoPagoSwitchContainer.classList.add('payment-disabled');
-        } else {
-            mercadoPagoSwitch.disabled = false;
-            mercadoPagoSwitchContainer.classList.remove('payment-disabled');
-        }
-
-        // Actualizar estado de la sección de Mercado Pago
-        if (mercadoPagoSwitch.checked) {
-            mercadoPagoSection.classList.remove('mercado-pago-disabled');
-        } else {
+            
+            // Mostrar campo Alias/CBU
+            aliasField.style.display = 'block';
+            aliasCbuInput.disabled = false;
+            
+            // Agregar mensaje informativo
+            const mercadoPagoMessage = document.createElement('div');
+            mercadoPagoMessage.className = 'payment-disabled-message';
+            mercadoPagoMessage.innerHTML = '<i class="fas fa-info-circle"></i> Desactiva el pago por Alias para habilitar Mercado Pago.';
+            mercadoPagoSwitchContainer.appendChild(mercadoPagoMessage);
+            
+            // Deshabilitar sección de Mercado Pago
             mercadoPagoSection.classList.add('mercado-pago-disabled');
+
+        } 
+        // Si ambos están desactivados
+        else {
+            // Habilitar ambos switches
+            mercadoPagoSwitch.disabled = false;
+            aliasSwitch.disabled = false;
+            mercadoPagoSwitchContainer.classList.remove('payment-disabled');
+            aliasSwitchContainer.classList.remove('payment-disabled');
+            
+            // Ocultar campo Alias/CBU
+            aliasField.style.display = 'none';
+            aliasCbuInput.disabled = true;
+            
+            // Deshabilitar sección de Mercado Pago si no está activado
+            if (!mercadoPagoSwitch.checked) {
+                mercadoPagoSection.classList.add('mercado-pago-disabled');
+            }
         }
+    }
+
+    // Función para manejar el cambio en Mercado Pago
+    function handleMercadoPagoChange() {
+        if (this.checked) {
+            // Si se activa Mercado Pago, desactivar Alias automáticamente
+            aliasSwitch.checked = false;
+            toggleAliasField();
+        }
+        updatePaymentMethodsState();
+    }
+
+    // Función para manejar el cambio en Alias
+    function handleAliasChange() {
+        if (this.checked) {
+            // Si se activa Alias, desactivar Mercado Pago automáticamente
+            mercadoPagoSwitch.checked = false;
+        }
+        toggleAliasField();
+        updatePaymentMethodsState();
     }
 
     // Inicializar estado
     updatePaymentMethodsState();
+    toggleAliasField();
 
     // Escuchar cambios en los switches
-    mercadoPagoSwitch.addEventListener('change', updatePaymentMethodsState);
-    aliasSwitch.addEventListener('change', updatePaymentMethodsState);
+    mercadoPagoSwitch.addEventListener('change', handleMercadoPagoChange);
+    aliasSwitch.addEventListener('change', handleAliasChange);
+
+    // También actualizar el estado cuando se carga la página para mensajes iniciales
+    setTimeout(updatePaymentMethodsState, 100);
 });
 
 // Discount codes handling

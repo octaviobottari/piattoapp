@@ -1927,6 +1927,11 @@ def actualizar_metodos_pago(request):
         restaurante.metodo_pago_alias = request.POST.get('metodo_pago_alias') == 'on'
         restaurante.alias_cbu = request.POST.get('alias_cbu', '').strip()
         
+        # === NUEVA VALIDACIÓN: Exclusividad entre métodos de pago ===
+        if restaurante.metodo_pago_mercadopago and restaurante.metodo_pago_alias:
+            messages.error(request, 'No puedes tener ambos métodos de pago activados al mismo tiempo. Solo puedes habilitar uno.')
+            return redirect('configuraciones')
+        
         # Validar que al menos un método esté habilitado
         if not restaurante.metodo_pago_mercadopago and not restaurante.metodo_pago_alias:
             messages.error(request, 'Debes habilitar al menos un método de pago.')

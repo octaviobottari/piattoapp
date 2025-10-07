@@ -532,7 +532,12 @@
                         <select name="metodo_pago" id="metodo_pago_resumen" class="form-select" onchange="actualizarResumen(true); mostrarResumenPedido();" required>
                             <option value="" disabled selected>Selecciona un método</option>
                             <option value="efectivo">Efectivo</option>
-                            <option value="mercadopago">Mercado Pago</option>
+                            {% if restaurante.metodo_pago_mercadopago %}
+                                <option value="mercadopago">Mercado Pago</option>
+                            {% endif %}
+                            {% if restaurante.metodo_pago_alias %}
+                                <option value="alias">Transferencia (Alias/CBU)</option>
+                            {% endif %}
                         </select>
                     </div>
                 </div>

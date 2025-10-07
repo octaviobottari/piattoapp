@@ -519,6 +519,69 @@ textarea.form-control {
     {% endif %}
 </div>
 
+<!-- Sección Métodos de Pago -->
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Configuración de Métodos de Pago</h5>
+    </div>
+    <div class="card-body">
+        <form method="POST" action="{% url 'actualizar_metodos_pago' %}">
+            {% csrf_token %}
+            
+            <!-- Mercado Pago -->
+            <div class="mb-3 form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="metodo_pago_mercadopago" 
+                       id="metodo_pago_mercadopago" {% if restaurante.metodo_pago_mercadopago %}checked{% endif %}>
+                <label class="form-check-label" for="metodo_pago_mercadopago">
+                    Habilitar Mercado Pago
+                </label>
+                <small class="form-text text-muted d-block">
+                    Los clientes podrán pagar con tarjetas, efectivo y otros métodos a través de Mercado Pago.
+                </small>
+            </div>
+
+            <!-- Pago por Alias -->
+            <div class="mb-3 form-check form-switch">
+                <input class="form-check-input" type="checkbox" name="metodo_pago_alias" 
+                       id="metodo_pago_alias" {% if restaurante.metodo_pago_alias %}checked{% endif %}
+                       onchange="toggleAliasField()">
+                <label class="form-check-label" for="metodo_pago_alias">
+                    Habilitar Pago por Alias/CBU
+                </label>
+                <small class="form-text text-muted d-block">
+                    Los clientes podrán pagar mediante transferencia bancaria.
+                </small>
+            </div>
+
+            <!-- Campo Alias/CBU -->
+            <div class="mb-3" id="alias-field" style="display: {% if restaurante.metodo_pago_alias %}block{% else %}none{% endif %};">
+                <label class="form-label" for="alias_cbu">Alias o CBU para Transferencias</label>
+                <input type="text" class="form-control" name="alias_cbu" id="alias_cbu" 
+                       value="{{ restaurante.alias_cbu|default:'' }}" 
+                       placeholder="Ej: mi.alias.o.cbu" maxlength="100">
+                <small class="form-text text-muted">
+                    Ingresa tu alias o CBU para que los clientes puedan realizar transferencias.
+                </small>
+            </div>
+
+            <button type="submit" class="btn btn-success">Guardar Configuración de Pagos</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleAliasField() {
+    const aliasCheckbox = document.getElementById('metodo_pago_alias');
+    const aliasField = document.getElementById('alias-field');
+    
+    if (aliasCheckbox.checked) {
+        aliasField.style.display = 'block';
+    } else {
+        aliasField.style.display = 'none';
+    }
+}
+</script>
+
   <!-- QR del Local -->
   <div class="card">
     <div class="card-header">

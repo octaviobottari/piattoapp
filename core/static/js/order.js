@@ -911,6 +911,9 @@ function mostrarResumen() {
         const aclaraciones = form.querySelector('textarea[name="aclaraciones"]').value.trim();
         const metodoPago = document.getElementById('metodo_pago_resumen')?.value;
 
+        let metodoPagoTexto = '';
+
+
         if (!nombre) {
             showErrorModal('Por favor, ingresa un nombre válido.');
             return;
@@ -927,6 +930,16 @@ function mostrarResumen() {
             showErrorModal('Por favor, selecciona un método de pago.');
             return;
         }
+
+        if (metodoPago === 'efectivo') {
+        metodoPagoTexto = 'Efectivo';
+        } else if (metodoPago === 'mercadopago') {
+            metodoPagoTexto = 'Mercado Pago';
+        } else if (metodoPago === 'alias') {
+            metodoPagoTexto = 'Transferencia (Alias/CBU)';
+        }
+
+        document.getElementById('resumen-metodo-pago').textContent = `Método de Pago: ${metodoPagoTexto}`;
 
         pedidoData.datosCliente = { nombre, telefono, direccion, aclaraciones, metodo_pago: metodoPago };
         actualizarResumen(true);

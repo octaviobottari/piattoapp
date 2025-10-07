@@ -176,11 +176,23 @@
                 Hubo un error con el pago. Por favor, intenta de nuevo.
             </p>
         {% endif %}
-        {% if not confirmado and init_point %}
-            <a href="{{ init_point }}" class="btn btn-primary-custom">
-                Pagar ahora
-            </a>
-        {% endif %}
+        {% if pedido.metodo_pago == 'alias' and restaurante.alias_cbu %}
+<div class="alert alert-info mt-4">
+    <h5 class="alert-heading">Información para el Pago</h5>
+    <p class="mb-2">Por favor, realiza la transferencia al siguiente alias/CBU:</p>
+    <div class="text-center">
+        <h4 class="text-primary">{{ restaurante.alias_cbu }}</h4>
+        <p class="mb-2"><strong>Monto a transferir: ${{ pedido.total|floatformat:2 }}</strong></p>
+    </div>
+    <hr>
+    <p class="mb-0">
+        <strong>Una vez realizada la transferencia:</strong><br>
+        1. Toma un screenshot del comprobante<br>
+        2. Envíalo por WhatsApp al restaurante<br>
+        3. Tu pedido será confirmado y preparado
+    </p>
+</div>
+{% endif %}
         <a href="tel:{{ pedido.telefono }}" class="contact-link">
             ¿Necesitás cambiar algo o tenés alguna duda? <br><span style="color: #10B981;">{{ restaurante.telefono }}</span>
         </a>

@@ -1169,6 +1169,16 @@ def procesar_pedido(request, restaurante):
                 if not telefono:
                     return JsonResponse({'error': 'El teléfono del cliente es requerido.'}, status=400)
 
+                # === MODIFICACIÓN 1: Validar métodos de pago habilitados ===
+                if metodo_pago == 'mercadopago' and not restaurante.metodo_pago_mercadopago:
+                    return JsonResponse({'error': 'El restaurante no tiene habilitado Mercado Pago.'}, status=400)
+                
+                if metodo_pago == 'alias' and not restaurante.metodo_pago_alias:
+                    return JsonResponse({'error': 'El restaurante no tiene habilitado el pago por transferencia.'}, status=400)
+                
+                if metodo_pago == 'alias' and not restaurante.alias_cbu:
+                    return JsonResponse({'error': 'El restaurante no tiene configurado el alias/CBU para transferencias.'}, status=400)
+                
                 if metodo_pago == 'mercadopago' and not restaurante.mp_access_token:
                     return JsonResponse({'error': 'El restaurante no tiene cuenta de Mercado Pago vinculada.'}, status=400)
 
@@ -1259,7 +1269,12 @@ def procesar_pedido(request, restaurante):
                     direccion = 'Retiro en local'
 
                 # Set estado based on payment method
-                estado = 'procesando_pago' if metodo_pago == 'mercadopago' else 'pendiente'
+                if metodo_pago == 'mercadopago':
+                    estado = 'procesando_pago'
+                elif metodo_pago == 'alias':
+                    estado = 'pendiente'  # Mismo estado que efectivo
+                else:
+                    estado = 'pendiente'  # efectivo
 
                 # Create the order
                 pedido = Pedido.objects.create(
@@ -1391,7 +1406,9 @@ def mercado_pago_callback(request):
         restaurante.save()
         messages.success(request, 'Cuenta de Mercado Pago vinculada correctamente.')
     else:
-        messages.error(request, 'Error al obtener los tokens de Mercado Pago.')
+        error_msg = f"Error al obtener los tokens de Mercado Pago. Status: {response.status_code}, Response: {response.text}"
+        logger.error(error_msg)
+        messages.error(request, 'Error al vincular la cuenta de Mercado Pago. Consulta los logs para más detalles.')
     return redirect('configuraciones')
 
 @login_required
@@ -1455,11 +1472,9 @@ def confirmacion_pedido(request, nombre_restaurante, token):
                 'init_point': None,
                 'efectivo': True
             }
-            
             logger.info(f"Rendering confirmation page for EFECTIVO pedido {pedido.numero_pedido}")
             return render(request, 'core/confirmacion_pedido.html', params)
-        
-        
+
         items = get_list_or_404(ItemPedido, pedido=pedido)
 
         for item in items:
@@ -1471,10 +1486,10 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         mp_items = []
         for i in items:
             mp_item = {
-                "id": str(i.producto.id) if i.producto else str(i.id),  # Código del item
-                "title": i.nombre_producto,  # Nombre del item
-                "description": i.producto.descripcion[:500] if i.producto and i.producto.descripcion else "Sin descripción",  # Descripción (limitada a 500 chars)
-                "category_id": "food",  # Categoría fija para alimentos
+                "id": str(i.producto.id) if i.producto else str(i.id),
+                "title": i.nombre_producto,
+                "description": i.producto.descripcion[:500] if i.producto and i.producto.descripcion else "Sin descripción",
+                "category_id": "food",
                 "quantity": i.cantidad,
                 "unit_price": float(i.precio_unitario)
             }
@@ -1508,9 +1523,9 @@ def confirmacion_pedido(request, nombre_restaurante, token):
         payer_info = {
             "name": pedido.cliente.split()[0] if pedido.cliente else "Cliente",
             "surname": " ".join(pedido.cliente.split()[1:]) if pedido.cliente and len(pedido.cliente.split()) > 1 else "Sin apellido",
-            "email": "cliente@example.com",  # Email por defecto (ya que no tenemos este dato)
+            "email": "cliente@example.com",
             "phone": {
-                "area_code": "11",  # Código de área por defecto
+                "area_code": "11",
                 "number": pedido.telefono[-8:] if pedido.telefono and len(pedido.telefono) >= 8 else "12345678"
             }
         }
@@ -1527,7 +1542,7 @@ def confirmacion_pedido(request, nombre_restaurante, token):
             "auto_return": "approved",
             "external_reference": str(pedido.token),
             "notification_url": f"https://{request.get_host()}/hello",
-            "statement_descriptor": f"PIATTO {pedido.restaurante.nombre_local[:12]}",  # Máximo 22 caracteres
+            "statement_descriptor": f"PIATTO {pedido.restaurante.nombre_local[:12]}",
         }
 
         log_body = body.copy()
@@ -1885,7 +1900,36 @@ def configurar_restaurante(request):
         'restaurant_qr': restaurant_qr,
     })
 
-
+@login_required
+@require_POST
+@never_cache
+@no_cache_view
+def actualizar_metodos_pago(request):
+    restaurante = get_object_or_404(Restaurante, id=request.user.id)
+    
+    try:
+        restaurante.metodo_pago_mercadopago = request.POST.get('metodo_pago_mercadopago') == 'on'
+        restaurante.metodo_pago_alias = request.POST.get('metodo_pago_alias') == 'on'
+        restaurante.alias_cbu = request.POST.get('alias_cbu', '').strip()
+        
+        # Validar que al menos un método esté habilitado
+        if not restaurante.metodo_pago_mercadopago and not restaurante.metodo_pago_alias:
+            messages.error(request, 'Debes habilitar al menos un método de pago.')
+            return redirect('configuraciones')
+        
+        # Validar que si alias está habilitado, tenga un valor
+        if restaurante.metodo_pago_alias and not restaurante.alias_cbu:
+            messages.error(request, 'Debes ingresar un alias o CBU si habilitas el pago por transferencia.')
+            return redirect('configuraciones')
+        
+        restaurante.save()
+        messages.success(request, 'Configuración de métodos de pago actualizada correctamente.')
+        
+    except Exception as e:
+        logger.error(f"Error al actualizar métodos de pago: {str(e)}")
+        messages.error(request, 'Error al actualizar la configuración de pagos.')
+    
+    return redirect('configuraciones')
 
 @login_required
 @never_cache

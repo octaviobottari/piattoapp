@@ -45,6 +45,9 @@ class Restaurante(AbstractUser):
     mp_refresh_token = models.TextField(blank=True, null=True, verbose_name="Mercado Pago Refresh Token")
     mp_user_id = models.CharField(max_length=100, blank=True, null=True, verbose_name="Mercado Pago User ID")
     mp_token_expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Mercado Pago Token Expiration")
+    metodo_pago_mercadopago = models.BooleanField(default=True, verbose_name="Habilitar Mercado Pago")
+    metodo_pago_alias = models.BooleanField(default=False, verbose_name="Habilitar Pago por Alias")
+    alias_cbu = models.CharField(max_length=100, blank=True, null=True, verbose_name="Alias/CBU para transferencias")
     tiene_demora = models.BooleanField(default=False, verbose_name="¿Hay demora en los pedidos?")
     tiempo_demora = models.CharField(max_length=50, blank=True, null=True, verbose_name="Tiempo estimado de demora")
     estado_control = models.CharField(

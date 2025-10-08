@@ -262,6 +262,93 @@ textarea.form-control {
     cursor: not-allowed;
 }
 
+/* Estilos para la Guía SEO */
+.seo-guide {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    color: white;
+}
+
+.seo-guide h3 {
+    color: white;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.step {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    backdrop-filter: blur(10px);
+}
+
+.step-number {
+    background: #f85c2b;
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.step-content h5 {
+    color: white;
+    margin-bottom: 0.5rem;
+}
+
+.step-content p {
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 0.5rem;
+    font-size: 0.9rem;
+}
+
+.example-box {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 6px;
+    padding: 1rem;
+    margin-top: 0.5rem;
+    border-left: 4px solid #f85c2b;
+}
+
+.example-box strong {
+    color: #ffd700;
+}
+
+.badge-seo {
+    background: #f85c2b;
+    color: white;
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    margin-left: 0.5rem;
+}
+
+.character-count {
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.character-count.good {
+    color: #28a745;
+}
+
+.character-count.warning {
+    color: #ffc107;
+}
+
+.character-count.danger {
+    color: #dc3545;
+}
+
+
 /* Responsividad */
 @media (max-width: 768px) {
     .container {
@@ -351,28 +438,99 @@ textarea.form-control {
           <small class="text-muted">Dejar vacío si no ofrece envío gratis.</small>
         </div>
         <!-- Meta Tags -->
-        <h6 class="mt-4">Optimización para Buscadores (SEO)</h6>
+
+        <!-- Guía SEO Completa -->
+  <div class="seo-guide">
+    <h3>🚀 Guía Completa para Aparecer en Google</h3>
+    
+    <div class="step d-flex">
+      <div class="step-number">1</div>
+      <div class="step-content">
+        <h5>Meta Título (Máx. 60 caracteres)</h5>
+        <p>Es lo primero que ven tus clientes en Google. Incluye tu ubicación y especialidad.</p>
+        <div class="example-box">
+          <strong>Fórmula ganadora:</strong><br>
+          <em>"{{ restaurante.nombre_local }} - [Tu Zona/Localidad] | Piatto"</em><br><br>
+          <strong>Ejemplos reales:</strong><br>
+          • "Pizzería Napoli - Av. San Martín 1234 | Piatto"<br>
+          • "Burger House - Palermo, CABA | Piatto"<br>
+          • "Sushi Bar - Delivery en Mendoza | Piatto"
+        </div>
+      </div>
+    </div>
+
+    <div class="step d-flex">
+      <div class="step-number">2</div>
+      <div class="step-content">
+        <h5>Meta Descripción (Máx. 160 caracteres)</h5>
+        <p>Tu carta de presentación. Convence a los clientes para que hagan clic.</p>
+        <div class="example-box">
+          <strong>Estructura que vende:</strong><br>
+          <em>"Pedí online de [Tu Restaurante]. [Ubicación]. [Especialidades]. [Beneficio único]."</em><br><br>
+          <strong>Ejemplos que convierten:</strong><br>
+          • "Pedí online de {{ restaurante.nombre_local }}. {{ restaurante.direccion|default:"Tu dirección" }}. Pizzas, empanadas, delivery. Menú digital con precios actualizados."<br>
+          • "{{ restaurante.nombre_local }} - Hamburguesas gourmet en Buenos Aires. Delivery rápido y take away. Pedí online las 24 horas."
+        </div>
+      </div>
+    </div>
+
+    <div class="step d-flex">
+      <div class="step-number">3</div>
+      <div class="step-content">
+        <h5>Palabras Clave Estratégicas</h5>
+        <p>Las palabras que usan tus clientes para buscarte.</p>
+        <div class="example-box">
+          <strong>Para pizzerías:</strong><br>
+          "pizzeria, comida italiana, delivery, {{ restaurante.nombre_local|lower }}, {{ restaurante.direccion|split:","|first|lower }}, empanadas, pizzas, muzzarella, fugazzetta"<br><br>
+          <strong>Para hamburgueserías:</strong><br>
+          "hamburguesas, burger, delivery, {{ restaurante.nombre_local|lower }}, comida rapida, papas fritas, gourmet, lomito"<br><br>
+          <strong>Para sushi:</strong><br>
+          "sushi, comida japonesa, delivery, {{ restaurante.nombre_local|lower }}, rolls, sashimi, comida asiatica, pescado fresco"
+        </div>
+      </div>
+    </div>
+
+    <div class="step d-flex">
+      <div class="step-number">4</div>
+      <div class="step-content">
+        <h5>📍 Estrategia por Regiones de Argentina</h5>
+        <p>Adaptá tu SEO según tu ubicación:</p>
+        <div class="example-box">
+          <strong>CABA y GBA:</strong> Incluir "CABA", "Capital Federal", "Buenos Aires", barrios como "Palermo", "Recoleta"<br>
+          <strong>Provincia de Buenos Aires:</strong> "La Plata", "Mar del Plata", "Quilmes", "Morón"<br>
+          <strong>Interior:</strong> "Córdoba Capital", "Rosario", "Mendoza", "Bariloche" + puntos de referencia
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+        <h6 class="mt-4">Optimización para Buscadores (SEO) <span class="badge-seo">IMPORTANTE</span></h6>
+        
         <div class="mb-3">
-          <label class="form-label">Meta Título</label>
+          <label class="form-label">Meta Título <span id="title-counter" class="character-count {% if config_form.meta_title.value|length <= 60 %}good{% else %}danger{% endif %}">({{ config_form.meta_title.value|default:''|length }}/60)</span></label>
           {{ config_form.meta_title }}
-          <small class="text-muted">Título que aparece en Google (máx. 60 caracteres, {{ config_form.meta_title.value|default:''|length }} usados).</small>
-          <small id="meta-title-warning" class="text-danger" style="display: none;">El título excede los 60 caracteres.</small>
+          <small class="text-muted">Título que aparece en Google. Máximo 60 caracteres recomendados.</small>
+          <small id="meta-title-warning" class="text-danger" style="display: none;">⚠️ El título excede los 60 caracteres y se verá cortado en Google.</small>
         </div>
+        
         <div class="mb-3">
-          <label class="form-label">Meta Descripción</label>
+          <label class="form-label">Meta Descripción <span id="description-counter" class="character-count {% if config_form.meta_description.value|length <= 160 %}good{% else %}danger{% endif %}">({{ config_form.meta_description.value|default:''|length }}/160)</span></label>
           {{ config_form.meta_description }}
-          <small class="text-muted">Descripción que aparece en Google (máx. 160 caracteres, {{ config_form.meta_description.value|default:''|length }} usados).</small>
-          <small id="meta-description-warning" class="text-danger" style="display: none;">La descripción excede los 160 caracteres.</small>
+          <small class="text-muted">Descripción que aparece bajo el título en Google. Máximo 160 caracteres recomendados.</small>
+          <small id="meta-description-warning" class="text-danger" style="display: none;">⚠️ La descripción excede los 160 caracteres y se verá cortada en Google.</small>
         </div>
+        
         <div class="mb-3">
           <label class="form-label">Meta Palabras Clave</label>
           {{ config_form.meta_keywords }}
-          <small class="text-muted">Palabras clave separadas por comas (ej. comida, delivery, {{ restaurante.nombre_local|lower }}).</small>
+          <small class="text-muted">Palabras clave separadas por comas. Ej: "comida, delivery, {{ restaurante.nombre_local|lower }}, {{ restaurante.direccion|split:","|first|lower }}"</small>
         </div>
+        
         <!-- Vista previa de SEO -->
         <div class="card mt-3">
           <div class="card-header">
-            <h5 class="mb-0">Vista Previa de SEO</h5>
+            <h5 class="mb-0">🔍 Vista Previa de cómo aparecés en Google</h5>
           </div>
           <div class="card-body">
             <div class="seo-preview">
@@ -382,6 +540,7 @@ textarea.form-control {
             </div>
           </div>
         </div>
+
         <!-- Dirección -->
         <div class="mb-3">
           <label class="form-label">Dirección</label>

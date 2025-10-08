@@ -3,54 +3,75 @@
 {% block navbar_block %}
 {% endblock %}
 {% block extra_head %}
-<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} | Piatto</title>
+<!-- Título optimizado para SEO -->
+<title>{{ restaurante.meta_title|default:restaurante.nombre_local }} - {{ restaurante.direccion|default:"Restaurante" }} | Piatto</title>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
 
-<link rel="icon" type="image/png" href="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-faviconpng{% endif %}">
+<link rel="icon" type="image/png" href="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-favicon.png{% endif %}">
 
-<!-- SEO Meta Tags -->
-<meta name="title" content="{{ restaurante.meta_title|default:restaurante.nombre_local }}">
-<meta name="description" content="{{ restaurante.meta_description|default:'Deliciosa comida con entrega rápida en ' }}{{ restaurante.nombre_local }}">
-<meta name="keywords" content="{{ restaurante.meta_keywords|default:'comida, delivery, restaurante, ' }}{{ restaurante.nombre_local|lower }}">
+<!-- SEO Meta Tags OPTIMIZADAS -->
+<meta name="title" content="{{ restaurante.meta_title|default:restaurante.nombre_local }} - {{ restaurante.direccion|default:"Restaurante" }} | Piatto">
+<meta name="description" content="{{ restaurante.meta_description|default:"Pedí online de " }}{{ restaurante.nombre_local }}. {{ restaurante.direccion|default:"" }}. Delivery y take away. Menú digital con precios. {{ restaurante.meta_keywords|default:"" }}">
+<meta name="keywords" content="{{ restaurante.meta_keywords|default:"restaurante, comida, delivery, take away, " }}{{ restaurante.nombre_local|lower }}, {{ restaurante.direccion|default:""|lower }}, pedidos online, menú digital">
 <meta name="robots" content="index, follow">
 <meta name="author" content="{{ restaurante.nombre_local }}">
-<meta name="googlebot" content="index, follow">
+<meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large">
+
+<!-- Canonical URL -->
+<link rel="canonical" href="https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}" />
+
 <!-- No-cache headers -->
 <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<!-- Open Graph para redes sociales -->
-<meta property="og:title" content="{{ restaurante.meta_title|default:restaurante.nombre_local }} | Piatto">
-<meta property="og:description" content="{{ restaurante.meta_description|default:'Disfruta de los mejores platos de ' }}{{ restaurante.nombre_local }} con entrega rápida.">
-<meta property="og:image" content="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo.png{% endif %}">
+
+<!-- Open Graph OPTIMIZADO -->
+<meta property="og:title" content="{{ restaurante.meta_title|default:restaurante.nombre_local }} - Pedidos Online | Piatto">
+<meta property="og:description" content="{{ restaurante.meta_description|default:"Pedí online de " }}{{ restaurante.nombre_local }}. {{ restaurante.direccion|default:"" }}. Delivery y take away.">
+<meta property="og:image" content="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-icon.png{% endif %}">
 <meta property="og:url" content="https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}">
-<meta property="og:type" content="website">
+<meta property="og:type" content="restaurant.menu">
 <meta property="og:locale" content="es_AR">
 <meta property="og:site_name" content="{{ restaurante.nombre_local }}">
-<!-- Twitter Card -->
+
+<!-- Twitter Card OPTIMIZADO -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="{{ restaurante.meta_title|default:restaurante.nombre_local }} | Piatto">
-<meta name="twitter:description" content="{{ restaurante.meta_description|default:'Disfruta de los mejores platos de ' }}{{ restaurante.nombre_local }} con entrega rápida.">
-<meta property="twitter:image" content="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo.png{% endif %}">
+<meta name="twitter:title" content="{{ restaurante.meta_title|default:restaurante.nombre_local }} - Pedidos Online">
+<meta name="twitter:description" content="{{ restaurante.meta_description|default:"Pedí online de " }}{{ restaurante.nombre_local }}. {{ restaurante.direccion|default:"" }}. Delivery y take away.">
+<meta property="twitter:image" content="{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-icon.png{% endif %}">
 <meta name="twitter:site" content="@piatto">
-<!-- Structured Data -->
+
+<!-- Structured Data MEJORADO para Restaurantes - TODA ARGENTINA -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
   "@type": "Restaurant",
   "name": "{{ restaurante.nombre_local }}",
   "url": "https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}",
-  "logo": "{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-logo.png{% endif %}",
-  "description": "{{ restaurante.meta_description|default:'Disfruta de los mejores platos de ' }}{{ restaurante.nombre_local }} con entrega rápida.}",
+  "logo": "{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-icon.png{% endif %}",
+  "description": "{{ restaurante.meta_description|default:"Restaurante " }}{{ restaurante.nombre_local }} - Pedidos online, delivery y take away en Argentina",
   "address": {
     "@type": "PostalAddress",
     "streetAddress": "{{ restaurante.direccion|default:'Dirección no especificada' }}",
-    "addressCountry": "AR"
+    "addressCountry": "AR",
+    "addressRegion": "Argentina"
   },
   "telephone": "{{ restaurante.telefono|default:'No especificado' }}",
-  "servesCuisine": "{{ restaurante.meta_keywords|default:'comida, delivery, restaurante' }}",
+  "servesCuisine": "{{ restaurante.meta_keywords|default:'Comida Argentina, Delivery, Take Away' }}",
   "openingHours": "{{ restaurante.written_schedules|default:'Horarios no especificados' }}",
+  "menu": "https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}",
+  "acceptsReservations": "false",
+  "priceRange": "$$",
+  "areaServed": {
+    "@type": "GeoCircle",
+    "geoMidpoint": {
+      "@type": "GeoCoordinates",
+      "latitude": -38.4161,
+      "longitude": -63.6167
+    },
+    "geoRadius": "2000000"
+  },
   "contactPoint": {
     "@type": "ContactPoint",
     "telephone": "{{ restaurante.telefono|default:'No especificado' }}",
@@ -63,7 +84,56 @@
     {% if restaurante.instagram_username %}"https://www.instagram.com/{{ restaurante.instagram_username }}",{% endif %}
     {% if restaurante.facebook_username %}"https://www.facebook.com/{{ restaurante.facebook_username }}",{% endif %}
     {% if restaurante.telefono %}"https://wa.me/{{ restaurante.telefono }}"{% endif %}
-  ]
+  ],
+  "hasMenu": {
+    "@type": "Menu",
+    "name": "Menú {{ restaurante.nombre_local }}",
+    "url": "https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}",
+    "hasMenuSection": [
+      {% for categoria in categorias %}
+      {
+        "@type": "MenuSection",
+        "name": "{{ categoria.nombre }}",
+        "hasMenuItem": [
+          {% for producto in categoria.producto_set.all %}
+          {
+            "@type": "MenuItem",
+            "name": "{{ producto.nombre }}",
+            "description": "{{ producto.descripcion|default:''|escapejs }}",
+            "offers": {
+              "@type": "Offer",
+              "price": "{{ producto.precio|floatformat:2 }}",
+              "priceCurrency": "ARS"
+            }
+          }{% if not forloop.last %},{% endif %}
+          {% endfor %}
+        ]
+      }{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+}
+</script>
+
+<!-- Structured Data adicional para LocalBusiness -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": "{{ restaurante.nombre_local }}",
+  "image": "{% if restaurante.logo %}{{ restaurante.logo.url }}{% else %}https://piattoweb.com{{ MEDIA_URL }}images/piatto-icon.png{% endif %}",
+  "description": "{{ restaurante.meta_description|default:"Restaurante " }}{{ restaurante.nombre_local }} - Pedidos online y delivery en Argentina",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "{{ restaurante.direccion|default:'Dirección no especificada' }}",
+    "addressCountry": "AR"
+  },
+  "telephone": "{{ restaurante.telefono|default:'No especificado' }}",
+  "openingHours": "{{ restaurante.written_schedules|default:'Horarios no especificados' }}",
+  "url": "https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}",
+  "priceRange": "$$",
+  "servesCuisine": "{{ restaurante.meta_keywords|default:'Comida, Delivery, Take Away' }}",
+  "areaServed": "Argentina"
 }
 </script>
 

@@ -1667,7 +1667,7 @@ def imprimir_ticket(request, pedido_id):
     # Tamaño de ticket estándar (80mm x aprox 200mm)
     # Convertir mm a puntos (1mm = 2.83465 puntos)
     ticket_width = 80 * 2.83465
-    ticket_height = 297 * 2.83465  # Alto de página A4 pero se cortará
+    ticket_height = 120 * 2.83465  # Alto de página A4 pero se cortará
     
     # Crear PDF con tamaño de ticket
     p = canvas.Canvas(response, pagesize=(ticket_width, ticket_height))

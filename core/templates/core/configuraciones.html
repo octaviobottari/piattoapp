@@ -440,6 +440,7 @@ textarea.form-control {
         <!-- Meta Tags -->
 
         <!-- Guía SEO Completa -->
+   <!-- Guía SEO Completa -->
   <div class="seo-guide">
     <h3>🚀 Guía Completa para Aparecer en Google</h3>
     
@@ -481,7 +482,7 @@ textarea.form-control {
         <p>Las palabras que usan tus clientes para buscarte.</p>
         <div class="example-box">
           <strong>Para pizzerías:</strong><br>
-          "pizzeria, comida italiana, delivery, {{ restaurante.nombre_local|lower }}, {{ restaurante.direccion|split:","|first|lower }}, empanadas, pizzas, muzzarella, fugazzetta"<br><br>
+          "pizzeria, comida italiana, delivery, {{ restaurante.nombre_local|lower }}, {{ restaurante.ciudad|default:"tu ciudad"|lower }}, empanadas, pizzas, muzzarella, fugazzetta"<br><br>
           <strong>Para hamburgueserías:</strong><br>
           "hamburguesas, burger, delivery, {{ restaurante.nombre_local|lower }}, comida rapida, papas fritas, gourmet, lomito"<br><br>
           <strong>Para sushi:</strong><br>
@@ -524,7 +525,7 @@ textarea.form-control {
         <div class="mb-3">
           <label class="form-label">Meta Palabras Clave</label>
           {{ config_form.meta_keywords }}
-          <small class="text-muted">Palabras clave separadas por comas. Ej: "comida, delivery, {{ restaurante.nombre_local|lower }}, {{ restaurante.direccion|split:","|first|lower }}"</small>
+          <small class="text-muted">Palabras clave separadas por comas. Ej: "comida, delivery, {{ restaurante.nombre_local|lower }}, {{ restaurante.ciudad|default:"tu ciudad"|lower }}"</small>
         </div>
         
         <!-- Vista previa de SEO -->

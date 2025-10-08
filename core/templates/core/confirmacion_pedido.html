@@ -182,9 +182,6 @@
 
     {% block content %}
     <div class="confirmation-container">
-        {% if init_point %}
-            <p class="init-point">Link de pago: {{ init_point }}</p>
-        {% endif %}
         <button class="close-btn" aria-label="Cerrar" onclick="window.location.href='{% url 'restaurante_publico' restaurante.username %}'">
             <i class="fas fa-times"></i>
         </button>

@@ -1660,71 +1660,195 @@ def imprimir_ticket(request, pedido_id):
     pedido.impreso = True
     pedido.save()
 
-    # Configurar respuesta PDF
+    # Configurar respuesta PDF con tamaño de ticket (80mm de ancho)
     response = HttpResponse(content_type='application/pdf')
-    response['Content-Disposition'] = f'filename=ticket_pedido_{pedido.id}.pdf'
+    response['Content-Disposition'] = f'filename=ticket_pedido_{pedido.numero_pedido}.pdf'
 
-    # Crear PDF
-    p = canvas.Canvas(response, pagesize=letter)
-    width, height = letter
+    # Tamaño de ticket estándar (80mm x aprox 200mm)
+    # Convertir mm a puntos (1mm = 2.83465 puntos)
+    ticket_width = 80 * 2.83465
+    ticket_height = 297 * 2.83465  # Alto de página A4 pero se cortará
+    
+    # Crear PDF con tamaño de ticket
+    p = canvas.Canvas(response, pagesize=(ticket_width, ticket_height))
+    
+    # Configurar márgenes
+    margin_left = 10
+    margin_right = ticket_width - 10
+    current_y = ticket_height - 20  # Empezar desde arriba
 
-    # Encabezado
-    p.setFont("Helvetica-Bold", 16)
-    p.drawString(100, height - 50, f"Ticket Pedido #{pedido.id}")
-    p.setFont("Helvetica", 12)
-    p.drawString(100, height - 80, f"Restaurante: {pedido.restaurante.nombre_local}")
-    p.drawString(100, height - 100, f"Fecha: {pedido.fecha.strftime('%d/%m/%Y %H:%M')}")
+    # FUNCIÓN PARA DIBUJAR LÍNEA
+    def draw_line(y):
+        p.line(margin_left, y, margin_right, y)
 
-    # Información del cliente
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(100, height - 140, "Datos del Cliente")
-    p.setFont("Helvetica", 12)
-    p.drawString(100, height - 160, f"Nombre: {pedido.cliente}")
-    p.drawString(100, height - 180, f"Teléfono: {pedido.telefono}")
-    if pedido.direccion:
-        p.drawString(100, height - 200, f"Dirección: {pedido.direccion}")
+    # FUNCIÓN PARA TEXTO CENTRADO
+    def draw_centered_text(text, y, font_size=10, bold=False):
+        if bold:
+            p.setFont("Helvetica-Bold", font_size)
+        else:
+            p.setFont("Helvetica", font_size)
+        text_width = p.stringWidth(text, "Helvetica", font_size)
+        x = (ticket_width - text_width) / 2
+        p.drawString(x, y, text)
 
-    # Productos
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(100, height - 240, "Productos:")
-    y_position = height - 260
+    # FUNCIÓN PARA TEXTO CON COLUMNAS
+    def draw_columns(left_text, right_text, y, font_size=10):
+        p.setFont("Helvetica", font_size)
+        p.drawString(margin_left, y, left_text)
+        right_width = p.stringWidth(right_text, "Helvetica", font_size)
+        p.drawString(margin_right - right_width, y, right_text)
+
+    # ENCABEZADO
+    draw_centered_text(pedido.restaurante.nombre_local, current_y, 12, True)
+    current_y -= 15
+    
+    draw_centered_text(f"Pedido #{pedido.numero_pedido}", current_y, 10, True)
+    current_y -= 12
+    
+    draw_centered_text(pedido.fecha.strftime('%d/%m/%Y %H:%M'), current_y, 8)
+    current_y -= 15
+    
+    draw_line(current_y)
+    current_y -= 10
+
+    # INFORMACIÓN DEL CLIENTE
+    p.setFont("Helvetica-Bold", 9)
+    p.drawString(margin_left, current_y, "CLIENTE:")
+    current_y -= 12
+    
+    p.setFont("Helvetica", 8)
+    p.drawString(margin_left, current_y, pedido.cliente)
+    current_y -= 10
+    
+    p.drawString(margin_left, current_y, f"Tel: {pedido.telefono}")
+    current_y -= 10
+    
+    if pedido.direccion and pedido.direccion != 'Retiro en local':
+        p.drawString(margin_left, current_y, f"Dir: {pedido.direccion}")
+        current_y -= 10
+    
+    if pedido.tipo_pedido:
+        tipo = "DELIVERY" if pedido.tipo_pedido == 'delivery' else "RETIRO"
+        p.drawString(margin_left, current_y, f"Tipo: {tipo}")
+        current_y -= 10
+    
+    if pedido.aclaraciones:
+        p.drawString(margin_left, current_y, f"Aclaraciones: {pedido.aclaraciones}")
+        current_y -= 15
+    
+    draw_line(current_y)
+    current_y -= 10
+
+    # PRODUCTOS
+    draw_centered_text("PRODUCTOS", current_y, 10, True)
+    current_y -= 12
+    
     subtotal = Decimal('0.00')
     for item in pedido.items.all():
-        p.setFont("Helvetica", 12)
-        p.drawString(120, y_position, f"• {item.nombre_producto} (x{item.cantidad})")
-        p.drawString(100, y_position - 20, f"${item.precio_unitario} = ${item.subtotal}")
+        # Nombre del producto y cantidad
+        p.setFont("Helvetica-Bold", 8)
+        product_text = f"{item.nombre_producto} x{item.cantidad}"
+        p.drawString(margin_left, current_y, product_text)
+        current_y -= 8
+        
+        # Precio unitario y subtotal
+        p.setFont("Helvetica", 7)
+        price_text = f"${item.precio_unitario} c/u = ${item.subtotal}"
+        p.drawString(margin_left, current_y, price_text)
+        current_y -= 8
+        
+        # Opciones seleccionadas
         if item.opciones_seleccionadas:
-            p.drawString(120, y_position - 40, "Opciones:")
             for opcion in item.opciones_seleccionadas:
-                p.drawString(140, y_position - 60, f"- {opcion['nombre']} (+${opcion['precio_adicional']})")
-                y_position -= 20
+                opcion_text = f"  + {opcion['nombre']}"
+                if Decimal(opcion['precio_adicional']) > 0:
+                    opcion_text += f" (+${opcion['precio_adicional']})"
+                p.drawString(margin_left, current_y, opcion_text)
+                current_y -= 6
+        
         subtotal += item.subtotal
-        y_position -= 60
+        current_y -= 4  # Espacio entre productos
+    
+    draw_line(current_y)
+    current_y -= 8
 
-    # Costos
-    p.setFont("Helvetica", 12)
-    p.drawString(100, y_position - 20, f"Subtotal: ${subtotal:.2f}")
-    if pedido.costo_envio > 0:
-        p.drawString(100, y_position - 40, f"Costo de Envío: ${pedido.costo_envio:.2f}")
-        y_position -= 20
-    if pedido.monto_descuento > 0:
-        p.drawString(100, y_position - 40, f"Descuento ({pedido.codigo_descuento}): -${pedido.monto_descuento:.2f}")
-        y_position -= 20
-    p.setFont("Helvetica-Bold", 14)
-    p.drawString(100, y_position - 60, f"Total: ${pedido.total:.2f}")
+    # RESUMEN DE PAGOS
+    draw_centered_text("RESUMEN", current_y, 9, True)
+    current_y -= 10
+    
+    # Subtotal
+    draw_columns("Subtotal:", f"${subtotal:.2f}", current_y, 8)
+    current_y -= 8
+    
+    # Descuento en efectivo
+    if pedido.cash_discount_applied and pedido.cash_discount_percentage > 0:
+        desc_text = f"Desc. efectivo ({pedido.cash_discount_percentage}%):"
+        draw_columns(desc_text, f"-${pedido.monto_descuento_efectivo:.2f}", current_y, 8)
+        current_y -= 8
+    
+    # Descuento por código
+    if pedido.codigo_descuento and pedido.monto_descuento_codigo:
+        desc_text = f"Desc. {pedido.codigo_descuento}:"
+        draw_columns(desc_text, f"-${pedido.monto_descuento_codigo:.2f}", current_y, 8)
+        current_y -= 8
+    
+    # Costo de envío
+    if pedido.costo_envio and pedido.costo_envio > 0:
+        draw_columns("Envío:", f"${pedido.costo_envio:.2f}", current_y, 8)
+        current_y -= 8
+    
+    # Línea antes del total
+    draw_line(current_y)
+    current_y -= 8
+    
+    # TOTAL
+    draw_columns("TOTAL:", f"${pedido.total:.2f}", current_y, 10)
+    current_y -= 12
+    
+    draw_line(current_y)
+    current_y -= 10
 
+    # INFORMACIÓN ADICIONAL
+    # Método de pago
+    metodo_pago = "EFECTIVO" if pedido.metodo_pago == 'efectivo' else "MERCADO PAGO"
+    draw_columns("Método pago:", metodo_pago, current_y, 8)
+    current_y -= 8
+    
     # Estado del pedido
-    p.drawString(100, y_position - 80, f"Estado: {pedido.get_estado_display()}")
+    estado_map = {
+        'pendiente': 'PENDIENTE',
+        'en_preparacion': 'EN PREPARACIÓN',
+        'listo': 'LISTO',
+        'en_entrega': 'EN ENTREGA',
+        'entregado': 'ENTREGADO',
+        'cancelado': 'CANCELADO'
+    }
+    estado = estado_map.get(pedido.estado, pedido.estado.upper())
+    draw_columns("Estado:", estado, current_y, 8)
+    current_y -= 8
+    
+    # Tiempo estimado si existe
+    if pedido.tiempo_estimado:
+        tiempo_map = {
+            '15-30': '15-30 min',
+            '30-40': '30-40 min', 
+            '45-60': '45-60 min',
+            '60-90': '60-90 min'
+        }
+        tiempo = tiempo_map.get(pedido.tiempo_estimado, pedido.tiempo_estimado)
+        draw_columns("Tiempo estimado:", tiempo, current_y, 8)
+        current_y -= 8
 
-    # Pie de página
-    p.setFont("Helvetica", 10)
-    p.drawString(100, 50, "¡Gracias por su pedido!")
+    # ESPACIO FINAL
+    current_y -= 15
+    draw_centered_text("¡Gracias por su pedido!", current_y, 9)
+    current_y -= 8
+    draw_centered_text("Vuelva pronto!", current_y, 8)
 
     p.showPage()
     p.save()
     return response
 
-# views.py
 @login_required
 @never_cache
 @no_cache_view

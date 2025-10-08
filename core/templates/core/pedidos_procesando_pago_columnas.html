@@ -19,8 +19,7 @@
                     <a href="{% url 'imprimir_ticket' pedido.id %}" class="text-decoration-none print-link" target="_blank">
                         <i class="fas fa-print"></i>
                     </a>
-                    <button class="btn btn-success btn-sm confirmar-pago" data-pedido-id="{{ pedido.id }}">Sí</button>
-                    <button class="btn btn-danger btn-sm rechazar-pago" data-pedido-id="{{ pedido.id }}">No</button>
+                    <button class="btn btn-danger btn-sm rechazar-pago" data-pedido-id="{{ pedido.id }}">No pagó / Error</button>
                 </div>
                 <div class="order-price">${{ pedido.total|floatformat:2 }}</div>
                 <div class="order-method">{{ pedido.get_metodo_pago_display|default:"Sin método" }}</div>

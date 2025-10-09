@@ -22,29 +22,79 @@
         </div>
     </div>
 
-    <!-- Estadísticas: Ventas por Día y Último Mes -->
+    <!-- Estadísticas Financieras Mejoradas -->
     <div class="row g-4 mb-4">
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card text-white bg-dark">
+        <!-- Ventas Hoy -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card text-white bg-primary">
                 <div class="card-body text-center">
                     <h6>Ventas Hoy</h6>
                     <h3>${{ estadisticas.ventas_hoy|floatformat:2 }}</h3>
+                    <small>Ganancia: ${{ estadisticas.ganancia_hoy|floatformat:2 }}</small>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card text-white bg-dark">
+        
+        <!-- Ventas Último Mes -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card text-white bg-success">
                 <div class="card-body text-center">
                     <h6>Ventas Último Mes</h6>
                     <h3>${{ estadisticas.ventas_mes|floatformat:2 }}</h3>
+                    <small>Ganancia: ${{ estadisticas.ganancia_mes|floatformat:2 }}</small>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-6 col-lg-4">
-            <div class="card text-white bg-dark">
+        
+        <!-- Pedidos Pendientes -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card text-white bg-warning">
                 <div class="card-body text-center">
                     <h6>Pedidos Pendientes</h6>
                     <h3>{{ estadisticas.pedidos_pendientes }}</h3>
+                    <small>Por preparar</small>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ticket Promedio -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card text-white bg-info">
+                <div class="card-body text-center">
+                    <h6>Ticket Promedio</h6>
+                    <h3>${{ estadisticas.ticket_promedio|floatformat:2 }}</h3>
+                    <small>Último mes</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen Financiero Detallado -->
+    <div class="row g-4 mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0">Resumen Financiero - Últimos 30 Días</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col-md-3">
+                            <h6>Total Ventas</h6>
+                            <h4 class="text-primary">${{ estadisticas.ventas_mes|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>Costos</h6>
+                            <h4 class="text-danger">${{ estadisticas.costos_mes|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>Ganancia Bruta</h6>
+                            <h4 class="text-success">${{ estadisticas.ganancia_mes|floatformat:2 }}</h4>
+                        </div>
+                        <div class="col-md-3">
+                            <h6>Margen</h6>
+                            <h4 class="text-info">{{ estadisticas.margen_ganancia|floatformat:1 }}%</h4>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -52,69 +102,144 @@
 
     <!-- Productos Más Vendidos -->
     <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Productos Más Vendidos (Último Mes)</h5>
+        </div>
         <div class="card-body">
-            <h5 class="card-title">Productos Más Vendidos</h5>
-            <ul class="list-group list-group-flush">
-                {% for producto in estadisticas.productos_populares %}
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        {{ producto.nombre|default:"Producto desconocido" }}
-                        <span class="badge bg-primary rounded-pill">{{ producto.cantidad_vendida }} unidades</span>
-                    </li>
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th class="text-center">Unidades</th>
+                            <th class="text-end">Ventas Totales</th>
+                            <th class="text-end">Ganancia</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for producto in estadisticas.productos_populares %}
+                            <tr>
+                                <td>{{ producto.nombre|default:"Producto desconocido" }}</td>
+                                <td class="text-center">{{ producto.cantidad_vendida }}</td>
+                                <td class="text-end">${{ producto.ventas_totales|floatformat:2 }}</td>
+                                <td class="text-end">${{ producto.ganancia|floatformat:2 }}</td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="4" class="text-center">No hay datos de ventas disponibles.</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Métodos de Pago Más Usados -->
+    <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Métodos de Pago (Último Mes)</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                {% for metodo in estadisticas.metodos_pago %}
+                    <div class="col-md-3 mb-3">
+                        <div class="card">
+                            <div class="card-body text-center">
+                                <h6>{{ metodo.metodo|title }}</h6>
+                                <h4 class="text-primary">${{ metodo.total|floatformat:2 }}</h4>
+                                <small>{{ metodo.cantidad }} pedidos</small>
+                            </div>
+                        </div>
+                    </div>
                 {% empty %}
-                    <li class="list-group-item">No hay datos de ventas disponibles.</li>
+                    <div class="col-12 text-center">
+                        <p>No hay datos de métodos de pago disponibles.</p>
+                    </div>
                 {% endfor %}
-            </ul>
+            </div>
         </div>
     </div>
 
     <!-- Códigos de Descuento Activados -->
     <div class="card mb-4">
+        <div class="card-header bg-dark text-white">
+            <h5 class="mb-0">Códigos de Descuento Activados</h5>
+        </div>
         <div class="card-body">
-            <h5 class="card-title">Códigos de Descuento Activados</h5>
             {% if restaurante.codigos_descuento %}
-                <ul class="list-group list-group-flush">
+                <div class="row">
                     {% for codigo in restaurante.codigos_descuento %}
                         {% if codigo.activo|default_if_none:True %}
-                            <li class="list-group-item d-flex justify-content-between align-items-center">
-                                {{ codigo.nombre }} ({{ codigo.porcentaje }}% de descuento)
-                                <span class="badge bg-success rounded-pill">Activo</span>
-                            </li>
+                            <div class="col-md-4 mb-3">
+                                <div class="card border-success">
+                                    <div class="card-body text-center">
+                                        <h6 class="text-success">{{ codigo.nombre }}</h6>
+                                        <h4>{{ codigo.porcentaje }}% OFF</h4>
+                                        <small class="text-muted">
+                                            Usos: {{ codigo.usos_actuales|default:0 }}/{{ codigo.usos_maximos|default:"Ilimitado" }}
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
                         {% endif %}
                     {% endfor %}
-                </ul>
+                </div>
             {% else %}
-                <p>No hay códigos de descuento activos.</p>
+                <p class="text-center">No hay códigos de descuento activos.</p>
             {% endif %}
         </div>
     </div>
 
     <!-- Pedidos Urgentes o Retrasados -->
     <div class="card mb-4">
+        <div class="card-header bg-warning text-dark">
+            <h5 class="mb-0">Pedidos Urgentes o Retrasados</h5>
+        </div>
         <div class="card-body">
-            <h5 class="card-title">Pedidos Urgentes o Retrasados</h5>
             {% if estadisticas.pedidos_retrasados %}
-                <ul class="list-group list-group-flush">
-                    {% for pedido in estadisticas.pedidos_retrasados %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            Pedido #{{ pedido.numero_pedido }} (Creado: {{ pedido.fecha|timesince }} atrás)
-                            <span class="badge bg-danger rounded-pill">Retrasado</span>
-                        </li>
-                    {% endfor %}
-                </ul>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Pedido</th>
+                                <th>Cliente</th>
+                                <th>Tiempo</th>
+                                <th>Total</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for pedido in estadisticas.pedidos_retrasados %}
+                                <tr>
+                                    <td>#{{ pedido.numero_pedido }}</td>
+                                    <td>{{ pedido.cliente|truncatechars:20 }}</td>
+                                    <td class="text-danger">{{ pedido.fecha|timesince }}</td>
+                                    <td>${{ pedido.total|floatformat:2 }}</td>
+                                    <td>
+                                        <a href="{% url 'lista_pedidos' %}" class="btn btn-sm btn-outline-primary">Ver</a>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             {% else %}
-                <p>No hay pedidos retrasados.</p>
+                <p class="text-center text-success">✅ No hay pedidos retrasados.</p>
             {% endif %}
         </div>
     </div>
 
     <!-- Problemas con Pagos -->
     <div class="card mb-4">
+        <div class="card-header bg-danger text-white">
+            <h5 class="mb-0">Problemas con Pagos</h5>
+        </div>
         <div class="card-body">
-            <h5 class="card-title">Problemas con Pagos</h5>
             {% if estadisticas.pedidos_error_pago %}
                 {% include 'core/pedidos_procesando_pago.html' with pedidos_error=estadisticas.pedidos_error_pago %}
             {% else %}
-                <p>No hay problemas con pagos en este momento.</p>
+                <p class="text-center text-success">✅ No hay problemas con pagos en este momento.</p>
             {% endif %}
         </div>
     </div>
@@ -124,8 +249,32 @@
         <div class="card-body text-center">
             <h5 class="card-title">Soporte</h5>
             <p>¿Necesitas ayuda? Contáctanos para asistencia técnica o consultas.</p>
-            <a href="#" class="btn btn-outline-black">Contactar Soporte</a>
+            <a href="#" class="btn btn-outline-primary">Contactar Soporte</a>
         </div>
     </div>
 </div>
+
+<style>
+.card {
+    border: none;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+}
+
+.card-header {
+    border-radius: 10px 10px 0 0 !important;
+    font-weight: 600;
+}
+
+.table th {
+    border-top: none;
+    font-weight: 600;
+    color: #495057;
+}
+</style>
 {% endblock %}

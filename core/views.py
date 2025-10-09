@@ -130,19 +130,40 @@ def panel_view(request):
     start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
     one_month_ago = now - timedelta(days=30)
 
-    # Ventas Hoy
-    ventas_hoy = Pedido.objects.filter(
-        restaurante=restaurante,
-        fecha__gte=start_of_day,
-        estado__in=['listo', 'en_entrega', 'archivado']
-    ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
-
-    # Ventas Último Mes
-    ventas_mes = Pedido.objects.filter(
+    # Pedidos del último mes (archivados y listos)
+    pedidos_mes = Pedido.objects.filter(
         restaurante=restaurante,
         fecha__gte=one_month_ago,
         estado__in=['listo', 'en_entrega', 'archivado']
-    ).aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    )
+
+    # Ventas Hoy
+    pedidos_hoy = pedidos_mes.filter(fecha__gte=start_of_day)
+    ventas_hoy = pedidos_hoy.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+    
+    # Ventas Último Mes
+    ventas_mes = pedidos_mes.aggregate(total=Sum('total'))['total'] or Decimal('0.00')
+
+    # Calcular ganancias (estimación basada en costos de producción)
+    ganancia_hoy = Decimal('0.00')
+    ganancia_mes = Decimal('0.00')
+    costos_mes = Decimal('0.00')
+    
+    for pedido in pedidos_mes:
+        # Calcular costo de producción del pedido
+        costo_pedido = Decimal('0.00')
+        for item in pedido.items.all():
+            if item.producto and item.producto.costo_produccion:
+                costo_pedido += item.producto.costo_produccion * item.cantidad
+            else:
+                # Estimación conservadora del 60% del precio como costo si no hay costo definido
+                costo_pedido += item.precio_unitario * Decimal('0.6') * item.cantidad
+        
+        if pedido.fecha >= start_of_day:
+            ganancia_hoy += pedido.total - costo_pedido
+        
+        ganancia_mes += pedido.total - costo_pedido
+        costos_mes += costo_pedido
 
     # Pedidos Pendientes
     pedidos_pendientes = Pedido.objects.filter(
@@ -150,19 +171,48 @@ def panel_view(request):
         estado='pendiente'
     ).count()
 
-    # Productos Más Vendidos
-    productos_populares = ItemPedido.objects.filter(
-        pedido__restaurante=restaurante,
-        pedido__estado__in=['listo', 'en_entrega', 'archivado']
-    ).values('producto__nombre').annotate(
-        cantidad_vendida=Sum('cantidad')
-    ).order_by('-cantidad_vendida')[:5]
+    # Ticket promedio
+    cantidad_pedidos_mes = pedidos_mes.count()
+    ticket_promedio = ventas_mes / cantidad_pedidos_mes if cantidad_pedidos_mes > 0 else Decimal('0.00')
 
-    # Rename the field to match template expectations
-    productos_populares = [
-        {'nombre': item['producto__nombre'], 'cantidad_vendida': item['cantidad_vendida']}
-        for item in productos_populares
-    ]
+    # Margen de ganancia
+    margen_ganancia = (ganancia_mes / ventas_mes * 100) if ventas_mes > 0 else Decimal('0.00')
+
+    # Productos Más Vendidos con ganancias
+    productos_populares_data = ItemPedido.objects.filter(
+        pedido__restaurante=restaurante,
+        pedido__fecha__gte=one_month_ago,
+        pedido__estado__in=['listo', 'en_entrega', 'archivado']
+    ).values('producto__nombre', 'producto__costo_produccion').annotate(
+        cantidad_vendida=Sum('cantidad'),
+        ventas_totales=Sum(F('cantidad') * F('precio_unitario'))
+    ).order_by('-cantidad_vendida')[:10]
+
+    productos_populares = []
+    for item in productos_populares_data:
+        costo_produccion = item['producto__costo_produccion'] or Decimal('0.00')
+        ganancia_producto = item['ventas_totales'] - (costo_produccion * item['cantidad_vendida'])
+        
+        productos_populares.append({
+            'nombre': item['producto__nombre'],
+            'cantidad_vendida': item['cantidad_vendida'],
+            'ventas_totales': item['ventas_totales'],
+            'ganancia': ganancia_producto
+        })
+
+    # Métodos de pago más usados
+    metodos_pago_data = pedidos_mes.values('metodo_pago').annotate(
+        total=Sum('total'),
+        cantidad=Count('id')
+    ).order_by('-total')
+
+    metodos_pago = []
+    for metodo in metodos_pago_data:
+        metodos_pago.append({
+            'metodo': metodo['metodo_pago'],
+            'total': metodo['total'],
+            'cantidad': metodo['cantidad']
+        })
 
     # Pedidos Urgentes o Retrasados (más de 40 minutos)
     forty_minutes_ago = now - timedelta(minutes=40)
@@ -181,8 +231,14 @@ def panel_view(request):
     estadisticas = {
         'ventas_hoy': ventas_hoy,
         'ventas_mes': ventas_mes,
+        'ganancia_hoy': ganancia_hoy,
+        'ganancia_mes': ganancia_mes,
+        'costos_mes': costos_mes,
+        'margen_ganancia': margen_ganancia,
         'pedidos_pendientes': pedidos_pendientes,
+        'ticket_promedio': ticket_promedio,
         'productos_populares': productos_populares,
+        'metodos_pago': metodos_pago,
         'pedidos_retrasados': pedidos_retrasados,
         'pedidos_error_pago': pedidos_error_pago,
     }

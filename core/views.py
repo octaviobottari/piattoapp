@@ -2389,11 +2389,16 @@ def generate_qr_for_restaurant(restaurant_name):
     print(f"QR image saved to S3: s3://piatto-media-2025/media/qrcodes/{filename}")
     return restaurant_qr
 
-@api_view(['GET', 'POST'])  # Permite ambos métodos
-@csrf_exempt  # Necesario para webhooks externos
+@api_view(['GET', 'POST'])
+@csrf_exempt
 @never_cache
 def hello(request):
-    # Obtener parámetros según el método
+    # === SECURITY FIX: VALIDATE TOKEN FIRST ===
+    token = None
+    payment_id = None
+    status = None
+
+    # Get parameters according to method
     if request.method == 'POST':
         # Manejar diferentes formatos de webhook de Mercado Pago
         if request.content_type == 'application/json':
@@ -2430,6 +2435,28 @@ def hello(request):
         payment_id = request.GET.get("payment_id")
         status = request.GET.get("status")
 
+    # === CRITICAL SECURITY VALIDATION ===
+    # 1. Always require token
+    if not token:
+        logger.warning("No token provided in request")
+        if request.method == 'POST':
+            return JsonResponse({'status': 'error', 'message': 'Missing order token'}, status=400)
+        return redirect('home')
+
+    # 2. Validate token exists and get order EARLY
+    try:
+        pedido = Pedido.objects.get(token=token)
+    except Pedido.DoesNotExist:
+        logger.warning(f"Invalid token attempted: {token} from IP: {request.META.get('REMOTE_ADDR')}")
+        if request.method == 'POST':
+            return JsonResponse({'status': 'error', 'message': 'Order not found'}, status=404)
+        return redirect('home')
+
+    # 3. For POST requests (real webhooks), require payment_id
+    if request.method == 'POST' and not payment_id:
+        logger.warning(f"Webhook POST without payment_id for token: {token}")
+        return JsonResponse({'status': 'error', 'message': 'Missing payment ID'}, status=400)
+
     # Log solo si tenemos al menos algún dato útil
     if token or payment_id or status:
         logger.info(f"Webhook called with token={token}, payment_id={payment_id}, status={status}")
@@ -2440,14 +2467,14 @@ def hello(request):
         return redirect('home')
 
     try:
+        # This check is now redundant but keeping for safety
         if not payment_id or not token:
-            # Cambiar de ERROR a WARNING para webhooks incompletos esperados
-            logger.warning("Webhook received without payment_id or token (expected for some Mercado Pago notifications)")
+            logger.warning("Webhook received without payment_id or token")
             if request.method == 'POST':
                 return JsonResponse({'status': 'ignored', 'message': 'Incomplete webhook data'}, status=200)
             return redirect('home')
 
-        pedido = get_object_or_404(Pedido, token=token)
+        # pedido is already loaded from security validation above
 
         if not pedido.payment_id:
             pedido.payment_id = payment_id
@@ -2458,6 +2485,17 @@ def hello(request):
                 return JsonResponse({'status': 'error', 'message': 'Payment ID mismatch'}, status=400)
             return redirect('home')
 
+        # For GET requests (user redirects), we can proceed without Mercado Pago API call
+        # since the user is just being redirected to confirmation page
+        if request.method == 'GET' and not payment_id:
+            # User redirect without payment_id - just show confirmation page
+            redirect_url = reverse('confirmacion_pedido', args=[pedido.restaurante.username, str(pedido.token)])
+            if status:
+                redirect_url += f"?status={status}&external_reference={token}"
+            logger.info(f"Redirecting user to confirmation: {redirect_url}")
+            return redirect(redirect_url)
+
+        # Only call Mercado Pago API if we have payment_id
         access_token = get_mp_access_token(pedido.restaurante)
         headers = {'Authorization': f'Bearer {access_token}'}
         ml_response = requests.get(f'https://api.mercadopago.com/v1/payments/{payment_id}', headers=headers)

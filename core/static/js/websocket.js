@@ -16,13 +16,13 @@ $(document).ready(function() {
     const baseReconnectDelay = 5000;
 
     function connectWebSocket() {
-        console.log("Intentando conectar WebSocket a:", wsUrl);
+        console.log("Intentando conectar en tiempo real a:", wsUrl);
         ws = new WebSocket(wsUrl);
 
         ws.onopen = function() {
-            console.log("WebSocket conectado exitosamente para restaurante:", restauranteId);
+            console.log("Tiempo real conectado exitosamente para restaurante:", restauranteId);
             reconnectAttempts = 0;
-            showNotification("Conexión WebSocket establecida", "success");
+            showNotification("Conexión en tiempo real establecida", "success");
         };
 
         ws.onmessage = function(e) {
@@ -33,7 +33,7 @@ $(document).ready(function() {
 
                 if (data.error) {
                     console.error("Error recibido del WebSocket:", data.error);
-                    showNotification(data.error, "error");
+                    showNotification(data.error, "Error en conexión, reinicia la página");
                     return;
                 }
 

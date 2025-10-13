@@ -382,6 +382,10 @@ class ConfigRestauranteForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Ej. HVNBurger'
             }),
+            'google_verification_code': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Ej: ABcDeFgHiJkLmNoPqRsTuVwXyZ012345'
+            }),
         }
 
 class CodigoDescuentoForm(forms.Form):

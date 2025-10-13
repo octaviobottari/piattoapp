@@ -80,6 +80,12 @@ class Restaurante(AbstractUser):
         max_length=500, blank=True, null=True,
         verbose_name="Meta Palabras Clave (SEO, separadas por comas)"
     )
+    google_verification_code = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        verbose_name="Código de verificación de Google"
+    )
     written_schedules = models.TextField(
         max_length=500, blank=True, null=True,
         verbose_name="Horarios Escritos (ej. Lunes a Viernes 12:00-22:00)"

@@ -527,6 +527,13 @@ textarea.form-control {
           {{ config_form.meta_keywords }}
           <small class="text-muted">Palabras clave separadas por comas. Ej: "comida, delivery, {{ restaurante.nombre_local|lower }}, {{ restaurante.ciudad|default:"tu ciudad"|lower }}"</small>
         </div>
+        <div class="mb-3">
+    <label class="form-label">Código Verificación Google - No tocar</label>
+    <input type="text" class="form-control" name="google_verification_code" 
+           value="{{ restaurante.google_verification_code|default:'' }}"
+           placeholder="Ej: ABcDeFgHiJkLmNoPqRsTuVwXyZ012345">
+    <small class="text-muted">El código de Google Search Console lo hace el Staff de Piatto</small>
+</div>
         
         <!-- Vista previa de SEO -->
         <div class="card mt-3">

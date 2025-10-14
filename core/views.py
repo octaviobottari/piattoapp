@@ -50,6 +50,7 @@ import re
 from django.views.decorators.cache import cache_page
 from django.views.decorators.cache import never_cache
 import requests
+from django.core.cache import cache
 
 logger = logging.getLogger(__name__)
 
@@ -1079,7 +1080,24 @@ def pedido_json(request, pedido_id):
     }
     return JsonResponse(data)
 
+def rate_limit_check(ip_address, key, limit, window=60):
+    """
+    Verifica si se excedió el límite de requests
+    key: identificador único (ej: 'procesar_pedido')
+    limit: máximo de requests por ventana de tiempo
+    window: ventana de tiempo en segundos (default 60s)
+    """
+    cache_key = f"rate_limit:{key}:{ip_address}"
+    current = cache.get(cache_key, 0)
+    
+    if current >= limit:
+        return False
+    
+    cache.set(cache_key, current + 1, window)
+    return True
+
 @never_cache
+@no_cache_view
 def restaurante_publico(request, nombre_restaurante):
     reserved_paths = ['panel', 'login', 'registro', 'logout', 'admin']
     if nombre_restaurante.lower() in reserved_paths:
@@ -1091,9 +1109,21 @@ def restaurante_publico(request, nombre_restaurante):
     if request.method == 'POST':
         return procesar_pedido(request, restaurante)
 
-    categorias = Categoria.objects.filter(restaurante=restaurante).prefetch_related(
-        Prefetch('producto_set', queryset=Producto.objects.filter(disponible=True).order_by('nombre'))
-    )
+    # ✅ CACHE ESTRATÉGICO - REEMPLAZAR LA CONSULTA ACTUAL
+    cache_key = f'restaurante_menu_{nombre_restaurante}'
+    categorias = cache.get(cache_key)
+    
+    if not categorias:
+        # Solo hacemos la consulta a BD si no está en cache
+        categorias = Categoria.objects.filter(restaurante=restaurante).prefetch_related(
+            Prefetch('producto_set', 
+                    queryset=Producto.objects.filter(disponible=True).order_by('nombre'))
+        )
+        # Guardar en cache por 10 minutos
+        cache.set(cache_key, categorias, 60 * 10)
+    
+    # Invalidar cache cuando cambie el menú (agregar en otras vistas)
+    # Ej: cuando edites/agregues/elimines productos
 
     response = render(request, 'core/restaurante_publico.html', {
         'restaurante': restaurante,

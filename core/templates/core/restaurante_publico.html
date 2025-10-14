@@ -18,8 +18,8 @@
 <meta name="author" content="{{ restaurante.nombre_local }}">
 <meta name="googlebot" content="index, follow, max-snippet:-1, max-image-preview:large">
 {% if restaurante.google_verification_code %}
-    <meta name="google-site-verification" content="{{ restaurante.google_verification_code }}" />
-    {% endif %}
+<meta name="google-site-verification" content="{{ restaurante.google_verification_code }}" />
+{% endif %}
 
 <!-- Canonical URL -->
 <link rel="canonical" href="https://piattoweb.com{% url 'restaurante_publico' restaurante.username %}" />

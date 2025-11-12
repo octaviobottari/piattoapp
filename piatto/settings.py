@@ -21,7 +21,6 @@ handler500 = 'core.views.error_view'
 
 # Apps
 INSTALLED_APPS = [
-    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -32,13 +31,27 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap4',
     'widget_tweaks',
-    'channels',
     'corsheaders',
     'django_extensions',
     'storages',
     'core.apps.CoreConfig',
-    'rest_framework'
+    'rest_framework',
+    'django_celery_results',
+    'django_celery_beat'
 ]
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'piatto-cache',
+        'TIMEOUT': 300,  # 5 minutos
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+            'CULL_FREQUENCY': 3,
+        }
+    }
+}
+
 
 # Middleware
 MIDDLEWARE = [
@@ -73,7 +86,7 @@ TEMPLATES = [
 # URLs
 ROOT_URLCONF = 'piatto.urls'
 WSGI_APPLICATION = 'piatto.wsgi.application'
-ASGI_APPLICATION = 'piatto.asgi.application'
+ASGI_APPLICATION = 'None'
 
 # Database
 DATABASES = {
@@ -128,30 +141,6 @@ AWS_S3_CUSTOM_DOMAIN = 'piatto-media-2025.s3.us-east-2.amazonaws.com'
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap4"
 CRISPY_TEMPLATE_PACK = 'bootstrap4'
 
-# Channels with Redis
-CHANNEL_LAYERS = {
-    'default': {
-        'BACKEND': 'channels_redis.core.RedisChannelLayer',
-        'CONFIG': {
-            'hosts': [os.getenv('REDIS_URL', 'redis://127.0.0.1:6379')],
-            'capacity': 100,  
-            'group_expiry': 3600,
-        },
-    },
-}
-
-# Caching with Redis
-CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/1'),
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
-        },
-        'TIMEOUT': 3600,
-        'KEY_PREFIX': 'piatto_',
-    }
-}
 
 # Prevent cache buildup
 CACHE_MIDDLEWARE_ALIAS = 'default'
@@ -239,8 +228,17 @@ X_FRAME_OPTIONS = 'DENY'
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
-SESSION_ENGINE = 'django.contrib.sessions.backends.cache'
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'
+SESSION_COOKIE_AGE = 1209600
 SESSION_CACHE_ALIAS = 'default'
+SSE_TIMEOUT = 30
+POLLING_INTERVAL = 10
+CELERY_BROKER_URL = 'django-db://'
+CELERY_RESULT_BACKEND = 'django-db://'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Argentina/Buenos_Aires'
 
 # Email settings
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'

@@ -1,11 +1,13 @@
+import threading
+import time
 from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.db import transaction
 from django.db.models import Prefetch, F, Sum, Count
-from django.views.decorators.http import require_POST
-from django.http import JsonResponse, HttpResponse
+from django.views.decorators.http import require_POST, require_GET
+from django.http import JsonResponse, HttpResponse, StreamingHttpResponse
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from django.forms.models import modelformset_factory  # Use modelformset_factory
@@ -765,6 +767,116 @@ def mass_delete_products(request):
         return JsonResponse({'success': True})
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error al eliminar productos: {str(e)}'}, status=500)
+    
+class PedidoMemoryCache:
+    _instance = None
+    _cache = {}
+    _lock = threading.Lock()
+    
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            with cls._lock:
+                if cls._instance is None:
+                    cls._instance = cls()
+        return cls._instance
+    
+    def set_pedidos(self, restaurante_id, pedidos):
+        with self._lock:
+            cache_key = f"pedidos_activos_{restaurante_id}"
+            self._cache[cache_key] = {
+                'data': pedidos,
+                'timestamp': timezone.now(),
+                'version': self._cache.get(cache_key, {}).get('version', 0) + 1
+            }
+    
+    def get_pedidos(self, restaurante_id):
+        with self._lock:
+            cache_key = f"pedidos_activos_{restaurante_id}"
+            return self._cache.get(cache_key, {}).get('data', [])
+    
+    def get_version(self, restaurante_id):
+        with self._lock:
+            cache_key = f"pedidos_activos_{restaurante_id}"
+            return self._cache.get(cache_key, {}).get('version', 0)
+
+pedido_cache = PedidoMemoryCache.get_instance()
+
+@require_GET
+@login_required
+def pedidos_sse(request, restaurante_id):
+    """
+    Server-Sent Events para actualizaciones en tiempo real
+    Reemplaza WebSockets completamente
+    """
+    # Verificar que el usuario tiene acceso a este restaurante
+    if request.user.id != int(restaurante_id) and not request.user.is_staff:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+    
+    def event_stream():
+        last_version = int(request.GET.get('version', 0))
+        client_id = f"{restaurante_id}_{int(time.time())}"
+        
+        try:
+            # Enviar heartbeat cada 25 segundos (menos de 30s timeout de nginx)
+            heartbeat_count = 0
+            
+            while True:
+                current_version = pedido_cache.get_version(restaurante_id)
+                
+                # Si hay cambios, enviar datos
+                if current_version > last_version:
+                    pedidos = pedido_cache.get_pedidos(restaurante_id)
+                    yield f"data: {json.dumps({
+                        'type': 'pedidos_updated',
+                        'pedidos': pedidos,
+                        'version': current_version,
+                        'timestamp': timezone.now().isoformat()
+                    })}\n\n"
+                    last_version = current_version
+                
+                # Heartbeat cada 25 segundos
+                heartbeat_count += 1
+                if heartbeat_count >= 5:  # 5 * 5s = 25s
+                    yield "data: {\"type\": \"heartbeat\"}\n\n"
+                    heartbeat_count = 0
+                
+                time.sleep(5)  # Verificar cada 5 segundos
+                
+        except GeneratorExit:
+            logger.info(f"SSE connection closed for client {client_id}")
+        except Exception as e:
+            logger.error(f"SSE error for client {client_id}: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+    
+    response = StreamingHttpResponse(
+        event_stream(), 
+        content_type='text/event-stream'
+    )
+    response['Cache-Control'] = 'no-cache'
+    response['X-Accel-Buffering'] = 'no'  # Importante para Nginx
+    return response
+
+def actualizar_cache_pedidos(restaurante_id):
+    """
+    Función para actualizar el cache cuando hay cambios en pedidos
+    """
+    from .models import Pedido
+    
+    try:
+        pedidos_activos = Pedido.objects.filter(
+            restaurante_id=restaurante_id,
+            estado__in=['pendiente', 'en_preparacion', 'listo', 'procesando_pago']
+        ).order_by('-fecha').values(
+            'id', 'numero_pedido', 'cliente', 'telefono', 
+            'estado', 'fecha', 'total', 'metodo_pago'
+        )[:50]  # Limitar a 50 pedidos
+        
+        pedido_cache.set_pedidos(restaurante_id, list(pedidos_activos))
+        logger.info(f"Cache actualizado para restaurante {restaurante_id}: {len(pedidos_activos)} pedidos activos")
+        
+    except Exception as e:
+        logger.error(f"Error actualizando cache para restaurante {restaurante_id}: {str(e)}")
 
 @login_required
 @never_cache
@@ -871,6 +983,10 @@ def eliminar_pedido(request, pedido_id):
 
     try:
         pedido.delete()
+        
+        # ✅ AGREGAR ESTA LÍNEA:
+        actualizar_cache_pedidos(request.user.id)
+        
         return JsonResponse({'success': True, 'message': f'Pedido #{pedido.numero_pedido} eliminado correctamente'})
     except Exception as e:
         logger.error(f"Error al eliminar pedido {pedido_id}: {str(e)}")
@@ -888,6 +1004,10 @@ def marcar_en_entrega(request, pedido_id):
     pedido.estado = 'en_entrega'
     pedido.fecha_en_entrega = timezone.now()
     pedido.save()
+    
+    # ✅ AGREGAR ESTA LÍNEA:
+    actualizar_cache_pedidos(request.user.id)
+    
     return JsonResponse({'success': True})
 
 @login_required
@@ -901,6 +1021,10 @@ def archivar_pedido(request, pedido_id):
 
     pedido.estado = 'archivado'
     pedido.save()
+    
+    # ✅ AGREGAR ESTA LÍNEA:
+    actualizar_cache_pedidos(request.user.id)
+    
     return JsonResponse({'success': True})
 
 @login_required
@@ -982,6 +1106,10 @@ def aceptar_pedido(request, pedido_id):
     pedido.estado = 'en_preparacion'
     pedido.tiempo_estimado = tiempo_estimado
     pedido.save()
+    
+    # ✅ AGREGAR ESTA LÍNEA:
+    actualizar_cache_pedidos(request.user.id)
+    
     return JsonResponse({'success': True})
 
 @login_required
@@ -998,6 +1126,10 @@ def rechazar_pedido(request, pedido_id):
     pedido.motivo_cancelacion = motivo
     pedido.fecha_cancelado = timezone.now()
     pedido.save()
+    
+    # ✅ AGREGAR ESTA LÍNEA:
+    actualizar_cache_pedidos(request.user.id)
+    
     return JsonResponse({'success': True})
 
 @login_required
@@ -1012,6 +1144,10 @@ def actualizar_estado(request, pedido_id):
 
     pedido.estado = estado
     pedido.save()
+    
+    # ✅ AGREGAR ESTA LÍNEA:
+    actualizar_cache_pedidos(request.user.id)
+    
     return JsonResponse({'success': True})
 
 @login_required
@@ -1189,16 +1325,9 @@ def confirmar_pago(request, pedido_id):
     pedido.estado = 'pendiente'
     pedido.save()
 
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        f'pedidos_restaurante_{request.user.id}',
-        {
-            'type': 'pedido_updated',
-            'pedido_id': pedido.id,
-            'message': 'Pago confirmado, pedido pendiente'
-        }
-    )
-
+    # ✅ AGREGAR ESTA LÍNEA:
+    actualizar_cache_pedidos(request.user.id)
+    
     return JsonResponse({'success': True})
 
 @login_required
@@ -1216,15 +1345,9 @@ def rechazar_pago(request, pedido_id):
     pedido.fecha_error_pago = timezone.now()
     pedido.save()
 
-    channel_layer = get_channel_layer()
-    async_to_sync(channel_layer.group_send)(
-        f'pedidos_restaurante_{request.user.id}',
-        {
-            'type': 'pedido_updated',
-            'pedido_id': pedido.id,
-            'message': 'Error en el pago del pedido'
-        }
-    )
+    # ✅ AGREGAR ESTA LÍNEA:
+    actualizar_cache_pedidos(request.user.id)
+    
     return JsonResponse({'success': True})
 
 # Update procesar_pedido to handle Mercado Pago orders
@@ -1393,17 +1516,7 @@ def procesar_pedido(request, restaurante):
                         precio_unitario=item['precio_unitario'],
                         opciones_seleccionadas=item['opciones_seleccionadas']
                     )
-
-                # Send WebSocket notification
-                channel_layer = get_channel_layer()
-                async_to_sync(channel_layer.group_send)(
-                    f'pedidos_restaurante_{restaurante.id}',
-                    {
-                        'type': 'new_pedido',
-                        'pedido_id': pedido.id,
-                        'message': 'Nuevo pedido recibido!'
-                    }
-                )
+                actualizar_cache_pedidos(restaurante.id)
 
                 return JsonResponse({
                     'success': True,

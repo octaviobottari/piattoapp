@@ -223,649 +223,600 @@
 
 {% block scripts %}
 {{ block.super }}
-<script src="{% static 'js/websocket.js' %}"></script>
+<!-- ✅ REEMPLAZAR WebSockets con SSE -->
+<script src="{% static 'js/sse-manager.js' %}"></script>
+
 <script>
-  // Dummy function to prevent updateDateTime error
-  function updateDateTime() {
-    console.log("updateDateTime called but not implemented");
-  }
+// Dummy function to prevent updateDateTime error
+function updateDateTime() {
+  console.log("updateDateTime called but not implemented");
+}
 
-  // Función para mostrar notificaciones
-  function showNotification(message, type) {
-    const notificationDiv = document.createElement("div");
-    notificationDiv.className = `alert alert-${type === "error" ? "danger" : type === "warning" ? "warning" : "success"} alert-dismissible fade show`;
-    notificationDiv.style.position = "fixed";
-    notificationDiv.style.top = "20px";
-    notificationDiv.style.right = "20px";
-    notificationDiv.style.zIndex = "1000";
-    notificationDiv.innerHTML = `
-      ${message}
-      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-    `;
-    document.body.appendChild(notificationDiv);
-    setTimeout(() => notificationDiv.remove(), 5000);
-  }
+// Función para mostrar notificaciones
+function showNotification(message, type) {
+  const notificationDiv = document.createElement("div");
+  notificationDiv.className = `alert alert-${type === "error" ? "danger" : type === "warning" ? "warning" : "success"} alert-dismissible fade show`;
+  notificationDiv.style.position = "fixed";
+  notificationDiv.style.top = "20px";
+  notificationDiv.style.right = "20px";
+  notificationDiv.style.zIndex = "1000";
+  notificationDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  document.body.appendChild(notificationDiv);
+  setTimeout(() => notificationDiv.remove(), 5000);
+}
 
-  // Función para copiar el mensaje al portapapeles
-  function copyToClipboard(text) {
-    if (navigator.clipboard && window.isSecureContext) {
-      // Usar la API moderna de Clipboard
-      navigator.clipboard.writeText(text).then(() => {
-        showNotification("Mensaje copiado al portapapeles", "success");
-        console.log("Mensaje copiado al portapapeles");
-      }).catch(err => {
-        showNotification("Error al copiar el mensaje", "error");
-        console.error("Error al copiar el mensaje: ", err);
-      });
-    } else {
-      // Fallback para navegadores antiguos
-      const tempTextArea = document.createElement('textarea');
-      tempTextArea.value = text;
-      document.body.appendChild(tempTextArea);
-      tempTextArea.select();
-      tempTextArea.setSelectionRange(0, 99999);
-      try {
-        document.execCommand('copy');
-        showNotification("Mensaje copiado al portapapeles", "success");
-        console.log("Mensaje copiado (fallback)");
-      } catch (err) {
-        showNotification("Error al copiar el mensaje (fallback)", "error");
-        console.error("Error al copiar el mensaje (fallback): ", err);
-      }
-      document.body.removeChild(tempTextArea);
-    }
-  }
+// Función para copiar el mensaje al portapapeles
+function copyToClipboard(text) {
+  if (navigator.clipboard && window.isSecureContext) {
+    // Usar la API moderna de Clipboard
+    navigator.clipboard.writeText(text).then(() => {
+      showNotification("Mensaje copiado al portapapeles", "success");
+      console.log("Mensaje copiado al portapapeles");
+    }).catch(err => {
+      showNotification("Error al copiar el mensaje", "error");
+      console.error("Error al copiar el mensaje: ", err);
+    });
+  } else {
+    // Fallback para navegadores antiguos
+    const tempTextArea = document.createElement('textarea');
+    tempTextArea.value = text;
+    document.body.appendChild(tempTextArea);
+    tempTextArea.select();
+    tempTextArea.setSelectionRange(0, 99999);
+    try {
+      document.execCommand('copy');
+      showNotification("Mensaje copiado al portapapeles", "success");
+      console.log("Mensaje copiado (fallback)");
+    } catch (err) {
+      showNotification("Error al copiar el mensaje (fallback)", "error");
+      console.error("Error al copiar el mensaje (fallback): ", err);
+    }
+    document.body.removeChild(tempTextArea);
+  }
+}
 
-  $(document).ready(function() {
-    console.log("JavaScript de lista_pedidos cargado correctamente");
+$(document).ready(function() {
+  console.log("JavaScript de lista_pedidos cargado correctamente");
 
-    // Configurar CSRF token para todas las solicitudes AJAX
-    $.ajaxSetup({
-      beforeSend: function(xhr, settings) {
-        if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
-          const csrftoken = getCookie('csrftoken');
-          if (csrftoken) {
-            xhr.setRequestHeader("X-CSRFToken", csrftoken);
-          } else {
-            console.error("CSRF token no encontrado");
-            showNotification("Error: CSRF token no encontrado", "error");
-          }
-        }
-      }
-    });
+  // Configurar CSRF token para todas las solicitudes AJAX
+  $.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+      if (!/^(GET|HEAD|OPTIONS|TRACE)$/i.test(settings.type) && !this.crossDomain) {
+        const csrftoken = getCookie('csrftoken');
+        if (csrftoken) {
+          xhr.setRequestHeader("X-CSRFToken", csrftoken);
+        } else {
+          console.error("CSRF token no encontrado");
+          showNotification("Error: CSRF token no encontrado", "error");
+        }
+      }
+    }
+  });
 
-    // Manejo de dropdowns para ajustar z-index de icon-group
-    $(document).on('show.bs.dropdown', '.dropdown', function() {
-      const $currentIconGroup = $(this).closest('.icon-group');
-      const $allIconGroups = $('.icon-group').not($currentIconGroup);
-      $allIconGroups.css('z-index', 50); // Lower z-index of other icon-groups
-      $currentIconGroup.css('z-index', 3100); // Ensure current icon-group is above dropdown
-    });
+  // Manejo de dropdowns para ajustar z-index de icon-group
+  $(document).on('show.bs.dropdown', '.dropdown', function() {
+    const $currentIconGroup = $(this).closest('.icon-group');
+    const $allIconGroups = $('.icon-group').not($currentIconGroup);
+    $allIconGroups.css('z-index', 50); // Lower z-index of other icon-groups
+    $currentIconGroup.css('z-index', 3100); // Ensure current icon-group is above dropdown
+  });
 
-    $(document).on('hide.bs.dropdown', '.dropdown', function() {
-      $('.icon-group').css('z-index', 100); // Restore default z-index
-    });
+  $(document).on('hide.bs.dropdown', '.dropdown', function() {
+    $('.icon-group').css('z-index', 100); // Restore default z-index
+  });
 
-    // Manejo de audio
-    const audio = document.getElementById('notificationSound');
-    let isSoundEnabled = localStorage.getItem('isSoundEnabled') === 'true';
-    let audioUnlocked = false;
-    let pendingSound = null;
-    $('#soundToggle').prop('checked', isSoundEnabled);
+  // Manejo de audio
+  const audio = document.getElementById('notificationSound');
+  let isSoundEnabled = localStorage.getItem('isSoundEnabled') === 'true';
+  let audioUnlocked = false;
+  let pendingSound = null;
+  $('#soundToggle').prop('checked', isSoundEnabled);
 
-    // Verificar carga del archivo de audio
-    audio.addEventListener('loadeddata', () => {
-      console.log("Archivo de audio cargado correctamente");
-    });
-    audio.addEventListener('error', (e) => {
-      console.error("Error al cargar el archivo de audio:", e);
-      showNotification("Error al cargar el sonido de notificación. Verifica el archivo /static/sounds/notification-bell.mp3.", "error");
-    });
-    audio.load();
+  // Verificar carga del archivo de audio
+  audio.addEventListener('loadeddata', () => {
+    console.log("Archivo de audio cargado correctamente");
+  });
+  audio.addEventListener('error', (e) => {
+    console.error("Error al cargar el archivo de audio:", e);
+    showNotification("Error al cargar el sonido de notificación. Verifica el archivo /static/sounds/notification-bell.mp3.", "error");
+  });
+  audio.load();
 
-    // Función para desbloquear audio
-    function unlockAudio() {
-      if (!audioUnlocked) {
-        console.log("Intentando desbloquear audio...");
-        audio.play().then(() => {
-          audio.pause();
-          audio.currentTime = 0;
-          audioUnlocked = true;
-          console.log("Audio desbloqueado tras interacción del usuario");
-          if (pendingSound) {
-            console.log("Reintentando sonido para pedido pendiente:", pendingSound);
-            playNotificationSound(pendingSound);
-            pendingSound = null;
-          }
-        }).catch(e => {
-          console.warn("No se pudo desbloquear audio:", e);
-          if (isSoundEnabled && !$('#modalActivarSonido').hasClass('show')) {
-            $('#modalActivarSonido').modal('show');
-          }
-        });
-      }
-    }
-
-    // Función para reproducir sonido
-    window.playNotificationSound = function(pedidoId) {
-      if (!isSoundEnabled) {
-        console.log("Sonido deshabilitado, no se reproduce para pedido:", pedidoId);
-        return;
-      }
-      console.log("Intentando reproducir sonido para pedido:", pedidoId);
-      if (audioUnlocked) {
-        audio.play().then(() => {
-          console.log("Sonido reproducido exitosamente para pedido:", pedidoId);
-        }).catch(e => {
-          console.error("Error al reproducir sonido:", e);
-          showNotification(`Nuevo pedido #${pedidoId} recibido, pero el sonido no se pudo reproducir. Interactúa con la página.`, "warning");
-        });
-      } else {
-        pendingSound = pedidoId;
-        showNotification(`Nuevo pedido #${pedidoId} recibido, pero el sonido está bloqueado. Interactúa con la página.`, "warning");
-        unlockAudio();
-      }
-    };
-
-    // Mostrar modal de activación de sonido al cargar si es necesario
-    if (isSoundEnabled) {
-      unlockAudio();
-    }
-
-    // Desbloquear audio en múltiples eventos
-    $(document).on('click touchstart', unlockAudio);
-    $('#soundToggle').on('click', unlockAudio);
-    $('#btnActivarSonido').on('click', function() {
-      unlockAudio();
-      $('#modalActivarSonido').modal('hide');
-    });
-
-    // Manejar cambio en el toggle de sonido
-    $('#soundToggle').change(function() {
-      isSoundEnabled = $(this).is(':checked');
-      localStorage.setItem('isSoundEnabled', isSoundEnabled);
-      console.log("Notificaciones de sonido:", isSoundEnabled ? "habilitadas" : "deshabilitadas");
-      if (isSoundEnabled) {
-        unlockAudio();
-        setTimeout(() => {
-          audio.play().then(() => {
-            audio.pause();
-            audio.currentTime = 0;
-            console.log("Sonido de prueba reproducido al habilitar notificaciones");
-          }).catch(e => {
-            console.error("Error al reproducir sonido de prueba:", e);
-            showNotification("No se pudo reproducir el sonido de prueba. Interactúa con la página.", "error");
-            $('#modalActivarSonido').modal('show');
-          });
-        }, 100);
-      }
-    });
-
-    // Buscador
-    $('#searchInput').on('keyup', function() {
-      const searchText = $(this).val().toLowerCase();
-      $('.order-card').each(function() {
-        const pedidoId = $(this).data('pedido-id').toString();
-        const cliente = $(this).find('.order-name').text().toLowerCase();
-        $(this).toggle(pedidoId.includes(searchText) || cliente.includes(searchText));
-      });
-    });
-
-    // Evitar clics múltiples
-    function disableButton($btn) {
-      $btn.addClass('disabled').prop('disabled', true);
-    }
-
-    function enableButton($btn) {
-      $btn.removeClass('disabled').prop('disabled', false);
-    }
-
-    // Función para refrescar todas las columnas
-    function refreshAllColumns() {
-      $.ajax({
-        url: '/panel/pedidos/pendientes/html/',
-        method: 'GET',
-        cache: false,
-        timeout: 10000,
-        success: function(html) {
-          const $pendientes = $('#pendientes');
-          $pendientes.html(html);
-          $('.dropdown-toggle', $pendientes).dropdown();
-          $pendientes[0].scrollTop = 0;
-        },
-        error: function(xhr) {
-          console.error("Error al obtener pedidos pendientes:", xhr.status, xhr.statusText, xhr.responseText);
-          showNotification(`Error al actualizar pedidos pendientes: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-        }
-      });
-
-      $.ajax({
-        url: '/panel/pedidos/en_preparacion/html/',
-        method: 'GET',
-        cache: false,
-        timeout: 10000,
-        success: function(html) {
-          const $enPreparacion = $('#en_preparacion');
-          $enPreparacion.html(html);
-          $('.dropdown-toggle', $enPreparacion).dropdown();
-          $enPreparacion[0].scrollTop = 0;
-        },
-        error: function(xhr) {
-          console.error("Error al obtener pedidos en preparación:", xhr.status, xhr.statusText, xhr.responseText);
-          showNotification(`Error al actualizar pedidos en preparación: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-        }
-      });
-
-      $.ajax({
-        url: '/panel/pedidos/listos/html/',
-        method: 'GET',
-        cache: false,
-        timeout: 10000,
-        success: function(html) {
-          const $listo = $('#listo');
-          $listo.html(html);
-          $('.dropdown-toggle', $listo).dropdown();
-          $listo[0].scrollTop = 0;
-        },
-        error: function(xhr) {
-          console.error("Error al obtener pedidos listos:", xhr.status, xhr.statusText, xhr.responseText);
-          showNotification(`Error al actualizar pedidos listos: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-        }
-      });
-    }
-
-    // Aceptar pedido
-    $(document).on('click', '.aceptar-pedido', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      const $this = $(this);
-      if ($this.hasClass('disabled')) return;
-      disableButton($this);
-
-      const pedidoId = $this.data('pedido-id');
-      const tiempoEstimado = $this.data('tiempo');
-
-      $.ajax({
-        url: `/panel/pedidos/${pedidoId}/aceptar/`,
-        method: 'POST',
-        data: { tiempo_estimado: tiempoEstimado },
-        success: function(response) {
-          if (response.success) {
-            showNotification(`Pedido #${pedidoId} aceptado`, "success");
-            refreshAllColumns();
-          } else {
-            showNotification(`Error al aceptar el pedido: ${response.error || 'Error desconocido'}`, "error");
-          }
-        },
-        error: function(xhr) {
-          showNotification(`Error al aceptar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-        },
-        complete: function() {
-          enableButton($this);
-        }
-      });
-    });
-
-    // Mover de "En Preparación" a "Listos para Entregar"
-    $(document).on('click', '.mover-a-listo', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      const $this = $(this);
-      if ($this.hasClass('disabled')) return;
-      disableButton($this);
-
-      const pedidoId = $this.data('pedido-id');
-
-      $.ajax({
-        url: `/panel/pedidos/${pedidoId}/actualizar_estado/`,
-        method: 'POST',
-        data: { estado: 'listo' },
-        success: function(response) {
-          if (response.success) {
-            showNotification(`Pedido #${pedidoId} movido a Listo`, "success");
-            refreshAllColumns();
-          } else {
-            showNotification(`Error al mover el pedido: ${response.error || 'Error desconocido'}`, "error");
-          }
-        },
-        error: function(xhr) {
-          showNotification(`Error al mover el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-        },
-        complete: function() {
-          enableButton($this);
-        }
-      });
-    });
-
-    // Rechazar pedido
-    $(document).on('click', '.rechazar-pedido', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      const $this = $(this);
-      if ($this.hasClass('disabled')) return;
-      disableButton($this);
-
-      const pedidoId = $this.data('pedido-id');
-      const motivo = $this.data('motivo');
-
-      $.ajax({
-        url: `/panel/pedidos/${pedidoId}/rechazar/`,
-        method: 'POST',
-        data: { motivo: motivo },
-        success: function(response) {
-          if (response.success) {
-            showNotification(`Pedido #${pedidoId} cancelado`, "success");
-            refreshAllColumns();
-          } else {
-            showNotification(`Error al rechazar el pedido: ${response.error || 'Error desconocido'}`, "error");
-          }
-        },
-        error: function(xhr) {
-          showNotification(`Error al rechazar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-        },
-        complete: function() {
-          enableButton($this);
-        }
-      });
-    });
-
-    // Marcar como "En Entrega"
-    $(document).on('click', '.marcar-en-entrega', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      const $this = $(this);
-      if ($this.hasClass('disabled')) return;
-      disableButton($this);
-
-      const pedidoId = $this.data('pedido-id');
-      const card = $this.closest('.order-card');
-      const telefonoRaw = card.find('.order-phone').attr('data-telefono');
-
-      if (!telefonoRaw || typeof telefonoRaw !== 'string' || telefonoRaw.trim() === '') {
-        showNotification('Número inválido. No se puede contactar por WhatsApp.', "error");
-        enableButton($this);
-        return;
-      }
-
-      const telefono = telefonoRaw.replace(/\D/g, '');
-      if (telefono.length !== 10 || isNaN(telefono)) {
-        showNotification('Número inválido. Debe tener 10 dígitos numéricos.', "error");
-        enableButton($this);
-        return;
-      }
-
-      const numeroWhatsApp = `+54${telefono}`;
-
-      $.get(`/panel/pedidos/${pedidoId}/json/`, (pedido) => {
-        let mensaje = `Hola ${pedido.nombre_cliente || 'Cliente'}, tu pedido #${pedido.numero_pedido} ya salió para entrega!\n\n*Detalles del pedido:*\n`;
-        pedido.items.forEach(item => {
-          mensaje += `- ${item.cantidad}x ${item.nombre_producto} ($${parseFloat(item.subtotal).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})`;
-          if (item.opciones_seleccionadas.length > 0) {
-            mensaje += `\n  Opciones:\n`;
-            item.opciones_seleccionadas.forEach(opt => {
-              mensaje += `    * ${opt.nombre} (+$${parseFloat(opt.precio_adicional).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})\n`;
-            });
-          } else {
-            mensaje += `\n`;
-          }
-        });
-        mensaje += `\n*Total*: $${parseFloat(pedido.total).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        mensaje += `\n\n*Entrega en*: ${pedido.direccion_entrega}`;
-        mensaje += `\n*Repartidor en camino*`;
-
-        const mensajeEncoded = encodeURIComponent(mensaje);
-        const whatsappUrl = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${mensajeEncoded}`;
-
-        $('#modalWhatsAppTitle').text('Notificar Entrega por WhatsApp');
-        $('#whatsappMessage').text(mensaje);
-        $('#whatsappLink').attr('href', whatsappUrl).show();
-        $('#modalWhatsApp').data('pedido-id', pedidoId).modal('show');
-        
-        // Copiar el mensaje al portapapeles automáticamente
-        copyToClipboard(mensaje);
-      }).fail((xhr) => {
-        showNotification('Error al cargar detalles del pedido: ' + (xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'), "error");
-        enableButton($this);
-      });
-    });
-
-    // Ejecutar acción de "Marcar como En Entrega" al cerrar el modal
-    $('#modalWhatsApp').on('hidden.bs.modal', function() {
-      const pedidoId = $(this).data('pedido-id');
-      if (pedidoId) {
-        $.ajax({
-          url: `/panel/pedidos/${pedidoId}/marcar_en_entrega/`,
-          method: 'POST',
-          data: {},
-          success: function(response) {
-            if (response.success) {
-              showNotification(`Pedido #${pedidoId} marcado como En Entrega`, "success");
-              refreshAllColumns();
-            } else {
-              showNotification(`Error al marcar como en entrega: ${response.error || 'Error desconocido'}`, "error");
-            }
-          },
-          error: function(xhr) {
-            showNotification(`Error al marcar como en entrega: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-          }
-        });
-        $(this).removeData('pedido-id');
-      }
-    });
-
-    // Archivar pedido
-    $(document).on('click', '.archivar-pedido', function(e) {
-      e.preventDefault();
-      e.stopPropagation();
-      const $this = $(this);
-      if ($this.hasClass('disabled')) return;
-      disableButton($this);
-
-      const pedidoId = $this.data('pedido-id');
-
-      $.ajax({
-        url: `/panel/pedidos/${pedidoId}/archivar/`,
-        method: 'POST',
-        data: {},
-        success: function(response) {
-          if (response.success) {
-            showNotification(`Pedido #${pedidoId} archivado`, "success");
-            refreshAllColumns();
-          } else {
-            showNotification(`Error al archivar el pedido: ${response.error || 'Error desconocido'}`, "error");
-          }
-        },
-        error: function(xhr) {
-          showNotification(`Error al archivar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-        },
-        complete: function() {
-          enableButton($this);
-        }
-      });
-    });
-
-    // Mostrar detalles del pedido
-    $(document).on('click', '.order-card', function(e) {
-      if ($(e.target).closest('.icon-group').length || $(e.target).hasClass('order-phone')) return;
-
-      const pedidoId = $(this).data('pedido-id');
-      $.ajax({
-        url: `/panel/pedidos/${pedidoId}/json/`,
-        method: 'GET',
-        success: function(data) {
-          $('#modalPedidoTitle').text(`Pedido #${data.numero_pedido || 'Desconocido'}`);
-          $('#modalCliente').text(data.nombre_cliente || 'Sin nombre');
-          $('#modalTelefono').text(data.telefono_cliente || 'Sin teléfono');
-          $('#modalDireccion').text(data.direccion_entrega || 'Retiro en local');
-          $('#modalAclaraciones').text(data.aclaraciones || 'Sin aclaraciones');
-          $('#modalFecha').text(data.fecha_creacion ? new Date(data.fecha_creacion).toLocaleString('es-AR', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-          }) : 'Sin fecha');
-          $('#modalMetodoPago').text(data.metodo_pago || 'No especificado');
-          $('#modalEstado').text(data.estado || 'Sin estado');
-          $('#modalTiempoEstimado').text(data.tiempo_estimado || 'No especificado');
-          $('#modalErrorPagoContainer').toggle(!!data.error_pago_mensaje);
-          $('#modalErrorPago').text(data.error_pago_mensaje || '');
-          $('#modalSubtotal').text(parseFloat(data.subtotal || 0).toFixed(2));
-          $('#modalDescuentoEfectivoContainer').toggle(!!data.monto_descuento_efectivo && data.monto_descuento_efectivo > 0);
-          $('#modalDescuentoEfectivo').text(parseFloat(data.monto_descuento_efectivo || 0).toFixed(2));
-          $('#modalDescuentoCodigoContainer').toggle(!!data.monto_descuento_codigo && data.monto_descuento_codigo > 0);
-          $('#modalDescuentoCodigo').text(parseFloat(data.monto_descuento_codigo || 0).toFixed(2));
-          $('#modalDescuentoTotal').text(parseFloat(data.monto_descuento || 0).toFixed(2));
-          $('#modalCostoEnvio').text(parseFloat(data.costo_envio || 0).toFixed(2));
-          $('#modalTotal').text(parseFloat(data.total || 0).toFixed(2));
-
-          const productosContainer = $('#modalProductos');
-          productosContainer.empty();
-          if (data.items && data.items.length > 0) {
-            const restaurantName = data.restaurante_nombre || '{{ restaurante.username|default:"default_restaurant" }}'.replace(/ /g, '_').toLowerCase();
-            data.items.forEach(item => {
-  let imageUrl = item.imagen_url || '';
-  if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
-    const originalFilename = item.imagen_nombre_original || 'default.png';
-    imageUrl = `{{ MEDIA_URL }}${restaurantName}/productos/${originalFilename}`;
+  // Función para desbloquear audio
+  function unlockAudio() {
+    if (!audioUnlocked) {
+      console.log("Intentando desbloquear audio...");
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audioUnlocked = true;
+        console.log("Audio desbloqueado tras interacción del usuario");
+        if (pendingSound) {
+          console.log("Reintentando sonido para pedido pendiente:", pendingSound);
+          playNotificationSound(pendingSound);
+          pendingSound = null;
+        }
+      }).catch(e => {
+        console.warn("No se pudo desbloquear audio:", e);
+        if (isSoundEnabled && !$('#modalActivarSonido').hasClass('show')) {
+          $('#modalActivarSonido').modal('show');
+        }
+      });
+    }
   }
 
-  // 🔴 Added sanitization for item.nombre_producto
-  const cleanNombre = (item.nombre_producto || 'Producto').replace(/&nbsp;|\xa0/g, ' ');
-  // 🔴 Modified opcionesHtml to sanitize op.nombre
-  const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (
-    `<div class="product-options">Opciones:<ul>${
-      item.opciones_seleccionadas.map(op => {
-        const cleanOpcion = (op.nombre || 'Opción').replace(/&nbsp;|\xa0/g, ' ');
-        return `<li>${cleanOpcion} (+$${parseFloat(op.precio_adicional || 0).toFixed(2)})</li>`;
-      }).join('')
-    }</ul></div>`
-  ) : '';
-  const productCard = `
-    <div class="product-card">
-      <img src="${imageUrl}" alt="${cleanNombre}" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Producto';">
-      <div class="product-name">${cleanNombre}</div>
-      <div class="product-detail">Cantidad: ${item.cantidad || 0}</div>
-      <div class="product-detail">Precio: $${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
-      <div class="product-detail">Subtotal: $${parseFloat(item.subtotal || 0).toFixed(2)}</div>
-      ${opcionesHtml}
-    </div>
-  `;
-  productosContainer.append(productCard);
+  // Función para reproducir sonido
+  window.playNotificationSound = function(pedidoId) {
+    if (!isSoundEnabled) {
+      console.log("Sonido deshabilitado, no se reproduce para pedido:", pedidoId);
+      return;
+    }
+    console.log("Intentando reproducir sonido para pedido:", pedidoId);
+    if (audioUnlocked) {
+      audio.play().then(() => {
+        console.log("Sonido reproducido exitosamente para pedido:", pedidoId);
+      }).catch(e => {
+        console.error("Error al reproducir sonido:", e);
+        showNotification(`Nuevo pedido #${pedidoId} recibido, pero el sonido no se pudo reproducir. Interactúa con la página.`, "warning");
+      });
+    } else {
+      pendingSound = pedidoId;
+      showNotification(`Nuevo pedido #${pedidoId} recibido, pero el sonido está bloqueado. Interactúa con la página.`, "warning");
+      unlockAudio();
+    }
+  };
+
+  // Mostrar modal de activación de sonido al cargar si es necesario
+  if (isSoundEnabled) {
+    unlockAudio();
+  }
+
+  // Desbloquear audio en múltiples eventos
+  $(document).on('click touchstart', unlockAudio);
+  $('#soundToggle').on('click', unlockAudio);
+  $('#btnActivarSonido').on('click', function() {
+    unlockAudio();
+    $('#modalActivarSonido').modal('hide');
+  });
+
+  // Manejar cambio en el toggle de sonido
+  $('#soundToggle').change(function() {
+    isSoundEnabled = $(this).is(':checked');
+    localStorage.setItem('isSoundEnabled', isSoundEnabled);
+    console.log("Notificaciones de sonido:", isSoundEnabled ? "habilitadas" : "deshabilitadas");
+    if (isSoundEnabled) {
+      unlockAudio();
+      setTimeout(() => {
+        audio.play().then(() => {
+          audio.pause();
+          audio.currentTime = 0;
+          console.log("Sonido de prueba reproducido al habilitar notificaciones");
+        }).catch(e => {
+          console.error("Error al reproducir sonido de prueba:", e);
+          showNotification("No se pudo reproducir el sonido de prueba. Interactúa con la página.", "error");
+          $('#modalActivarSonido').modal('show');
+        });
+      }, 100);
+    }
+  });
+
+  // Buscador
+  $('#searchInput').on('keyup', function() {
+    const searchText = $(this).val().toLowerCase();
+    $('.order-card').each(function() {
+      const pedidoId = $(this).data('pedido-id').toString();
+      const cliente = $(this).find('.order-name').text().toLowerCase();
+      $(this).toggle(pedidoId.includes(searchText) || cliente.includes(searchText));
+    });
+  });
+
+  // Evitar clics múltiples
+  function disableButton($btn) {
+    $btn.addClass('disabled').prop('disabled', true);
+  }
+
+  function enableButton($btn) {
+    $btn.removeClass('disabled').prop('disabled', false);
+  }
+
+  // ✅ ELIMINAR refreshAllColumns - AHORA LO MANEJA SSE
+  // Las columnas se actualizan automáticamente via SSE
+
+  // Aceptar pedido
+  $(document).on('click', '.aceptar-pedido', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const $this = $(this);
+    if ($this.hasClass('disabled')) return;
+    disableButton($this);
+
+    const pedidoId = $this.data('pedido-id');
+    const tiempoEstimado = $this.data('tiempo');
+
+    $.ajax({
+      url: `/panel/pedidos/${pedidoId}/aceptar/`,
+      method: 'POST',
+      data: { tiempo_estimado: tiempoEstimado },
+      success: function(response) {
+        if (response.success) {
+          showNotification(`Pedido #${pedidoId} aceptado`, "success");
+          // ✅ NO llamar refreshAllColumns - SSE se encarga
+        } else {
+          showNotification(`Error al aceptar el pedido: ${response.error || 'Error desconocido'}`, "error");
+        }
+      },
+      error: function(xhr) {
+        showNotification(`Error al aceptar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
+      },
+      complete: function() {
+        enableButton($this);
+      }
+    });
+  });
+
+  // Mover de "En Preparación" a "Listos para Entregar"
+  $(document).on('click', '.mover-a-listo', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const $this = $(this);
+    if ($this.hasClass('disabled')) return;
+    disableButton($this);
+
+    const pedidoId = $this.data('pedido-id');
+
+    $.ajax({
+      url: `/panel/pedidos/${pedidoId}/actualizar_estado/`,
+      method: 'POST',
+      data: { estado: 'listo' },
+      success: function(response) {
+        if (response.success) {
+          showNotification(`Pedido #${pedidoId} movido a Listo`, "success");
+          // ✅ NO llamar refreshAllColumns - SSE se encarga
+        } else {
+          showNotification(`Error al mover el pedido: ${response.error || 'Error desconocido'}`, "error");
+        }
+      },
+      error: function(xhr) {
+        showNotification(`Error al mover el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
+      },
+      complete: function() {
+        enableButton($this);
+      }
+    });
+  });
+
+  // Rechazar pedido
+  $(document).on('click', '.rechazar-pedido', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const $this = $(this);
+    if ($this.hasClass('disabled')) return;
+    disableButton($this);
+
+    const pedidoId = $this.data('pedido-id');
+    const motivo = $this.data('motivo');
+
+    $.ajax({
+      url: `/panel/pedidos/${pedidoId}/rechazar/`,
+      method: 'POST',
+      data: { motivo: motivo },
+      success: function(response) {
+        if (response.success) {
+          showNotification(`Pedido #${pedidoId} cancelado`, "success");
+          // ✅ NO llamar refreshAllColumns - SSE se encarga
+        } else {
+          showNotification(`Error al rechazar el pedido: ${response.error || 'Error desconocido'}`, "error");
+        }
+      },
+      error: function(xhr) {
+        showNotification(`Error al rechazar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
+      },
+      complete: function() {
+        enableButton($this);
+      }
+    });
+  });
+
+  // Marcar como "En Entrega"
+  $(document).on('click', '.marcar-en-entrega', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const $this = $(this);
+    if ($this.hasClass('disabled')) return;
+    disableButton($this);
+
+    const pedidoId = $this.data('pedido-id');
+    const card = $this.closest('.order-card');
+    const telefonoRaw = card.find('.order-phone').attr('data-telefono');
+
+    if (!telefonoRaw || typeof telefonoRaw !== 'string' || telefonoRaw.trim() === '') {
+      showNotification('Número inválido. No se puede contactar por WhatsApp.', "error");
+      enableButton($this);
+      return;
+    }
+
+    const telefono = telefonoRaw.replace(/\D/g, '');
+    if (telefono.length !== 10 || isNaN(telefono)) {
+      showNotification('Número inválido. Debe tener 10 dígitos numéricos.', "error");
+      enableButton($this);
+      return;
+    }
+
+    const numeroWhatsApp = `+54${telefono}`;
+
+    $.get(`/panel/pedidos/${pedidoId}/json/`, (pedido) => {
+      let mensaje = `Hola ${pedido.nombre_cliente || 'Cliente'}, tu pedido #${pedido.numero_pedido} ya salió para entrega!\n\n*Detalles del pedido:*\n`;
+      pedido.items.forEach(item => {
+        mensaje += `- ${item.cantidad}x ${item.nombre_producto} ($${parseFloat(item.subtotal).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})`;
+        if (item.opciones_seleccionadas.length > 0) {
+          mensaje += `\n  Opciones:\n`;
+          item.opciones_seleccionadas.forEach(opt => {
+            mensaje += `    * ${opt.nombre} (+$${parseFloat(opt.precio_adicional).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})\n`;
+          });
+        } else {
+          mensaje += `\n`;
+        }
+      });
+      mensaje += `\n*Total*: $${parseFloat(pedido.total).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      mensaje += `\n\n*Entrega en*: ${pedido.direccion_entrega}`;
+      mensaje += `\n*Repartidor en camino*`;
+
+      const mensajeEncoded = encodeURIComponent(mensaje);
+      const whatsappUrl = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${mensajeEncoded}`;
+
+      $('#modalWhatsAppTitle').text('Notificar Entrega por WhatsApp');
+      $('#whatsappMessage').text(mensaje);
+      $('#whatsappLink').attr('href', whatsappUrl).show();
+      $('#modalWhatsApp').data('pedido-id', pedidoId).modal('show');
+      
+      // Copiar el mensaje al portapapeles automáticamente
+      copyToClipboard(mensaje);
+    }).fail((xhr) => {
+      showNotification('Error al cargar detalles del pedido: ' + (xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'), "error");
+      enableButton($this);
+    });
+  });
+
+  // Ejecutar acción de "Marcar como En Entrega" al cerrar el modal
+  $('#modalWhatsApp').on('hidden.bs.modal', function() {
+    const pedidoId = $(this).data('pedido-id');
+    if (pedidoId) {
+      $.ajax({
+        url: `/panel/pedidos/${pedidoId}/marcar_en_entrega/`,
+        method: 'POST',
+        data: {},
+        success: function(response) {
+          if (response.success) {
+            showNotification(`Pedido #${pedidoId} marcado como En Entrega`, "success");
+            // ✅ NO llamar refreshAllColumns - SSE se encarga
+          } else {
+            showNotification(`Error al marcar como en entrega: ${response.error || 'Error desconocido'}`, "error");
+          }
+        },
+        error: function(xhr) {
+          showNotification(`Error al marcar como en entrega: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
+        }
+      });
+      $(this).removeData('pedido-id');
+    }
+  });
+
+  // Archivar pedido
+  $(document).on('click', '.archivar-pedido', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const $this = $(this);
+    if ($this.hasClass('disabled')) return;
+    disableButton($this);
+
+    const pedidoId = $this.data('pedido-id');
+
+    $.ajax({
+      url: `/panel/pedidos/${pedidoId}/archivar/`,
+      method: 'POST',
+      data: {},
+      success: function(response) {
+        if (response.success) {
+          showNotification(`Pedido #${pedidoId} archivado`, "success");
+          // ✅ NO llamar refreshAllColumns - SSE se encarga
+        } else {
+          showNotification(`Error al archivar el pedido: ${response.error || 'Error desconocido'}`, "error");
+        }
+      },
+      error: function(xhr) {
+        showNotification(`Error al archivar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
+      },
+      complete: function() {
+        enableButton($this);
+      }
+    });
+  });
+
+  // Mostrar detalles del pedido
+  $(document).on('click', '.order-card', function(e) {
+    if ($(e.target).closest('.icon-group').length || $(e.target).hasClass('order-phone')) return;
+
+    const pedidoId = $(this).data('pedido-id');
+    $.ajax({
+      url: `/panel/pedidos/${pedidoId}/json/`,
+      method: 'GET',
+      success: function(data) {
+        $('#modalPedidoTitle').text(`Pedido #${data.numero_pedido || 'Desconocido'}`);
+        $('#modalCliente').text(data.nombre_cliente || 'Sin nombre');
+        $('#modalTelefono').text(data.telefono_cliente || 'Sin teléfono');
+        $('#modalDireccion').text(data.direccion_entrega || 'Retiro en local');
+        $('#modalAclaraciones').text(data.aclaraciones || 'Sin aclaraciones');
+        $('#modalFecha').text(data.fecha_creacion ? new Date(data.fecha_creacion).toLocaleString('es-AR', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        }) : 'Sin fecha');
+        $('#modalMetodoPago').text(data.metodo_pago || 'No especificado');
+        $('#modalEstado').text(data.estado || 'Sin estado');
+        $('#modalTiempoEstimado').text(data.tiempo_estimado || 'No especificado');
+        $('#modalErrorPagoContainer').toggle(!!data.error_pago_mensaje);
+        $('#modalErrorPago').text(data.error_pago_mensaje || '');
+        $('#modalSubtotal').text(parseFloat(data.subtotal || 0).toFixed(2));
+        $('#modalDescuentoEfectivoContainer').toggle(!!data.monto_descuento_efectivo && data.monto_descuento_efectivo > 0);
+        $('#modalDescuentoEfectivo').text(parseFloat(data.monto_descuento_efectivo || 0).toFixed(2));
+        $('#modalDescuentoCodigoContainer').toggle(!!data.monto_descuento_codigo && data.monto_descuento_codigo > 0);
+        $('#modalDescuentoCodigo').text(parseFloat(data.monto_descuento_codigo || 0).toFixed(2));
+        $('#modalDescuentoTotal').text(parseFloat(data.monto_descuento || 0).toFixed(2));
+        $('#modalCostoEnvio').text(parseFloat(data.costo_envio || 0).toFixed(2));
+        $('#modalTotal').text(parseFloat(data.total || 0).toFixed(2));
+
+        const productosContainer = $('#modalProductos');
+        productosContainer.empty();
+        if (data.items && data.items.length > 0) {
+          const restaurantName = data.restaurante_nombre || '{{ restaurante.username|default:"default_restaurant" }}'.replace(/ /g, '_').toLowerCase();
+          data.items.forEach(item => {
+            let imageUrl = item.imagen_url || '';
+            if (!imageUrl || imageUrl.includes('via.placeholder.com')) {
+              const originalFilename = item.imagen_nombre_original || 'default.png';
+              imageUrl = `{{ MEDIA_URL }}${restaurantName}/productos/${originalFilename}`;
+            }
+
+            // Sanitization for item.nombre_producto
+            const cleanNombre = (item.nombre_producto || 'Producto').replace(/&nbsp;|\xa0/g, ' ');
+            // Modified opcionesHtml to sanitize op.nombre
+            const opcionesHtml = item.opciones_seleccionadas && item.opciones_seleccionadas.length > 0 ? (
+              `<div class="product-options">Opciones:<ul>${
+                item.opciones_seleccionadas.map(op => {
+                  const cleanOpcion = (op.nombre || 'Opción').replace(/&nbsp;|\xa0/g, ' ');
+                  return `<li>${cleanOpcion} (+$${parseFloat(op.precio_adicional || 0).toFixed(2)})</li>`;
+                }).join('')
+              }</ul></div>`
+            ) : '';
+            const productCard = `
+              <div class="product-card">
+                <img src="${imageUrl}" alt="${cleanNombre}" class="product-image" onerror="this.src='https://via.placeholder.com/120?text=Producto';">
+                <div class="product-name">${cleanNombre}</div>
+                <div class="product-detail">Cantidad: ${item.cantidad || 0}</div>
+                <div class="product-detail">Precio: $${parseFloat(item.precio_unitario || 0).toFixed(2)}</div>
+                <div class="product-detail">Subtotal: $${parseFloat(item.subtotal || 0).toFixed(2)}</div>
+                ${opcionesHtml}
+              </div>
+            `;
+            productosContainer.append(productCard);
+          });
+        } else {
+          productosContainer.append('<p>No hay productos en este pedido.</p>');
+        }
+
+        $('#modalPedido').modal('show');
+      },
+      error: function(xhr) {
+        console.error('AJAX error for pedido', pedidoId, xhr.status, xhr.responseText);
+        alert('No se pudo cargar los detalles del pedido. Código de error: ' + xhr.status);
+      }
+    });
+  });
+
+  // Manejo de clic en order-phone para WhatsApp
+  $(document).on('click', '.order-phone', function(e) {
+    e.preventDefault();
+    const $this = $(this);
+    const pedidoId = $this.data('pedido-id');
+    const telefonoRaw = $this.attr('data-telefono');
+    const estado = $this.closest('.order-column').data('estado');
+
+    if (estado === 'pendiente') {
+      return;
+    }
+
+    if (!telefonoRaw || typeof telefonoRaw !== 'string' || telefonoRaw.trim() === '') {
+      showNotification('Número inválido. No se puede contactar por WhatsApp.', "error");
+      return;
+    }
+
+    const telefono = telefonoRaw.replace(/\D/g, '');
+    if (telefono.length !== 10 || isNaN(telefono)) {
+      showNotification('Número inválido. Debe tener 10 dígitos numéricos.', "error");
+      return;
+    }
+
+    const numeroWhatsApp = `+54${telefono}`;
+
+    $.get(`/panel/pedidos/${pedidoId}/json/`, (pedido) => {
+      let mensaje, modalTitle;
+      if (estado === 'listo') {
+        modalTitle = 'Notificar Pedido Listo por WhatsApp';
+        mensaje = `Hola ${pedido.nombre_cliente || 'Cliente'}, tu pedido #${pedido.numero_pedido} está listo para entregar!\n\n*Detalles del pedido:*\n`;
+      } else {
+        modalTitle = 'Confirmación por WhatsApp';
+        mensaje = `Hola ${pedido.nombre_cliente || 'Cliente'}, tu pedido #${pedido.numero_pedido} ha sido confirmado y está en preparación!\n\n*Detalles del pedido:*\n`;
+      }
+      pedido.items.forEach(item => {
+        mensaje += `- ${item.cantidad}x ${item.nombre_producto} ($${parseFloat(item.subtotal).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})`;
+        if (item.opciones_seleccionadas.length > 0) {
+          mensaje += `\n  Opciones:\n`;
+          item.opciones_seleccionadas.forEach(opt => {
+            mensaje += `    * ${opt.nombre} (+$${parseFloat(opt.precio_adicional).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})\n`;
+          });
+        } else {
+          mensaje += `\n`;
+        }
+      });
+      mensaje += `\n*Total*: $${parseFloat(pedido.total).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+      if (pedido.direccion_entrega && pedido.direccion_entrega !== 'Retiro en local') {
+        mensaje += `\n\n*Entrega en*: ${pedido.direccion_entrega}`;
+      } else {
+        mensaje += `\n\n*Retiro en local*`;
+      }
+      if (pedido.tiempo_estimado && estado !== 'listo') {
+        mensaje += `\n*Tiempo estimado*: ${pedido.tiempo_estimado}`;
+      }
+
+      const mensajeEncoded = encodeURIComponent(mensaje);
+      const whatsappUrl = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${mensajeEncoded}`;
+
+      // Populate and show the modal
+      $('#modalWhatsAppTitle').text(modalTitle);
+      $('#whatsappMessage').text(mensaje); // Display the raw message for copying
+      $('#whatsappLink').attr('href', whatsappUrl).show();
+      $('#modalWhatsApp').modal('show');
+      
+      // Copiar el mensaje al portapapeles automáticamente
+      copyToClipboard(mensaje);
+    }).fail((xhr) => {
+      showNotification('Error al cargar detalles del pedido: ' + (xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'), "error");
+    });
+  });
+
+  // Manejar el clic en el nuevo botón de copiar
+  $('#copyWhatsAppMessage').on('click', function() {
+      const message = $('#whatsappMessage').text();
+      copyToClipboard(message);
+  });
+
+  // Función para obtener CSRF token
+  function getCookie(name) {
+    console.log("getCookie called for:", name);
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+      console.log("All cookies:", document.cookie);
+      const cookies = document.cookie.split(';');
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + '=')) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    console.log("Cookie value for", name, ":", cookieValue);
+    return cookieValue;
+  }
+
+  console.log("Initial csrftoken from cookie:", getCookie('csrftoken'));
+  window.csrftoken = getCookie('csrftoken');
+  console.log("window.csrftoken set to:", window.csrftoken);
+  console.log("DOM loaded, verifying CSRF token");
 });
-          } else {
-            productosContainer.append('<p>No hay productos en este pedido.</p>');
-          }
-
-          $('#modalPedido').modal('show');
-        },
-        error: function(xhr) {
-          console.error('AJAX error for pedido', pedidoId, xhr.status, xhr.responseText);
-          alert('No se pudo cargar los detalles del pedido. Código de error: ' + xhr.status);
-        }
-      });
-    });
-
-    // Manejo de clic en order-phone para WhatsApp
-    $(document).on('click', '.order-phone', function(e) {
-      e.preventDefault();
-      const $this = $(this);
-      const pedidoId = $this.data('pedido-id');
-      const telefonoRaw = $this.attr('data-telefono');
-      const estado = $this.closest('.order-column').data('estado');
-
-      if (estado === 'pendiente') {
-        return;
-      }
-
-      if (!telefonoRaw || typeof telefonoRaw !== 'string' || telefonoRaw.trim() === '') {
-        showNotification('Número inválido. No se puede contactar por WhatsApp.', "error");
-        return;
-      }
-
-      const telefono = telefonoRaw.replace(/\D/g, '');
-      if (telefono.length !== 10 || isNaN(telefono)) {
-        showNotification('Número inválido. Debe tener 10 dígitos numéricos.', "error");
-        return;
-      }
-
-      const numeroWhatsApp = `+54${telefono}`;
-
-      $.get(`/panel/pedidos/${pedidoId}/json/`, (pedido) => {
-        let mensaje, modalTitle;
-        if (estado === 'listo') {
-          modalTitle = 'Notificar Pedido Listo por WhatsApp';
-          mensaje = `Hola ${pedido.nombre_cliente || 'Cliente'}, tu pedido #${pedido.numero_pedido} está listo para entregar!\n\n*Detalles del pedido:*\n`;
-        } else {
-          modalTitle = 'Confirmación por WhatsApp';
-          mensaje = `Hola ${pedido.nombre_cliente || 'Cliente'}, tu pedido #${pedido.numero_pedido} ha sido confirmado y está en preparación!\n\n*Detalles del pedido:*\n`;
-        }
-        pedido.items.forEach(item => {
-          mensaje += `- ${item.cantidad}x ${item.nombre_producto} ($${parseFloat(item.subtotal).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})`;
-          if (item.opciones_seleccionadas.length > 0) {
-            mensaje += `\n  Opciones:\n`;
-            item.opciones_seleccionadas.forEach(opt => {
-              mensaje += `    * ${opt.nombre} (+$${parseFloat(opt.precio_adicional).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})})\n`;
-            });
-          } else {
-            mensaje += `\n`;
-          }
-        });
-        mensaje += `\n*Total*: $${parseFloat(pedido.total).toLocaleString('es-AR', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
-        if (pedido.direccion_entrega && pedido.direccion_entrega !== 'Retiro en local') {
-          mensaje += `\n\n*Entrega en*: ${pedido.direccion_entrega}`;
-        } else {
-          mensaje += `\n\n*Retiro en local*`;
-        }
-        if (pedido.tiempo_estimado && estado !== 'listo') {
-          mensaje += `\n*Tiempo estimado*: ${pedido.tiempo_estimado}`;
-        }
-
-        const mensajeEncoded = encodeURIComponent(mensaje);
-        const whatsappUrl = `https://api.whatsapp.com/send?phone=${numeroWhatsApp}&text=${mensajeEncoded}`;
-
-        // Populate and show the modal
-        $('#modalWhatsAppTitle').text(modalTitle);
-        $('#whatsappMessage').text(mensaje); // Display the raw message for copying
-        $('#whatsappLink').attr('href', whatsappUrl).show();
-        $('#modalWhatsApp').modal('show');
-        
-        // Copiar el mensaje al portapapeles automáticamente
-        copyToClipboard(mensaje);
-      }).fail((xhr) => {
-        showNotification('Error al cargar detalles del pedido: ' + (xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'), "error");
-      });
-    });
-
-    // Manejar el clic en el nuevo botón de copiar
-    $('#copyWhatsAppMessage').on('click', function() {
-        const message = $('#whatsappMessage').text();
-        copyToClipboard(message);
-    });
-
-    // Función para obtener CSRF token
-    function getCookie(name) {
-      console.log("getCookie called for:", name);
-      let cookieValue = null;
-      if (document.cookie && document.cookie !== '') {
-        console.log("All cookies:", document.cookie);
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-          const cookie = cookies[i].trim();
-          if (cookie.substring(0, name.length + 1) === (name + '=')) {
-            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-            break;
-          }
-        }
-      }
-      console.log("Cookie value for", name, ":", cookieValue);
-      return cookieValue;
-    }
-
-    console.log("Initial csrftoken from cookie:", getCookie('csrftoken'));
-    window.csrftoken = getCookie('csrftoken');
-    console.log("window.csrftoken set to:", window.csrftoken);
-    console.log("DOM loaded, verifying CSRF token");
-  });
 </script>
 {% endblock %}

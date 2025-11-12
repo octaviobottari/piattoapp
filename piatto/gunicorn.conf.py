@@ -1,5 +1,6 @@
 # gunicorn.conf.py
 import multiprocessing
+import os
 
 # Configuración para manejar SSE y conexiones largas
 bind = "0.0.0.0:{}".format(int(os.getenv("PORT", 10000)))

@@ -800,14 +800,13 @@ class PedidoMemoryCache:
 
 pedido_cache = PedidoMemoryCache.get_instance()
 
+# core/views.py - SSE OPTIMIZADO
 @require_GET
 @login_required
 def pedidos_sse(request, restaurante_id):
     """
-    Server-Sent Events para actualizaciones en tiempo real
-    Reemplaza WebSockets completamente
+    Server-Sent Events optimizado para múltiples conexiones
     """
-    # Verificar que el usuario tiene acceso a este restaurante
     if request.user.id != int(restaurante_id) and not request.user.is_staff:
         return JsonResponse({'error': 'No autorizado'}, status=403)
     
@@ -816,56 +815,57 @@ def pedidos_sse(request, restaurante_id):
         client_id = f"{restaurante_id}_{int(time.time())}"
         
         try:
-            # Enviar heartbeat cada 25 segundos (menos de 30s timeout de nginx)
             heartbeat_count = 0
+            consecutive_errors = 0
+            max_consecutive_errors = 3
             
-            while True:
-                current_version = pedido_cache.get_version(restaurante_id)
-                
-                # Si hay cambios, enviar datos
-                if current_version > last_version:
-                    pedidos = pedido_cache.get_pedidos(restaurante_id)
+            while consecutive_errors < max_consecutive_errors:
+                try:
+                    current_version = pedido_cache.get_version(restaurante_id)
                     
-                    # ✅ CORREGIDO: Serializar manualmente las fechas
-                    pedidos_serializados = []
-                    for pedido in pedidos:
-                        pedido_serializado = pedido.copy()
-                        if 'fecha' in pedido_serializado and pedido_serializado['fecha']:
-                            if isinstance(pedido_serializado['fecha'], str):
-                                # Ya está serializado
-                                pass
-                            else:
-                                # Serializar datetime
-                                pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
-                        pedidos_serializados.append(pedido_serializado)
-                    
-                    event_data = {
-                        'type': 'pedidos_updated',
-                        'pedidos': pedidos_serializados,  # ✅ Usar la versión serializada
-                        'version': current_version,
-                        'timestamp': timezone.now().isoformat()
-                    }
-                    yield f"data: {json.dumps(event_data)}\n\n"
-                    last_version = current_version
+                    # Si hay cambios, enviar datos
+                    if current_version > last_version:
+                        pedidos = pedido_cache.get_pedidos(restaurante_id)
+                        
+                        pedidos_serializados = []
+                        for pedido in pedidos:
+                            pedido_serializado = pedido.copy()
+                            if 'fecha' in pedido_serializado:
+                                if not isinstance(pedido_serializado['fecha'], str):
+                                    pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
+                            pedidos_serializados.append(pedido_serializado)
+                        
+                        event_data = {
+                            'type': 'pedidos_updated',
+                            'pedidos': pedidos_serializados,
+                            'version': current_version,
+                            'timestamp': timezone.now().isoformat()
+                        }
+                        yield f"data: {json.dumps(event_data)}\n\n"
+                        last_version = current_version
+                        consecutive_errors = 0  # Reset error counter
 
-                
-                # Heartbeat cada 25 segundos
-                heartbeat_count += 1
-                if heartbeat_count >= 5:  # 5 * 5s = 25s
-                    yield "data: {\"type\": \"heartbeat\"}\n\n"
-                    heartbeat_count = 0
-                
-                time.sleep(2)  # ✅ REDUCIDO: Verificar cada 2 segundos (más responsivo)
-                
+                    # Heartbeat optimizado
+                    heartbeat_count += 1
+                    if heartbeat_count >= 6:  # 6 * 5s = 30s
+                        yield "data: {\"type\": \"heartbeat\"}\n\n"
+                        heartbeat_count = 0
+                    
+                    # Sleep más eficiente
+                    for i in range(10):
+                        time.sleep(0.5)
+                        
+                except Exception as e:
+                    consecutive_errors += 1
+                    logger.error(f"SSE error for client {client_id}: {str(e)}")
+                    if consecutive_errors >= max_consecutive_errors:
+                        break
+                    time.sleep(1)  # Esperar antes de reintentar
+                    
         except GeneratorExit:
             logger.info(f"SSE connection closed for client {client_id}")
         except Exception as e:
-            logger.error(f"SSE error for client {client_id}: {e}")
-            # ✅ CORREGIDO: Evitar error de serialización en el mensaje de error
-            error_message = str(e)
-            if "datetime" in error_message:
-                error_message = "Error de serialización de fecha"
-            yield f"data: {json.dumps({'type': 'error', 'message': error_message})}\n\n"
+            logger.error(f"SSE fatal error for client {client_id}: {str(e)}")
     
     response = StreamingHttpResponse(
         event_stream(), 
@@ -873,8 +873,39 @@ def pedidos_sse(request, restaurante_id):
     )
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
-    response['Connection'] = 'keep-alive'  # ✅ AGREGADO: Mantener conexión activa
     return response
+
+@require_GET
+@login_required
+def pedidos_polling(request, restaurante_id):
+    """
+    Fallback de polling para cuando SSE falla
+    """
+    if request.user.id != int(restaurante_id) and not request.user.is_staff:
+        return JsonResponse({'error': 'No autorizado'}, status=403)
+    
+    version = int(request.GET.get('version', 0))
+    current_version = pedido_cache.get_version(restaurante_id)
+    
+    if current_version > version:
+        pedidos = pedido_cache.get_pedidos(restaurante_id)
+        pedidos_serializados = []
+        for pedido in pedidos:
+            pedido_serializado = pedido.copy()
+            if 'fecha' in pedido_serializado:  # ✅ CORREGIDO: pedido_serializado (sin 'd' extra)
+                if not isinstance(pedido_serializado['fecha'], str):
+                    pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
+            pedidos_serializados.append(pedido_serializado)
+        
+        return JsonResponse({
+            'pedidos': pedidos_serializados,
+            'version': current_version
+        })
+    else:
+        return JsonResponse({
+            'pedidos': [],
+            'version': current_version
+        })
 
 def actualizar_cache_pedidos(restaurante_id):
     """

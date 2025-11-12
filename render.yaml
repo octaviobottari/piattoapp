@@ -10,7 +10,8 @@ services:
       rm -rf staticfiles/*
       python manage.py collectstatic --noinput
       python manage.py migrate
-    startCommand: gunicorn piatto.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --timeout 120 --keep-alive 5 --max-requests 1000 --access-logfile - --error-logfile -
+    startCommand: gunicorn piatto.wsgi:application --bind 0.0.0.0:$PORT --workers 4 --threads 100 --timeout 120 --keep-alive 2 --max-requests 1000 --max-requests-jitter 100 --preload --worker-class=gthread
+
     domains:
       - piattoweb.com
       - www.piattoweb.com

@@ -80,21 +80,22 @@ class SSEManager {
     }
 
     actualizarInterfazPedidos(pedidos) {
-        console.log('Actualizando interfaz con', pedidos.length, 'pedidos');
-        
-        // ✅ ESTRATEGIA MEJORADA: Recargar columnas completas solo si hay cambios significativos
-        const cambiosSignificativos = this.detectarCambiosSignificativos(pedidos);
-        
-        if (cambiosSignificativos) {
-            console.log('Cambios significativos detectados, recargando columnas...');
-            this.recargarTodasLasColumnas();
-        } else {
-            console.log('Cambios menores, actualizando individualmente...');
-            this.actualizarPedidosIndividuales(pedidos);
-        }
-        
-        this.lastPedidos = this.agruparPorEstado(pedidos);
+    console.log('🔄 SSE: Actualizando interfaz con', pedidos.length, 'pedidos');
+    
+    // ✅ ESTRATEGIA MEJORADA: Siempre recargar las columnas completas
+    // Esto es más confiable para cambios de estado
+    this.recargarTodasLasColumnas();
+    
+    // ✅ Mostrar notificación si hay nuevos pedidos pendientes
+    const nuevosPendientes = pedidos.filter(p => p.estado === 'pendiente');
+    const anterioresPendientes = this.lastPedidos['pendiente'] || [];
+    
+    if (nuevosPendientes.length > anterioresPendientes.length) {
+        this.mostrarNotificacionNuevosPedidos(nuevosPendientes);
     }
+    
+    this.lastPedidos = this.agruparPorEstado(pedidos);
+}
 
     detectarCambiosSignificativos(nuevosPedidos) {
         const nuevosAgrupados = this.agruparPorEstado(nuevosPedidos);
@@ -128,14 +129,25 @@ class SSEManager {
     }
 
     recargarTodasLasColumnas() {
-        ['pendiente', 'en_preparacion', 'listo'].forEach(estado => {
-            this.cargarColumnaViaAPI(estado);
-        });
-    }
+    console.log('🔄 Recargando todas las columnas via AJAX');
+    
+    const estados = ['pendiente', 'en_preparacion', 'listo'];
+    let cargadas = 0;
+    
+    estados.forEach(estado => {
+        this.cargarColumnaViaAPI(estado)
+            .then(() => {
+                cargadas++;
+                console.log(`✅ Columna ${estado} actualizada (${cargadas}/${estados.length})`);
+            })
+            .catch(error => {
+                console.error(`❌ Error cargando columna ${estado}:`, error);
+            });
+    });
+}
 
     cargarColumnaViaAPI(estado) {
-        console.log(`Recargando columna ${estado} via API`);
-        
+    return new Promise((resolve, reject) => {
         fetch(`/panel/pedidos/${estado}/html/`)
             .then(response => {
                 if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -145,14 +157,15 @@ class SSEManager {
                 const columna = document.getElementById(estado);
                 if (columna) {
                     columna.innerHTML = html;
-                    this.inicializarEventosColumna(estado);
-                    console.log(`Columna ${estado} actualizada`);
+                    console.log(`✅ Columna ${estado} actualizada via AJAX`);
+                    resolve();
+                } else {
+                    reject(`Elemento #${estado} no encontrado`);
                 }
             })
-            .catch(error => {
-                console.error(`Error cargando columna ${estado}:`, error);
-            });
-    }
+            .catch(error => reject(error));
+    });
+}
 
     actualizarPedidosIndividuales(pedidos) {
         // Implementación simple: recargar si hay cambios

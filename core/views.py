@@ -827,13 +827,15 @@ def pedidos_sse(request, restaurante_id):
                 # Si hay cambios, enviar datos
                 if current_version > last_version:
                     pedidos = pedido_cache.get_pedidos(restaurante_id)
-                    yield f"data: {json.dumps({
+                    event_data = {
                         'type': 'pedidos_updated',
                         'pedidos': pedidos,
                         'version': current_version,
                         'timestamp': timezone.now().isoformat()
-                    })}\n\n"
+                    }
+                    yield f"data: {json.dumps(event_data)}\n\n"
                     last_version = current_version
+
                 
                 # Heartbeat cada 25 segundos
                 heartbeat_count += 1

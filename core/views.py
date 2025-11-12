@@ -825,9 +825,23 @@ def pedidos_sse(request, restaurante_id):
                 # Si hay cambios, enviar datos
                 if current_version > last_version:
                     pedidos = pedido_cache.get_pedidos(restaurante_id)
+                    
+                    # ✅ CORREGIDO: Serializar manualmente las fechas
+                    pedidos_serializados = []
+                    for pedido in pedidos:
+                        pedido_serializado = pedido.copy()
+                        if 'fecha' in pedido_serializado and pedido_serializado['fecha']:
+                            if isinstance(pedido_serializado['fecha'], str):
+                                # Ya está serializado
+                                pass
+                            else:
+                                # Serializar datetime
+                                pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
+                        pedidos_serializados.append(pedido_serializado)
+                    
                     event_data = {
                         'type': 'pedidos_updated',
-                        'pedidos': pedidos,
+                        'pedidos': pedidos_serializados,  # ✅ Usar la versión serializada
                         'version': current_version,
                         'timestamp': timezone.now().isoformat()
                     }
@@ -841,20 +855,25 @@ def pedidos_sse(request, restaurante_id):
                     yield "data: {\"type\": \"heartbeat\"}\n\n"
                     heartbeat_count = 0
                 
-                time.sleep(5)  # Verificar cada 5 segundos
+                time.sleep(2)  # ✅ REDUCIDO: Verificar cada 2 segundos (más responsivo)
                 
         except GeneratorExit:
             logger.info(f"SSE connection closed for client {client_id}")
         except Exception as e:
             logger.error(f"SSE error for client {client_id}: {e}")
-            yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
+            # ✅ CORREGIDO: Evitar error de serialización en el mensaje de error
+            error_message = str(e)
+            if "datetime" in error_message:
+                error_message = "Error de serialización de fecha"
+            yield f"data: {json.dumps({'type': 'error', 'message': error_message})}\n\n"
     
     response = StreamingHttpResponse(
         event_stream(), 
         content_type='text/event-stream'
     )
     response['Cache-Control'] = 'no-cache'
-    response['X-Accel-Buffering'] = 'no'  # Importante para Nginx
+    response['X-Accel-Buffering'] = 'no'
+    response['Connection'] = 'keep-alive'  # ✅ AGREGADO: Mantener conexión activa
     return response
 
 def actualizar_cache_pedidos(restaurante_id):
@@ -867,13 +886,24 @@ def actualizar_cache_pedidos(restaurante_id):
         pedidos_activos = Pedido.objects.filter(
             restaurante_id=restaurante_id,
             estado__in=['pendiente', 'en_preparacion', 'listo', 'procesando_pago']
-        ).order_by('-fecha').values(
-            'id', 'numero_pedido', 'cliente', 'telefono', 
-            'estado', 'fecha', 'total', 'metodo_pago'
-        )[:50]  # Limitar a 50 pedidos
+        ).order_by('-fecha')[:100]  # ✅ AUMENTADO: 100 pedidos para mayor capacidad
         
-        pedido_cache.set_pedidos(restaurante_id, list(pedidos_activos))
-        logger.info(f"Cache actualizado para restaurante {restaurante_id}: {len(pedidos_activos)} pedidos activos")
+        # ✅ CORREGIDO: Serializar explícitamente los datos
+        pedidos_data = []
+        for pedido in pedidos_activos:
+            pedidos_data.append({
+                'id': pedido.id,
+                'numero_pedido': pedido.numero_pedido,
+                'cliente': pedido.cliente,
+                'telefono': pedido.telefono,
+                'estado': pedido.estado,
+                'fecha': pedido.fecha.isoformat() if pedido.fecha else None,  # ✅ Serializado
+                'total': str(pedido.total) if pedido.total else '0.00',  # ✅ Decimal a string
+                'metodo_pago': pedido.metodo_pago
+            })
+        
+        pedido_cache.set_pedidos(restaurante_id, pedidos_data)
+        logger.info(f"Cache actualizado para restaurante {restaurante_id}: {len(pedidos_data)} pedidos activos")
         
     except Exception as e:
         logger.error(f"Error actualizando cache para restaurante {restaurante_id}: {str(e)}")

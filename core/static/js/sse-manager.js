@@ -1,4 +1,4 @@
-// static/js/sse-manager.js - REEMPLAZA websocket.js
+// static/js/sse-manager.js - VERSIÓN MEJORADA
 class SSEManager {
     constructor(restauranteId) {
         this.restauranteId = restauranteId;
@@ -8,6 +8,7 @@ class SSEManager {
         this.currentVersion = 0;
         this.isConnected = false;
         this.heartbeatInterval = null;
+        this.lastPedidos = {};
         
         console.log(`SSE Manager inicializado para restaurante: ${restauranteId}`);
     }
@@ -19,6 +20,7 @@ class SSEManager {
 
         try {
             const url = `/api/pedidos-sse/${this.restauranteId}/?version=${this.currentVersion}`;
+            console.log('Conectando SSE a:', url);
             this.eventSource = new EventSource(url);
             
             this.eventSource.onopen = () => {
@@ -27,16 +29,16 @@ class SSEManager {
                 this.reconnectDelay = 1000;
                 this.showNotification('Conexión en tiempo real establecida', 'success');
                 
-                // Iniciar verificación de heartbeat
                 this.startHeartbeatCheck();
             };
 
             this.eventSource.onmessage = (event) => {
                 try {
+                    console.log('SSE mensaje recibido:', event.data);
                     const data = JSON.parse(event.data);
                     this.handleEvent(data);
                 } catch (e) {
-                    console.error('Error parsing SSE data:', e);
+                    console.error('Error parsing SSE data:', e, 'Raw data:', event.data);
                 }
             };
 
@@ -54,6 +56,8 @@ class SSEManager {
     }
 
     handleEvent(data) {
+        console.log('Procesando evento SSE:', data.type);
+        
         switch(data.type) {
             case 'pedidos_updated':
                 this.currentVersion = data.version;
@@ -61,8 +65,13 @@ class SSEManager {
                 break;
                 
             case 'heartbeat':
-                // Reset heartbeat check
                 this.lastHeartbeat = Date.now();
+                console.log('Heartbeat recibido');
+                break;
+                
+            case 'error':
+                console.error('Error del servidor SSE:', data.message);
+                this.showNotification(`Error: ${data.message}`, 'error');
                 break;
                 
             default:
@@ -73,46 +82,71 @@ class SSEManager {
     actualizarInterfazPedidos(pedidos) {
         console.log('Actualizando interfaz con', pedidos.length, 'pedidos');
         
-        // Agrupar pedidos por estado
-        const pedidosPorEstado = {
+        // ✅ ESTRATEGIA MEJORADA: Recargar columnas completas solo si hay cambios significativos
+        const cambiosSignificativos = this.detectarCambiosSignificativos(pedidos);
+        
+        if (cambiosSignificativos) {
+            console.log('Cambios significativos detectados, recargando columnas...');
+            this.recargarTodasLasColumnas();
+        } else {
+            console.log('Cambios menores, actualizando individualmente...');
+            this.actualizarPedidosIndividuales(pedidos);
+        }
+        
+        this.lastPedidos = this.agruparPorEstado(pedidos);
+    }
+
+    detectarCambiosSignificativos(nuevosPedidos) {
+        const nuevosAgrupados = this.agruparPorEstado(nuevosPedidos);
+        const anterioresAgrupados = this.lastPedidos;
+        
+        // Considerar cambios significativos si:
+        // 1. Cambió la cantidad de pedidos en alguna columna
+        // 2. Hay nuevos pedidos pendientes (para sonido)
+        for (const estado in nuevosAgrupados) {
+            const cantidadAnterior = anterioresAgrupados[estado] ? anterioresAgrupados[estado].length : 0;
+            const cantidadNueva = nuevosAgrupados[estado].length;
+            
+            if (Math.abs(cantidadNueva - cantidadAnterior) > 0) {
+                if (estado === 'pendiente' && cantidadNueva > cantidadAnterior) {
+                    this.mostrarNotificacionNuevosPedidos(nuevosAgrupados[estado]);
+                }
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    agruparPorEstado(pedidos) {
+        return {
             'pendiente': pedidos.filter(p => p.estado === 'pendiente'),
             'en_preparacion': pedidos.filter(p => p.estado === 'en_preparacion'),
             'listo': pedidos.filter(p => p.estado === 'listo'),
             'procesando_pago': pedidos.filter(p => p.estado === 'procesando_pago')
         };
-
-        // Actualizar cada columna
-        this.actualizarColumna('pendiente', pedidosPorEstado.pendiente);
-        this.actualizarColumna('en_preparacion', pedidosPorEstado.en_preparacion);
-        this.actualizarColumna('listo', pedidosPorEstado.listo);
-        
-        // Mostrar notificación si hay nuevos pedidos
-        if (pedidosPorEstado.pendiente.length > 0) {
-            this.mostrarNotificacionNuevosPedidos(pedidosPorEstado.pendiente);
-        }
     }
 
-    actualizarColumna(estado, pedidos) {
-        const columna = document.getElementById(estado);
-        if (!columna) return;
-
-        // Si es la primera carga o hay cambios significativos, recargar completa
-        if (pedidos.length === 0 || this.debeRecargarColumna(estado, pedidos)) {
+    recargarTodasLasColumnas() {
+        ['pendiente', 'en_preparacion', 'listo'].forEach(estado => {
             this.cargarColumnaViaAPI(estado);
-        } else {
-            // Actualización incremental (más eficiente)
-            this.actualizarPedidosIndividuales(estado, pedidos);
-        }
+        });
     }
 
     cargarColumnaViaAPI(estado) {
+        console.log(`Recargando columna ${estado} via API`);
+        
         fetch(`/panel/pedidos/${estado}/html/`)
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                return response.text();
+            })
             .then(html => {
                 const columna = document.getElementById(estado);
                 if (columna) {
                     columna.innerHTML = html;
                     this.inicializarEventosColumna(estado);
+                    console.log(`Columna ${estado} actualizada`);
                 }
             })
             .catch(error => {
@@ -120,15 +154,25 @@ class SSEManager {
             });
     }
 
+    actualizarPedidosIndividuales(pedidos) {
+        // Implementación simple: recargar si hay cambios
+        this.recargarTodasLasColumnas();
+    }
+
+    inicializarEventosColumna(estado) {
+        // Los eventos ya están manejados por delegación en el documento
+        console.log(`Eventos inicializados para columna ${estado}`);
+    }
+
     startHeartbeatCheck() {
         this.lastHeartbeat = Date.now();
         this.heartbeatInterval = setInterval(() => {
             const timeSinceHeartbeat = Date.now() - this.lastHeartbeat;
-            if (timeSinceHeartbeat > 35000) { // 35 segundos sin heartbeat
+            if (timeSinceHeartbeat > 35000) {
                 console.warn('No heartbeat received, reconnecting...');
                 this.reconnect();
             }
-        }, 10000); // Verificar cada 10 segundos
+        }, 10000);
     }
 
     stopHeartbeatCheck() {
@@ -160,7 +204,7 @@ class SSEManager {
 
     mostrarNotificacionNuevosPedidos(pedidosNuevos) {
         if (pedidosNuevos.length > 0 && this.isSoundEnabled()) {
-            this.reproducirSonidoNotificacion();
+            this.reproducirSonidoNotificacion(pedidosNuevos[0].id);
         }
         
         const mensaje = pedidosNuevos.length === 1 
@@ -174,16 +218,18 @@ class SSEManager {
         return localStorage.getItem('isSoundEnabled') === 'true';
     }
 
-    reproducirSonidoNotificacion() {
-        // Usar el mismo audio que ya tienes
-        const audio = document.getElementById('notificationSound');
-        if (audio) {
-            audio.play().catch(e => console.log('No se pudo reproducir sonido:', e));
+    reproducirSonidoNotificacion(pedidoId) {
+        if (typeof window.playNotificationSound === 'function') {
+            window.playNotificationSound(pedidoId);
+        } else {
+            const audio = document.getElementById('notificationSound');
+            if (audio) {
+                audio.play().catch(e => console.log('No se pudo reproducir sonido:', e));
+            }
         }
     }
 
     showNotification(message, type) {
-        // Usar tu función existente de notificación
         if (typeof showNotification === 'function') {
             showNotification(message, type);
         } else {
@@ -191,16 +237,9 @@ class SSEManager {
             console.log(`${type}: ${message}`);
         }
     }
-
-    // Helper methods
-    debeRecargarColumna(estado, nuevosPedidos) {
-        const columna = document.getElementById(estado);
-        const cantidadActual = columna.querySelectorAll('.order-card').length;
-        return Math.abs(cantidadActual - nuevosPedidos.length) > 2;
-    }
 }
 
-// Inicialización automática cuando el DOM está listo
+// Inicialización automática
 document.addEventListener('DOMContentLoaded', function() {
     const restauranteId = document.querySelector('meta[name="restaurante-id"]')?.content;
     
@@ -208,7 +247,6 @@ document.addEventListener('DOMContentLoaded', function() {
         window.sseManager = new SSEManager(restauranteId);
         window.sseManager.connect();
         
-        // Reconectar cuando la página vuelve a estar visible
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden && !window.sseManager.isConnected) {
                 window.sseManager.connect();

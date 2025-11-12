@@ -24,8 +24,6 @@ from .forms import (
     HOUR_CHOICES, MINUTE_CHOICES
 )
 from .models import Producto, Categoria, Pedido, ItemPedido, Restaurante, HorarioRestaurante, OpcionProducto, OpcionCategoria, RestaurantQR
-from channels.layers import get_channel_layer
-from asgiref.sync import async_to_sync
 from django.forms import formset_factory, inlineformset_factory
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 import json
@@ -2665,9 +2663,6 @@ def hello(request):
                 return JsonResponse({'status': 'error', 'message': 'No status in response'}, status=500)
             return redirect('home')
 
-        channel_layer = get_channel_layer()
-        send_event = async_to_sync(channel_layer.group_send)
-
         if pedido.estado != 'procesando_pago':
             logger.warning(f"Pedido {pedido.id} not in procesando_pago state: {pedido.estado}")
             if request.method == 'POST':
@@ -2677,38 +2672,22 @@ def hello(request):
         if status == "approved":
             pedido.estado = 'pendiente'
             pedido.save()
-            send_event(
-                f"pedidos_restaurante_{pedido.restaurante.id}",
-                {
-                    'type': 'pedido_updated',
-                    'pedido_id': str(pedido.id),
-                    'message': 'Pago confirmado, pedido pendiente'
-                }
-            )
+            # Actualizar cache para SSE
+            actualizar_cache_pedidos(pedido.restaurante.id)
+            
         elif status in ('pending', 'in_process'):
             pedido.estado = 'procesando_pago'
             pedido.save()
-            send_event(
-                f"pedidos_restaurante_{pedido.restaurante.id}",
-                {
-                    'type': 'pedido_updated',
-                    'pedido_id': str(pedido.id),
-                    'message': 'Pedido confirmado, pago pendiente'
-                }
-            )
+            # Actualizar cache para SSE
+            actualizar_cache_pedidos(pedido.restaurante.id)
+            
         elif status in ("cancelled", "rejected"):
             pedido.estado = 'error_pago'
             pedido.motivo_error_pago = "No se pudo procesar el pago"
             pedido.fecha_error_pago = timezone.now()
             pedido.save()
-            send_event(
-                f"pedidos_restaurante_{pedido.restaurante.id}",
-                {
-                    'type': 'pedido_updated',
-                    'pedido_id': str(pedido.id),
-                    'message': 'Pago rechazado o cancelado'
-                }
-            )
+            # Actualizar cache para SSE
+            actualizar_cache_pedidos(pedido.restaurante.id)
 
         # Para webhooks POST, retornar JSON en lugar de redirect
         if request.method == 'POST':

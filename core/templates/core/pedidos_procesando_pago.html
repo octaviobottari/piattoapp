@@ -172,58 +172,14 @@
 
 {% block scripts %}
 {{ block.super }}
-<script src="{% static 'js/websocket.js' %}?v=6"></script>
+<!-- ✅ REEMPLAZAR WebSockets con SSE -->
+<script src="{% static 'js/sse-manager.js' %}"></script>
+
 <script>
-// Ensure window.refreshColumns is defined
+// Ensure window.refreshColumns is defined - AHORA MANEJADO POR SSE
 window.refreshColumns = function() {
-    console.log('Refreshing columns for procesando_pago and error_pago');
-    $.ajax({
-        url: '/panel/pedidos/procesando_pagos/html/',
-        method: 'GET',
-        cache: false,
-        timeout: 10000,
-        beforeSend: function() {
-            $('#procesando_pago').addClass('loading').empty();
-            $('#error_pago').addClass('loading').empty();
-            console.log('Cleared procesando_pago and error_pago columns');
-        },
-        success: function(html) {
-            console.log('AJAX response received for procesando_pagos:', html);
-            const $temp = $('<div>').html(html);
-            const $procesando = $('#procesando_pago');
-            const $error = $('#error_pago');
-
-            // Update procesando_pago column
-            const procesandoHtml = $temp.find('#procesando_pago').html() || '<p class="text-center">No hay pedidos procesando pago.</p>';
-            $procesando.html(procesandoHtml);
-            console.log('Updated procesando_pago with:', procesandoHtml);
-
-            // Update error_pago column
-            const errorHtml = $temp.find('#error_pago').html() || '<p class="text-center">No hay pedidos con error en pago.</p>';
-            $error.html(errorHtml);
-            console.log('Updated error_pago with:', errorHtml);
-
-            // Reinitialize Bootstrap dropdowns
-            $('.dropdown-toggle', $procesando).dropdown();
-            $('.dropdown-toggle', $error).dropdown();
-            console.log('Dropdowns initialized:', $('.dropdown-toggle').length);
-
-            // Call updateTimers if defined
-            if (typeof window.updateTimers === 'function') {
-                window.updateTimers();
-                console.log('Timers updated');
-            }
-
-            $procesando.removeClass('loading');
-            $error.removeClass('loading');
-        },
-        error: function(xhr) {
-            console.error('Error refreshing columns:', xhr);
-            showNotification(`Error al actualizar pedidos: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
-            $('#procesando_pago').removeClass('loading');
-            $('#error_pago').removeClass('loading');
-        }
-    });
+    console.log('SSE se encarga de las actualizaciones automáticas');
+    // Esta función ya no hace AJAX, SSE actualiza automáticamente
 };
 
 // Timer for error_pago orders
@@ -245,65 +201,6 @@ window.updateTimers = function() {
     });
 };
 setInterval(window.updateTimers, 1000);
-
-// Confirmar Pago (Sí)
-$(document).on('click', '.confirmar-pago', function(e) {
-    e.preventDefault();
-    const $this = $(this);
-    if ($this.hasClass('disabled')) return;
-    $this.addClass('disabled').prop('disabled', true);
-
-    const pedidoId = $this.data('pedido-id');
-    $.ajax({
-        url: `/panel/pedidos/${pedidoId}/confirmar_pago/`,
-        method: 'POST',
-        success: function(response) {
-            if (response.success) {
-                showNotification(`Pago del pedido #${pedidoId} confirmado`, 'success');
-                window.refreshColumns();
-            } else {
-                showNotification(`Error al confirmar el pago: ${response.error || 'Error desconocido'}`, 'error');
-            }
-        },
-        error: function(xhr) {
-            console.error(`Error confirming payment for pedido ${pedidoId}:`, xhr);
-            showNotification(`Error al confirmar el pago: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
-        },
-        complete: function() {
-            $this.removeClass('disabled').prop('disabled', false);
-        }
-    });
-});
-
-// Rechazar Pago (No)
-$(document).on('click', '.rechazar-pago', function(e) {
-    e.preventDefault();
-    const $this = $(this);
-    if ($this.hasClass('disabled')) return;
-    $this.addClass('disabled').prop('disabled', true);
-
-    const pedidoId = $this.data('pedido-id');
-    $.ajax({
-        url: `/panel/pedidos/${pedidoId}/rechazar_pago/`,
-        method: 'POST',
-        data: { motivo_error: 'Error desconocido en el procesamiento del pago' },
-        success: function(response) {
-            if (response.success) {
-                showNotification(`Pago del pedido #${pedidoId} rechazado`, 'success');
-                window.refreshColumns();
-            } else {
-                showNotification(`Error al rechazar el pago: ${response.error || 'Error desconocido'}`, 'error');
-            }
-        },
-        error: function(xhr) {
-            console.error(`Error rejecting payment for pedido ${pedidoId}:`, xhr);
-            showNotification(`Error al rechazar el pago: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, 'error');
-        },
-        complete: function() {
-            $this.removeClass('disabled').prop('disabled', false);
-        }
-    });
-});
 
 $(document).ready(function() {
     // Check dependencies
@@ -353,7 +250,7 @@ $(document).ready(function() {
     setInterval(window.updateTimers, 1000);
     window.updateTimers();
 
-    // Confirmar Pago (Sí)
+    // Confirmar Pago (Sí) - ✅ MANTENER LÓGICA ORIGINAL
     $(document).on('click', '.confirmar-pago', function(e) {
         e.preventDefault();
         const $this = $(this);
@@ -367,7 +264,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     showNotification(`Pago del pedido #${pedidoId} confirmado`, 'success');
-                    window.refreshColumns();
+                    // ✅ NO llamar refreshColumns - SSE se encarga automáticamente
                 } else {
                     showNotification(`Error al confirmar el pago: ${response.error || 'Error desconocido'}`, 'error');
                 }
@@ -382,7 +279,7 @@ $(document).ready(function() {
         });
     });
 
-    // Rechazar Pago (No)
+    // Rechazar Pago (No) - ✅ MANTENER LÓGICA ORIGINAL
     $(document).on('click', '.rechazar-pago', function(e) {
         e.preventDefault();
         const $this = $(this);
@@ -397,7 +294,7 @@ $(document).ready(function() {
             success: function(response) {
                 if (response.success) {
                     showNotification(`Pago del pedido #${pedidoId} rechazado`, 'success');
-                    window.refreshColumns();
+                    // ✅ NO llamar refreshColumns - SSE se encarga automáticamente
                 } else {
                     showNotification(`Error al rechazar el pago: ${response.error || 'Error desconocido'}`, 'error');
                 }
@@ -412,6 +309,9 @@ $(document).ready(function() {
         });
     });
 
+    // ✅ ELIMINAR refreshColumns - SSE maneja las actualizaciones automáticas
+
+    // El resto del código permanece EXACTAMENTE IGUAL...
     // Mostrar detalles del pedido
     $(document).on('click', '.order-card', function(e) {
         if ($(e.target).closest('.icon-group').length || $(e.target).hasClass('order-phone')) return;
@@ -586,7 +486,7 @@ $(document).ready(function() {
         });
     });
 
-    // Audio handling
+    // Audio handling (igual que en el primer template)
     const audio = document.getElementById('notificationSound');
     let isSoundEnabled = localStorage.getItem('isSoundEnabled') === 'true';
     let audioUnlocked = false;
@@ -693,9 +593,7 @@ $(document).ready(function() {
         }
     });
 
-    // Initial refresh
-    console.log('Triggering initial refreshColumns');
-    window.refreshColumns();
+    console.log('SSE configurado para pedidos procesando pago');
 });
 
 // Function to get CSRF token

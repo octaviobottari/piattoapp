@@ -86,7 +86,8 @@ TEMPLATES = [
 # URLs
 ROOT_URLCONF = 'piatto.urls'
 WSGI_APPLICATION = 'piatto.wsgi.application'
-ASGI_APPLICATION = 'None'
+ASGI_APPLICATION = 'piatto.asgi.application'
+
 
 # Database
 DATABASES = {

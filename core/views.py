@@ -1012,12 +1012,14 @@ def pedidos_pendientes_html(request):
         restaurante=request.user,
         estado='pendiente'
     ).order_by('-fecha')
-    return render(request, 'core/pedidos_columnas.html', {
+    response = render(request, 'core/pedidos_columnas.html', {
         'pedidos_pendientes': pedidos_pendientes,
         'pendientes_only': True,
         'tiempos_estimados': Pedido.TIEMPO_ESTIMADO_CHOICES,
         'motivos_cancelacion': Pedido.MOTIVO_CANCELACION_CHOICES
     })
+    response['Cache-Control'] = 'no-store, no-cache, must-revalidate'
+    return response
 
 @login_required
 @never_cache
@@ -1613,7 +1615,16 @@ def procesar_pedido(request, restaurante):
                         precio_unitario=item['precio_unitario'],
                         opciones_seleccionadas=item['opciones_seleccionadas']
                     )
+                print(f"🎉 NUEVO PEDIDO CREADO: #{pedido.numero_pedido}, actualizando cache...")
                 actualizar_cache_pedidos(restaurante.id)
+
+                import threading
+                def actualizar_cache_delayed():
+                    time.sleep(1)
+                    print("🔄 Actualización delayed del cache...")
+                    actualizar_cache_pedidos(restaurante.id)
+                
+                threading.Thread(target=actualizar_cache_delayed).start()
 
                 return JsonResponse({
                     'success': True,

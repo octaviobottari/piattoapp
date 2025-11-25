@@ -1,4 +1,4 @@
-// static/js/sse-manager.js - VERSIÓN CORREGIDA
+// static/js/sse-manager.js - VERSIÓN COMPLETA Y CORREGIDA
 class SSEManager {
     constructor(restauranteId) {
         this.restauranteId = restauranteId;
@@ -22,6 +22,11 @@ class SSEManager {
             'listo': [],
             'procesando_pago': []
         };
+
+        // ✅ NUEVO: Forzar recarga periódica como fallback
+        this.forceRefreshInterval = setInterval(() => {
+            this.forceRefreshIfNeeded();
+        }, 10000); // Cada 10 segundos
     }
 
     connect() {
@@ -45,6 +50,9 @@ class SSEManager {
                 this.isConnected = true;
                 this.reconnectDelay = 1000;
                 this.reconnectAttempts = 0;
+                
+                // ✅ RECARGAR INMEDIATAMENTE AL CONECTARSE
+                this.recargarTodasLasColumnas();
                 
                 if (this.reconnectAttempts === 0) {
                     this.showNotification('Conexión en tiempo real establecida', 'success');
@@ -132,6 +140,23 @@ class SSEManager {
             });
     }
 
+    // ✅ NUEVO: Recarga forzada si es necesario
+    forceRefreshIfNeeded() {
+        if (this.isConnected) {
+            // Verificar si hay cambios haciendo una solicitud de polling
+            fetch(`/api/pedidos-polling/${this.restauranteId}/?version=${this.currentVersion}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.version > this.currentVersion) {
+                        console.log('🔄 Cambios detectados via polling forzado, recargando...');
+                        this.currentVersion = data.version;
+                        this.recargarTodasLasColumnas();
+                    }
+                })
+                .catch(error => console.log('ℹ️ Polling forzado falló:', error));
+        }
+    }
+
     debouncedUpdate(pedidos) {
         if (this.debounceTimer) {
             clearTimeout(this.debounceTimer);
@@ -147,14 +172,10 @@ class SSEManager {
         
         const cambios = this.detectarCambiosPorColumna(pedidos);
         
-        if (cambios.todos) {
-            console.log('🔄 Cambios múltiples, recargando todas las columnas');
+        // ✅ MODIFICADO: SIEMPRE recargar todas las columnas cuando hay cambios
+        if (cambios.todos || cambios.columnas.length > 0) {
+            console.log('🔄 Cambios detectados, recargando todas las columnas');
             this.recargarTodasLasColumnas();
-        } else {
-            console.log('🔄 Cambios en columnas:', cambios.columnas);
-            cambios.columnas.forEach(estado => {
-                this.cargarColumnaViaAPI(estado);
-            });
         }
         
         // ✅ MEJORADO: Detección más precisa de nuevos pedidos
@@ -200,7 +221,7 @@ class SSEManager {
         }
         
         // Si hay cambios en múltiples columnas, recargar todo
-        if (cambios.columnas.length >= 2) {
+        if (cambios.columnas.length >= 1) { // ✅ REDUCIDO: 1 o más columnas
             cambios.todos = true;
         }
         
@@ -255,6 +276,9 @@ class SSEManager {
         }
         
         console.log(`📡 Cargando columna ${estado} desde: ${url}`);
+        
+        // ✅ AGREGAR TIMESTAMP PARA EVITAR CACHE
+        url += `${url.includes('?') ? '&' : '?'}_=${Date.now()}`;
         
         return fetch(url)
             .then(response => {
@@ -344,6 +368,11 @@ class SSEManager {
         if (this.pollingInterval) {
             clearInterval(this.pollingInterval);
             this.pollingInterval = null;
+        }
+        
+        if (this.forceRefreshInterval) {
+            clearInterval(this.forceRefreshInterval);
+            this.forceRefreshInterval = null;
         }
         
         if (this.eventSource) {

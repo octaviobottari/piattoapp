@@ -818,5 +818,16 @@ $(document).ready(function() {
   console.log("window.csrftoken set to:", window.csrftoken);
   console.log("DOM loaded, verifying CSRF token");
 });
+
+setInterval(() => {
+    // Verificar si hay pedidos visibles, si no, forzar recarga
+    const pedidosVisibles = document.querySelectorAll('.order-card').length;
+    if (pedidosVisibles === 0) {
+        console.log('🔄 No hay pedidos visibles, forzando recarga...');
+        if (window.sseManager) {
+            window.sseManager.recargarTodasLasColumnas();
+        }
+    }
+}, 15000);
 </script>
 {% endblock %}

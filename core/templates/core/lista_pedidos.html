@@ -325,7 +325,7 @@ $(document).ready(function() {
   });
   audio.load();
 
-  // Función para desbloquear audio
+  // ✅ MEJORADO: Función para desbloquear audio
   function unlockAudio() {
     if (!audioUnlocked) {
       console.log("Intentando desbloquear audio...");
@@ -348,7 +348,7 @@ $(document).ready(function() {
     }
   }
 
-  // Función para reproducir sonido
+  // ✅ MEJORADO: Función para reproducir sonido
   window.playNotificationSound = function(pedidoId) {
     if (!isSoundEnabled) {
       console.log("Sonido deshabilitado, no se reproduce para pedido:", pedidoId);
@@ -356,6 +356,8 @@ $(document).ready(function() {
     }
     console.log("Intentando reproducir sonido para pedido:", pedidoId);
     if (audioUnlocked) {
+      // ✅ RESETEAR Y REPRODUCIR INMEDIATAMENTE
+      audio.currentTime = 0;
       audio.play().then(() => {
         console.log("Sonido reproducido exitosamente para pedido:", pedidoId);
       }).catch(e => {
@@ -819,8 +821,8 @@ $(document).ready(function() {
   console.log("DOM loaded, verifying CSRF token");
 });
 
+// ✅ FALLBACK: Verificar cada 15 segundos si no hay pedidos visibles
 setInterval(() => {
-    // Verificar si hay pedidos visibles, si no, forzar recarga
     const pedidosVisibles = document.querySelectorAll('.order-card').length;
     if (pedidosVisibles === 0) {
         console.log('🔄 No hay pedidos visibles, forzando recarga...');

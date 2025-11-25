@@ -805,7 +805,7 @@ pedido_cache = PedidoMemoryCache.get_instance()
 @login_required
 def pedidos_sse(request, restaurante_id):
     """
-    Server-Sent Events MEJORADO con detección de nuevos pedidos
+    Server-Sent Events MEJORADO - RÁPIDO Y EFICIENTE
     """
     if request.user.id != int(restaurante_id) and not request.user.is_staff:
         return JsonResponse({'error': 'No autorizado'}, status=403)
@@ -817,48 +817,56 @@ def pedidos_sse(request, restaurante_id):
         print(f"🎯 Nueva conexión SSE para restaurante {restaurante_id}, cliente: {client_id}")
         
         try:
-            heartbeat_count = 0
-            consecutive_errors = 0
-            max_consecutive_errors = 3
+            # ✅ ENVIAR DATOS INMEDIATAMENTE AL CONECTAR
+            current_version = pedido_cache.get_version(restaurante_id)
+            pedidos_actuales = pedido_cache.get_pedidos(restaurante_id)
             
-            # ✅ NUEVO: Cache de últimos pedidos conocidos
-            ultimos_pedidos_conocidos = set()
+            if pedidos_actuales:
+                pedidos_serializados = []
+                for pedido in pedidos_actuales:
+                    pedido_serializado = pedido.copy()
+                    if 'fecha' in pedido_serializado and not isinstance(pedido_serializado['fecha'], str):
+                        pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
+                    pedidos_serializados.append(pedido_serializado)
+                
+                event_data = {
+                    'type': 'pedidos_updated',
+                    'pedidos': pedidos_serializados,
+                    'version': current_version,
+                    'timestamp': timezone.now().isoformat()
+                }
+                yield f"data: {json.dumps(event_data)}\n\n"
+                print(f"📨 Datos iniciales enviados: {len(pedidos_serializados)} pedidos")
             
-            while consecutive_errors < max_consecutive_errors:
+            # ✅ MONITOREAR CAMBIOS EN TIEMPO REAL
+            ultima_version_conocida = current_version
+            
+            while True:
                 try:
+                    time.sleep(1)  # ✅ VERIFICACIÓN MÁS RÁPIDA
+                    
                     current_version = pedido_cache.get_version(restaurante_id)
                     pedidos_actuales = pedido_cache.get_pedidos(restaurante_id)
                     
-                    # ✅ NUEVO: Detectar nuevos pedidos específicamente
-                    pedidos_actuales_ids = {p['id'] for p in pedidos_actuales}
-                    nuevos_pedidos_ids = pedidos_actuales_ids - ultimos_pedidos_conocidos
-                    
-                    # Si hay cambios de versión O nuevos pedidos
-                    if current_version > last_version or nuevos_pedidos_ids:
+                    # ✅ DETECTAR NUEVOS PEDIDOS ESPECÍFICAMENTE
+                    if current_version > ultima_version_conocida:
+                        print(f"🔄 Cambio detectado: versión {ultima_version_conocida} -> {current_version}")
                         
-                        if nuevos_pedidos_ids:
-                            print(f"🎉 NUEVOS PEDIDOS DETECTADOS: {nuevos_pedidos_ids}")
-                            # Enviar evento específico para nuevos pedidos
-                            for pedido_id in nuevos_pedidos_ids:
-                                pedido_data = next((p for p in pedidos_actuales if p['id'] == pedido_id), None)
-                                if pedido_data and pedido_data.get('estado') == 'pendiente':
-                                    event_data = {
-                                        'type': 'nuevo_pedido',
-                                        'pedido': pedido_data,
-                                        'timestamp': timezone.now().isoformat()
-                                    }
-                                    yield f"data: {json.dumps(event_data)}\n\n"
-                                    print(f"📨 Enviado evento nuevo_pedido para: {pedido_id}")
-                        
-                        # También enviar actualización general
+                        # Serializar pedidos
                         pedidos_serializados = []
+                        nuevos_pendientes = []
+                        
                         for pedido in pedidos_actuales:
                             pedido_serializado = pedido.copy()
-                            if 'fecha' in pedido_serializado:
-                                if not isinstance(pedido_serializado['fecha'], str):
-                                    pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
+                            if 'fecha' in pedido_serializado and not isinstance(pedido_serializado['fecha'], str):
+                                pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
                             pedidos_serializados.append(pedido_serializado)
+                            
+                            # Detectar nuevos pedidos pendientes
+                            if pedido_serializado.get('estado') == 'pendiente':
+                                nuevos_pendientes.append(pedido_serializado)
                         
+                        # ✅ ENVIAR ACTUALIZACIÓN GENERAL
                         event_data = {
                             'type': 'pedidos_updated',
                             'pedidos': pedidos_serializados,
@@ -867,25 +875,21 @@ def pedidos_sse(request, restaurante_id):
                         }
                         yield f"data: {json.dumps(event_data)}\n\n"
                         
-                        last_version = current_version
-                        ultimos_pedidos_conocidos = pedidos_actuales_ids
-                        consecutive_errors = 0
-
-                    # Heartbeat
-                    heartbeat_count += 1
-                    if heartbeat_count >= 6:
-                        yield "data: {\"type\": \"heartbeat\"}\n\n"
-                        heartbeat_count = 0
-                    
-                    # Sleep más corto para mejor respuesta
-                    time.sleep(2)  # Reducido de 5s a 2s para mejor respuesta
+                        # ✅ ENVIAR EVENTOS INDIVIDUALES PARA NUEVOS PEDIDOS
+                        for nuevo_pedido in nuevos_pendientes:
+                            event_data = {
+                                'type': 'nuevo_pedido',
+                                'pedido': nuevo_pedido,
+                                'timestamp': timezone.now().isoformat()
+                            }
+                            yield f"data: {json.dumps(event_data)}\n\n"
+                            print(f"🎉 Evento nuevo_pedido enviado: #{nuevo_pedido.get('numero_pedido', 'N/A')}")
                         
+                        ultima_version_conocida = current_version
+                    
                 except Exception as e:
-                    consecutive_errors += 1
-                    logger.error(f"SSE error for client {client_id}: {str(e)}")
-                    if consecutive_errors >= max_consecutive_errors:
-                        break
-                    time.sleep(1)
+                    print(f"❌ Error en loop SSE: {str(e)}")
+                    time.sleep(2)  # Esperar antes de reintentar
                     
         except GeneratorExit:
             print(f"🔌 Conexión SSE cerrada para cliente {client_id}")
@@ -934,7 +938,7 @@ def pedidos_polling(request, restaurante_id):
 
 def actualizar_cache_pedidos(restaurante_id):
     """
-    Función MEJORADA para actualizar el cache cuando hay cambios en pedidos
+    Función MEJORADA para actualizar el cache - MÁS RÁPIDA
     """
     from .models import Pedido
     
@@ -942,38 +946,31 @@ def actualizar_cache_pedidos(restaurante_id):
         pedidos_activos = Pedido.objects.filter(
             restaurante_id=restaurante_id,
             estado__in=['pendiente', 'en_preparacion', 'listo', 'procesando_pago']
-        ).order_by('-fecha')[:100]
+        ).order_by('-fecha')[:50]  # ✅ LIMITAR PARA MEJOR PERFORMANCE
         
-        # ✅ MEJORADO: Serialización más completa
+        # ✅ SERIALIZACIÓN RÁPIDA
         pedidos_data = []
         for pedido in pedidos_activos:
             pedidos_data.append({
                 'id': pedido.id,
                 'numero_pedido': pedido.numero_pedido,
-                'cliente': pedido.cliente,
-                'telefono': pedido.telefono,
+                'cliente': pedido.cliente or 'Sin nombre',
+                'telefono': pedido.telefono or 'Sin teléfono',
                 'estado': pedido.estado,
-                'fecha': pedido.fecha.isoformat() if pedido.fecha else None,
+                'fecha': pedido.fecha,
                 'total': str(pedido.total) if pedido.total else '0.00',
-                'metodo_pago': pedido.metodo_pago,
-                'tipo_pedido': pedido.tipo_pedido,
+                'metodo_pago': pedido.metodo_pago or 'efectivo',
+                'tipo_pedido': pedido.tipo_pedido or 'retiro',
                 'direccion': pedido.direccion or 'Retiro en local'
             })
         
-        # ✅ NUEVO: Log para debugging
-        estados_count = {}
-        for pedido in pedidos_data:
-            estado = pedido['estado']
-            estados_count[estado] = estados_count.get(estado, 0) + 1
-        
-        print(f"🔄 Cache actualizado para restaurante {restaurante_id}:")
-        for estado, count in estados_count.items():
-            print(f"   - {estado}: {count} pedidos")
-        
+        # ✅ ACTUALIZAR CACHE
         pedido_cache.set_pedidos(restaurante_id, pedidos_data)
         
+        print(f"🔄 Cache ACTUALIZADO para restaurante {restaurante_id}: {len(pedidos_data)} pedidos")
+        
     except Exception as e:
-        logger.error(f"Error actualizando cache para restaurante {restaurante_id}: {str(e)}")
+        print(f"❌ Error actualizando cache para restaurante {restaurante_id}: {str(e)}")
 
 @login_required
 @never_cache
@@ -1104,7 +1101,8 @@ def marcar_en_entrega(request, pedido_id):
     pedido.fecha_en_entrega = timezone.now()
     pedido.save()
     
-    # ✅ AGREGAR ESTA LÍNEA:
+    # ✅ ACTUALIZAR CACHE INMEDIATAMENTE
+    print(f"🔄 Pedido #{pedido.numero_pedido} marcado como en entrega, actualizando cache...")
     actualizar_cache_pedidos(request.user.id)
     
     return JsonResponse({'success': True})
@@ -1113,15 +1111,17 @@ def marcar_en_entrega(request, pedido_id):
 @never_cache
 @no_cache_view
 @require_POST
-def archivar_pedido(request, pedido_id):
+def actualizar_estado(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
-    if pedido.estado not in ['listo', 'en_entrega']:
-        return JsonResponse({'success': False, 'error': 'El pedido no puede ser archivado'})
+    estado = request.POST.get('estado')
+    if estado not in ['listo']:
+        return JsonResponse({'success': False, 'error': 'Estado no válido'})
 
-    pedido.estado = 'archivado'
+    pedido.estado = estado
     pedido.save()
     
-    # ✅ AGREGAR ESTA LÍNEA:
+    # ✅ ACTUALIZAR CACHE INMEDIATAMENTE
+    print(f"🔄 Pedido #{pedido.numero_pedido} actualizado a {estado}, actualizando cache...")
     actualizar_cache_pedidos(request.user.id)
     
     return JsonResponse({'success': True})
@@ -1206,7 +1206,8 @@ def aceptar_pedido(request, pedido_id):
     pedido.tiempo_estimado = tiempo_estimado
     pedido.save()
     
-    # ✅ AGREGAR ESTA LÍNEA:
+    # ✅ ACTUALIZAR CACHE INMEDIATAMENTE
+    print(f"🔄 Pedido #{pedido.numero_pedido} aceptado, actualizando cache...")
     actualizar_cache_pedidos(request.user.id)
     
     return JsonResponse({'success': True})
@@ -1226,10 +1227,12 @@ def rechazar_pedido(request, pedido_id):
     pedido.fecha_cancelado = timezone.now()
     pedido.save()
     
-    # ✅ AGREGAR ESTA LÍNEA:
+    # ✅ ACTUALIZAR CACHE INMEDIATAMENTE
+    print(f"🔄 Pedido #{pedido.numero_pedido} rechazado, actualizando cache...")
     actualizar_cache_pedidos(request.user.id)
     
     return JsonResponse({'success': True})
+
 
 @login_required
 @never_cache

@@ -1111,6 +1111,24 @@ def marcar_en_entrega(request, pedido_id):
 @never_cache
 @no_cache_view
 @require_POST
+def archivar_pedido(request, pedido_id):
+    pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
+    if pedido.estado not in ['listo', 'en_entrega']:
+        return JsonResponse({'success': False, 'error': 'El pedido no puede ser archivado'})
+
+    pedido.estado = 'archivado'
+    pedido.save()
+    
+    # ✅ ACTUALIZAR CACHE INMEDIATAMENTE
+    print(f"🔄 Pedido #{pedido.numero_pedido} archivado, actualizando cache...")
+    actualizar_cache_pedidos(request.user.id)
+    
+    return JsonResponse({'success': True})
+
+@login_required
+@never_cache
+@no_cache_view
+@require_POST
 def actualizar_estado(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     estado = request.POST.get('estado')

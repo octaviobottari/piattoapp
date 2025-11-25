@@ -48,6 +48,7 @@ urlpatterns = [
     # ✅ NUEVAS URLs SSE
     path('api/pedidos-sse/<int:restaurante_id>/', views.pedidos_sse, name='pedidos_sse'),
     path('api/pedidos-polling/<int:restaurante_id>/', views.pedidos_polling, name='pedidos_polling'),
+    
 
     
     # Configuración routes

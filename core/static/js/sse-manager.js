@@ -68,17 +68,70 @@ class SSEManager {
     }
 
     handleEvent(data) {
-        switch(data.type) {
-            case 'pedidos_updated':
-                console.log('🔄 Evento: pedidos_updated, version:', data.version, data.triggered ? '(TRIGGERED)' : '');
-                this.currentVersion = data.version;
-                this.procesarPedidosActualizados(data.pedidos);
-                break;
-                
-            default:
-                console.log('📨 SSE event desconocido:', data);
-        }
+    switch(data.type) {
+        case 'pedidos_updated':
+            console.log('🔄 Evento SSE recibido:', data.pedidos.length, 'pedidos');
+            
+            // ✅ SONIDO INMEDIATO si hay nuevos pedidos
+            if (data.pedidos && data.pedidos.length > 0 && !data.immediate) {
+                const nuevoPedido = data.pedidos.find(p => 
+                    p.estado === 'pendiente' || p.estado === 'procesando_pago'
+                );
+                if (nuevoPedido) {
+                    console.log('🔔 Nuevo pedido detectado:', nuevoPedido.numero_pedido);
+                    this.playNotificationSound(nuevoPedido.numero_pedido);
+                }
+            }
+            
+            this.currentVersion = data.version;
+            this.procesarPedidosActualizados(data.pedidos);
+            break;
     }
+}
+
+playNotificationSound(pedidoId) {
+    const audio = document.getElementById('notificationSound');
+    const soundEnabled = localStorage.getItem('isSoundEnabled') !== 'false';
+    
+    if (!soundEnabled || !audio) {
+        console.log('🔇 Sonido deshabilitado o audio no encontrado');
+        return;
+    }
+    
+    // ✅ RESET Y REPRODUCIR
+    audio.currentTime = 0;
+    audio.play().catch(error => {
+        console.log('🔇 Sonido bloqueado, necesita interacción:', error);
+        // Mostrar notificación visual
+        this.showVisualNotification(pedidoId);
+    });
+}
+
+// ✅ NOTIFICACIÓN VISUAL DE FALLBACK
+showVisualNotification(pedidoId) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(`Nuevo Pedido #${pedidoId}`, {
+            body: 'Tienes un nuevo pedido pendiente',
+            icon: '/static/images/logo.png'
+        });
+    }
+    
+    // Notificación en página
+    const notification = document.createElement('div');
+    notification.innerHTML = `
+        <div style="position: fixed; top: 20px; right: 20px; background: #28a745; color: white; padding: 15px; border-radius: 5px; z-index: 10000;">
+            <strong>Nuevo Pedido #${pedidoId}</strong>
+            <button onclick="this.parentElement.remove()" style="background: none; border: none; color: white; margin-left: 10px;">×</button>
+        </div>
+    `;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
 
     procesarPedidosActualizados(pedidos) {
         console.log('⚡ Procesando pedidos actualizados:', pedidos.length);

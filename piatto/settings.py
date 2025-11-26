@@ -43,14 +43,18 @@ INSTALLED_APPS = [
 CACHES = {
     'default': {
         'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-        'LOCATION': 'piatto-cache',
+        'LOCATION': 'piatto-ultra-cache',
         'TIMEOUT': 300,  # 5 minutos
         'OPTIONS': {
-            'MAX_ENTRIES': 1000,
-            'CULL_FREQUENCY': 3,
+            'MAX_ENTRIES': 10000,  # Más capacidad
+            'CULL_FREQUENCY': 10,  # Más agresivo
         }
     }
 }
+
+# MEJORAR SSE
+SSE_TIMEOUT = 45
+POLLING_INTERVAL = 5  # Más frecuente
 
 
 # Middleware
@@ -232,8 +236,6 @@ SECURE_HSTS_PRELOAD = True
 SESSION_ENGINE = 'django.contrib.sessions.backends.db'
 SESSION_COOKIE_AGE = 1209600
 SESSION_CACHE_ALIAS = 'default'
-SSE_TIMEOUT = 30
-POLLING_INTERVAL = 10
 CELERY_BROKER_URL = 'django-db://'
 CELERY_RESULT_BACKEND = 'django-db://'
 CELERY_ACCEPT_CONTENT = ['json']

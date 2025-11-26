@@ -1,4 +1,5 @@
 import threading
+from collections import defaultdict
 import time
 from django.shortcuts import render, redirect, get_object_or_404, get_list_or_404
 from django.contrib.auth import login, logout, authenticate
@@ -766,6 +767,53 @@ def mass_delete_products(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': f'Error al eliminar productos: {str(e)}'}, status=500)
     
+class UltraFastPedidoCache:
+    _instance = None
+    _lock = threading.Lock()
+    
+    def __new__(cls):
+        with cls._lock:
+            if cls._instance is None:
+                cls._instance = super().__new__(cls)
+                cls._instance._data = defaultdict(dict)
+                cls._instance._triggers = defaultdict(int)
+                cls._instance._locks = defaultdict(threading.Lock)
+            return cls._instance
+    
+    def set_pedidos(self, restaurante_id, pedidos):
+        with self._locks[restaurante_id]:
+            cache_key = f"pedidos_ultra_{restaurante_id}"
+            self._data[restaurante_id] = {
+                'pedidos': pedidos,
+                'timestamp': timezone.now(),
+                'version': self._data[restaurante_id].get('version', 0) + 1
+            }
+            # ✅ TRIGGER INMEDIATO
+            self._triggers[restaurante_id] += 1
+            # ✅ CACHE DE FALLBACK
+            cache.set(cache_key, self._data[restaurante_id], 300)
+    
+    def get_pedidos(self, restaurante_id):
+        with self._locks[restaurante_id]:
+            # ✅ INTENTAR MEMORY PRIMERO
+            if restaurante_id in self._data:
+                return self._data[restaurante_id]
+            
+            # ✅ FALLBACK A CACHE DJANGO
+            cache_key = f"pedidos_ultra_{restaurante_id}"
+            cached = cache.get(cache_key)
+            if cached:
+                self._data[restaurante_id] = cached
+                return cached
+            
+            return {'pedidos': [], 'version': 0, 'timestamp': timezone.now()}
+    
+    def check_trigger(self, restaurante_id, last_trigger):
+        return self._triggers.get(restaurante_id, 0) > last_trigger
+
+# INSTANCIA GLOBAL
+ultra_cache = UltraFastPedidoCache()
+
 class PedidoMemoryCache:
     _instance = None
     _cache = {}
@@ -819,67 +867,61 @@ pedido_cache = PedidoMemoryCache.get_instance()
 @require_GET
 @login_required
 def pedidos_sse(request, restaurante_id):
-    """
-    Server-Sent Events ULTRA-RÁPIDO - SIN DELAYS
-    """
+    """SSE MEJORADO - RESPONDE EN <1 SEGUNDO"""
     if request.user.id != int(restaurante_id) and not request.user.is_staff:
         return JsonResponse({'error': 'No autorizado'}, status=403)
     
     def event_stream():
         client_id = f"{restaurante_id}_{int(time.time())}"
         last_version = int(request.GET.get('version', 0))
-        last_trigger_check = timezone.now()
+        last_trigger = 0
         
-        print(f"🎯 Nueva conexión SSE ULTRA-RÁPIDA para restaurante {restaurante_id}")
+        print(f"🚀 SSE CONECTADO para restaurante {restaurante_id}")
         
         try:
-            # ✅ 1. ENVIAR DATOS INMEDIATAMENTE AL CONECTAR
-            current_version = pedido_cache.get_version(restaurante_id)
-            pedidos_actuales = pedido_cache.get_pedidos(restaurante_id)
+            # ✅ ENVIAR DATOS INMEDIATOS AL CONECTAR
+            cache_data = ultra_cache.get_pedidos(restaurante_id)
+            current_version = cache_data.get('version', 0)
             
-            if pedidos_actuales:
+            if cache_data['pedidos']:
                 pedidos_serializados = []
-                for pedido in pedidos_actuales:
-                    pedido_serializado = pedido.copy()
-                    if 'fecha' in pedido_serializado and not isinstance(pedido_serializado['fecha'], str):
-                        pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
-                    pedidos_serializados.append(pedido_serializado)
+                for pedido in cache_data['pedidos']:
+                    pedido_data = pedido.copy()
+                    if 'fecha' in pedido_data:
+                        pedido_data['fecha'] = pedido_data['fecha'].isoformat()
+                    pedidos_serializados.append(pedido_data)
                 
                 event_data = {
                     'type': 'pedidos_updated',
                     'pedidos': pedidos_serializados,
                     'version': current_version,
                     'timestamp': timezone.now().isoformat(),
-                    'immediate': True  # ✅ NUEVO: Indicador de respuesta inmediata
+                    'immediate': True
                 }
                 yield f"data: {json.dumps(event_data)}\n\n"
-                print(f"📨 Datos iniciales enviados INMEDIATAMENTE: {len(pedidos_serializados)} pedidos")
+                print(f"📦 Datos INMEDIATOS enviados: {len(pedidos_serializados)} pedidos")
             
-            # ✅ 2. MONITOREAR CAMBIOS EN TIEMPO REAL - SIN DELAYS
-            ultima_version_conocida = current_version
-            
+            # ✅ MONITOREAR CAMBIOS EN TIEMPO REAL
             while True:
                 try:
-                    # ✅ VERIFICACIÓN INMEDIATA CON TRIGGERS
                     current_time = timezone.now()
                     
-                    # Verificar triggers primero (más rápido que versión)
-                    if pedido_cache.check_trigger(restaurante_id, last_trigger_check):
-                        print(f"🎯 TRIGGER DETECTADO - Actualización inmediata")
-                        last_trigger_check = current_time
+                    # ✅ VERIFICACIÓN POR TRIGGER (MÁS RÁPIDO)
+                    if ultra_cache.check_trigger(restaurante_id, last_trigger):
+                        last_trigger = ultra_cache._triggers.get(restaurante_id, 0)
+                        print(f"🎯 TRIGGER INMEDIATO detectado")
                         
-                        current_version = pedido_cache.get_version(restaurante_id)
-                        pedidos_actuales = pedido_cache.get_pedidos(restaurante_id)
+                        cache_data = ultra_cache.get_pedidos(restaurante_id)
+                        current_version = cache_data.get('version', 0)
                         
-                        # Serializar pedidos
+                        # Serializar rápidamente
                         pedidos_serializados = []
-                        for pedido in pedidos_actuales:
-                            pedido_serializado = pedido.copy()
-                            if 'fecha' in pedido_serializado and not isinstance(pedido_serializado['fecha'], str):
-                                pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
-                            pedidos_serializados.append(pedido_serializado)
+                        for pedido in cache_data['pedidos']:
+                            pedido_data = pedido.copy()
+                            if 'fecha' in pedido_data:
+                                pedido_data['fecha'] = pedido_data['fecha'].isoformat()
+                            pedidos_serializados.append(pedido_data)
                         
-                        # ✅ ENVIAR ACTUALIZACIÓN INMEDIATA
                         event_data = {
                             'type': 'pedidos_updated',
                             'pedidos': pedidos_serializados,
@@ -888,27 +930,22 @@ def pedidos_sse(request, restaurante_id):
                             'triggered': True
                         }
                         yield f"data: {json.dumps(event_data)}\n\n"
-                        
-                        ultima_version_conocida = current_version
-                        continue  # ✅ Saltar el sleep después de un trigger
+                        continue
                     
-                    # ✅ VERIFICACIÓN POR VERSIÓN (fallback)
-                    current_version = pedido_cache.get_version(restaurante_id)
+                    # ✅ VERIFICACIÓN POR VERSIÓN (FALLBACK)
+                    cache_data = ultra_cache.get_pedidos(restaurante_id)
+                    current_version = cache_data.get('version', 0)
                     
-                    if current_version > ultima_version_conocida:
-                        print(f"🔄 Cambio por VERSIÓN detectado: {ultima_version_conocida} -> {current_version}")
+                    if current_version > last_version:
+                        print(f"🔄 Cambio por VERSIÓN: {last_version} -> {current_version}")
                         
-                        pedidos_actuales = pedido_cache.get_pedidos(restaurante_id)
-                        
-                        # Serializar pedidos
                         pedidos_serializados = []
-                        for pedido in pedidos_actuales:
-                            pedido_serializado = pedido.copy()
-                            if 'fecha' in pedido_serializado and not isinstance(pedido_serializado['fecha'], str):
-                                pedido_serializado['fecha'] = pedido_serializado['fecha'].isoformat()
-                            pedidos_serializados.append(pedido_serializado)
+                        for pedido in cache_data['pedidos']:
+                            pedido_data = pedido.copy()
+                            if 'fecha' in pedido_data:
+                                pedido_data['fecha'] = pedido_data['fecha'].isoformat()
+                            pedidos_serializados.append(pedido_data)
                         
-                        # ✅ ENVIAR ACTUALIZACIÓN
                         event_data = {
                             'type': 'pedidos_updated',
                             'pedidos': pedidos_serializados,
@@ -917,24 +954,21 @@ def pedidos_sse(request, restaurante_id):
                         }
                         yield f"data: {json.dumps(event_data)}\n\n"
                         
-                        ultima_version_conocida = current_version
+                        last_version = current_version
                     
-                    # ✅ SLEEP MÍNIMO para no saturar
-                    time.sleep(0.5)  # 500ms en lugar de 1 segundo
+                    # ✅ SLEEP OPTIMIZADO
+                    time.sleep(0.3)  # 300ms - MÁS RÁPIDO
                     
                 except Exception as e:
                     print(f"❌ Error en loop SSE: {str(e)}")
-                    time.sleep(1)  # Esperar antes de reintentar
+                    time.sleep(1)
                     
         except GeneratorExit:
-            print(f"🔌 Conexión SSE cerrada para cliente {client_id}")
+            print(f"🔌 Cliente {client_id} desconectado")
         except Exception as e:
-            logger.error(f"SSE fatal error for client {client_id}: {str(e)}")
+            logger.error(f"SSE error fatal: {str(e)}")
     
-    response = StreamingHttpResponse(
-        event_stream(), 
-        content_type='text/event-stream'
-    )
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
     response['Cache-Control'] = 'no-cache'
     response['X-Accel-Buffering'] = 'no'
     return response
@@ -971,30 +1005,28 @@ def pedidos_polling(request, restaurante_id):
             'version': current_version
         })
 
+# ✅ REEMPLAZAR en actualizar_cache_pedidos
 def actualizar_cache_pedidos(restaurante_id):
-    """
-    Función ULTRA-RÁPIDA para actualizar el cache
-    """
+    """ACTUALIZACIÓN ULTRA-RÁPIDA DEL CACHE"""
     from .models import Pedido
     
     try:
-        # ✅ CONSULTA OPTIMIZADA - Solo campos necesarios
+        # ✅ CONSULTA MEGA-OPTIMIZADA
         pedidos_activos = Pedido.objects.filter(
             restaurante_id=restaurante_id,
             estado__in=['pendiente', 'en_preparacion', 'listo', 'procesando_pago']
         ).only(
-            'id', 'numero_pedido', 'cliente', 'telefono', 
-            'estado', 'fecha', 'total', 'metodo_pago', 
-            'tipo_pedido', 'direccion'
+            'id', 'numero_pedido', 'cliente', 'telefono', 'estado', 
+            'fecha', 'total', 'metodo_pago', 'tipo_pedido', 'direccion'
         ).order_by('-fecha')[:50]
         
-        # ✅ SERIALIZACIÓN ULTRA-RÁPIDA
+        # ✅ SERIALIZACIÓN EXPRÉS
         pedidos_data = []
         for pedido in pedidos_activos:
             pedidos_data.append({
                 'id': pedido.id,
                 'numero_pedido': pedido.numero_pedido,
-                'cliente': pedido.cliente or 'Sin nombre',
+                'cliente': pedido.cliente or 'Cliente',
                 'telefono': pedido.telefono or 'Sin teléfono',
                 'estado': pedido.estado,
                 'fecha': pedido.fecha,
@@ -1004,13 +1036,13 @@ def actualizar_cache_pedidos(restaurante_id):
                 'direccion': pedido.direccion or 'Retiro en local'
             })
         
-        # ✅ ACTUALIZAR CACHE CON TRIGGER INMEDIATO
-        pedido_cache.set_pedidos(restaurante_id, pedidos_data)
+        # ✅ ACTUALIZAR SOLO ULTRA_CACHE (ELIMINAR pedido_cache)
+        ultra_cache.set_pedidos(restaurante_id, pedidos_data)
         
-        print(f"⚡ Cache ACTUALIZADO INSTANTÁNEAMENTE para restaurante {restaurante_id}: {len(pedidos_data)} pedidos")
+        print(f"⚡ CACHE ACTUALIZADO INSTANTÁNEAMENTE - Restaurante: {restaurante_id}, Pedidos: {len(pedidos_data)}")
         
     except Exception as e:
-        print(f"❌ Error actualizando cache para restaurante {restaurante_id}: {str(e)}")
+        print(f"❌ Error actualizando cache: {str(e)}")
 
 @login_required
 @never_cache
@@ -1266,8 +1298,8 @@ def aceptar_pedido(request, pedido_id):
     pedido.tiempo_estimado = tiempo_estimado
     pedido.save()
     
-    # ✅ ACTUALIZAR CACHE INMEDIATAMENTE
-    print(f"🔄 Pedido #{pedido.numero_pedido} aceptado, actualizando cache...")
+    # ✅ ACTUALIZACIÓN ULTRA-RÁPIDA
+    print(f"⚡ Pedido #{pedido.numero_pedido} ACEPTADO - Actualizando cache...")
     actualizar_cache_pedidos(request.user.id)
     
     return JsonResponse({'success': True})
@@ -1294,23 +1326,6 @@ def rechazar_pedido(request, pedido_id):
     return JsonResponse({'success': True})
 
 
-@login_required
-@never_cache
-@no_cache_view
-@require_POST
-def actualizar_estado(request, pedido_id):
-    pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
-    estado = request.POST.get('estado')
-    if estado not in ['listo']:
-        return JsonResponse({'success': False, 'error': 'Estado no válido'})
-
-    pedido.estado = estado
-    pedido.save()
-    
-    # ✅ AGREGAR ESTA LÍNEA:
-    actualizar_cache_pedidos(request.user.id)
-    
-    return JsonResponse({'success': True})
 
 @login_required
 @never_cache

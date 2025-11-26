@@ -1,24 +1,27 @@
-// static/js/sse-manager.js - VERSIÓN RÁPIDA Y SINCRONIZADA
+// static/js/sse-manager.js - VERSIÓN ULTRA-RÁPIDA
 class SSEManager {
     constructor(restauranteId) {
         this.restauranteId = restauranteId;
         this.eventSource = null;
-        this.reconnectDelay = 1000;
-        this.maxReconnectDelay = 30000;
+        this.reconnectDelay = 500; // ✅ REDUCIDO: 500ms
+        this.maxReconnectDelay = 10000; // ✅ REDUCIDO: 10 segundos
         this.currentVersion = 0;
         this.isConnected = false;
         this.reconnectAttempts = 0;
-        this.maxReconnectAttempts = 5;
+        this.maxReconnectAttempts = 10;
         
-        console.log(`🚀 SSE Manager inicializado para restaurante: ${restauranteId}`);
+        console.log(`🚀 SSE Manager ULTRA-RÁPIDO inicializado para restaurante: ${restauranteId}`);
         
-        // ✅ NUEVO: Cache simple para evitar duplicados
+        // ✅ NUEVO: Cache para evitar duplicados
         this.lastPedidoIds = new Set();
+        this.lastUpdateTime = Date.now();
         
-        // ✅ NUEVO: Forzar recarga cada 15 segundos como fallback
-        this.forceRefreshInterval = setInterval(() => {
-            this.forceRefreshIfNeeded();
-        }, 15000);
+        // ✅ NUEVO: Heartbeat para mantener conexión activa
+        this.heartbeatInterval = setInterval(() => {
+            if (this.isConnected) {
+                console.log('💓 SSE Heartbeat');
+            }
+        }, 30000); // 30 segundos
     }
 
     connect() {
@@ -28,24 +31,23 @@ class SSEManager {
 
         try {
             const url = `/api/pedidos-sse/${this.restauranteId}/?version=${this.currentVersion}&_=${Date.now()}`;
-            console.log('🔗 Conectando SSE a:', url);
+            console.log('🔗 Conectando SSE ULTRA-RÁPIDO a:', url);
             this.eventSource = new EventSource(url);
             
             this.eventSource.onopen = () => {
-                console.log('✅ SSE conectado exitosamente');
+                console.log('✅ SSE conectado EXITOSAMENTE');
                 this.isConnected = true;
-                this.reconnectDelay = 1000;
+                this.reconnectDelay = 500;
                 this.reconnectAttempts = 0;
-                
-                // ✅ CARGAR INMEDIATAMENTE AL CONECTAR
-                this.recargarTodasLasColumnas();
+                this.lastUpdateTime = Date.now();
             };
 
             this.eventSource.onmessage = (event) => {
                 try {
                     const data = JSON.parse(event.data);
-                    console.log('📨 Evento SSE recibido:', data.type);
+                    console.log('📨 Evento SSE RECIBIDO:', data.type, data.immediate ? '(INMEDIATO)' : '');
                     this.handleEvent(data);
+                    this.lastUpdateTime = Date.now();
                 } catch (e) {
                     console.error('❌ Error parsing SSE data:', e);
                 }
@@ -68,14 +70,9 @@ class SSEManager {
     handleEvent(data) {
         switch(data.type) {
             case 'pedidos_updated':
-                console.log('🔄 Evento: pedidos_updated, version:', data.version);
+                console.log('🔄 Evento: pedidos_updated, version:', data.version, data.triggered ? '(TRIGGERED)' : '');
                 this.currentVersion = data.version;
                 this.procesarPedidosActualizados(data.pedidos);
-                break;
-                
-            case 'nuevo_pedido':
-                console.log('🎉 Evento: NUEVO PEDIDO detectado:', data.pedido);
-                this.procesarNuevoPedido(data.pedido);
                 break;
                 
             default:
@@ -83,53 +80,25 @@ class SSEManager {
         }
     }
 
-    // ✅ NUEVO: Procesamiento rápido de nuevos pedidos
-    procesarNuevoPedido(nuevoPedido) {
-        console.log('🎯 Procesando NUEVO pedido inmediatamente:', nuevoPedido);
-        
-        // ✅ SONIDO INMEDIATO
-        this.reproducirSonidoInmediato();
-        
-        // ✅ NOTIFICACIÓN INMEDIATA
-        this.mostrarNotificacionInmediata(`📦 Nuevo pedido #${nuevoPedido.numero_pedido}`);
-        
-        // ✅ ACTUALIZACIÓN INMEDIATA de solo pendientes
-        this.actualizarColumnaInmediata('pendiente');
-    }
-
-    // ✅ NUEVO: Procesamiento rápido de actualizaciones
     procesarPedidosActualizados(pedidos) {
-        console.log('🔄 Procesando pedidos actualizados:', pedidos.length);
+        console.log('⚡ Procesando pedidos actualizados:', pedidos.length);
         
-        // Detectar cambios rápidamente
-        const nuevosIds = new Set(pedidos.map(p => p.id));
-        const nuevosPendientes = pedidos.filter(p => p.estado === 'pendiente' && !this.lastPedidoIds.has(p.id));
-        
-        if (nuevosPendientes.length > 0) {
-            console.log('🎉 Nuevos pedidos pendientes detectados:', nuevosPendientes.length);
-            this.reproducirSonidoInmediato();
-            this.mostrarNotificacionInmediata(`📦 ${nuevosPendientes.length} nuevo(s) pedido(s)`);
-        }
-        
-        // Actualizar cache
-        this.lastPedidoIds = nuevosIds;
-        
-        // Recargar todas las columnas inmediatamente
+        // ✅ ACTUALIZACIÓN INMEDIATA de todas las columnas
         this.recargarTodasLasColumnas();
     }
 
-    // ✅ NUEVO: Recarga forzada si es necesario
-    forceRefreshIfNeeded() {
-        if (this.isConnected) {
-            console.log('🔄 Verificación periódica de cambios...');
-            this.recargarTodasLasColumnas();
-        }
+    recargarTodasLasColumnas() {
+        console.log('🔄 Recargando TODAS las columnas INMEDIATAMENTE');
+        
+        const estados = ['pendiente', 'en_preparacion', 'listo'];
+        const timestamp = Date.now();
+        
+        estados.forEach(estado => {
+            this.actualizarColumnaInmediata(estado, timestamp);
+        });
     }
 
-    // ✅ NUEVO: Actualización inmediata de columna
-    actualizarColumnaInmediata(estado) {
-        console.log(`⚡ Actualización inmediata de columna: ${estado}`);
-        
+    actualizarColumnaInmediata(estado, timestamp) {
         let url;
         switch(estado) {
             case 'pendiente':
@@ -145,16 +114,19 @@ class SSEManager {
                 return;
         }
         
-        // ✅ SIN CACHE
-        url += `${url.includes('?') ? '&' : '?'}_=${Date.now()}`;
+        // ✅ SIN CACHE - timestamp único
+        url += `${url.includes('?') ? '&' : '?'}_=${timestamp}`;
         
         fetch(url)
-            .then(response => response.text())
+            .then(response => {
+                if (!response.ok) throw new Error('Network error');
+                return response.text();
+            })
             .then(html => {
                 const columna = document.getElementById(estado);
                 if (columna) {
                     columna.innerHTML = html;
-                    console.log(`✅ Columna ${estado} actualizada inmediatamente`);
+                    console.log(`✅ Columna ${estado} actualizada INSTANTÁNEAMENTE`);
                 }
             })
             .catch(error => {
@@ -162,41 +134,13 @@ class SSEManager {
             });
     }
 
-    // ✅ NUEVO: Sonido inmediato
-    reproducirSonidoInmediato() {
-        if (this.isSoundEnabled()) {
-            console.log('🔊 Reproduciendo sonido inmediatamente');
-            const audio = document.getElementById('notificationSound');
-            if (audio) {
-                // Resetear y reproducir inmediatamente
-                audio.currentTime = 0;
-                audio.play().catch(e => console.log('🔇 Sonido bloqueado, necesita interacción:', e));
-            }
-        }
-    }
-
-    // ✅ NUEVO: Notificación inmediata
-    mostrarNotificacionInmediata(mensaje) {
-        if (typeof showNotification === 'function') {
-            showNotification(mensaje, 'success');
-        } else {
-            // Fallback básico
-            console.log(`📢 ${mensaje}`);
-        }
-    }
-
-    recargarTodasLasColumnas() {
-        console.log('🔄 Recargando todas las columnas');
-        
-        const estados = ['pendiente', 'en_preparacion', 'listo'];
-        
-        estados.forEach(estado => {
-            this.actualizarColumnaInmediata(estado);
-        });
-    }
-
     reconnect() {
         this.disconnect();
+        
+        if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            console.error('🚨 Máximo de reconexiones alcanzado');
+            return;
+        }
         
         const delay = Math.min(this.reconnectDelay, this.maxReconnectDelay);
         console.log(`🔄 Reconectando en ${delay}ms (intento ${this.reconnectAttempts})`);
@@ -214,23 +158,23 @@ class SSEManager {
             this.eventSource.close();
             this.eventSource = null;
         }
-    }
-
-    isSoundEnabled() {
-        return localStorage.getItem('isSoundEnabled') === 'true';
+        
+        if (this.heartbeatInterval) {
+            clearInterval(this.heartbeatInterval);
+        }
     }
 }
 
-// ✅ INICIALIZACIÓN RÁPIDA
+// ✅ INICIALIZACIÓN ULTRA-RÁPIDA
 document.addEventListener('DOMContentLoaded', function() {
     const restauranteId = document.querySelector('meta[name="restaurante-id"]')?.content;
     
     if (restauranteId) {
-        console.log('🎯 Inicializando SSE Manager para restaurante:', restauranteId);
+        console.log('🎯 Inicializando SSE Manager ULTRA-RÁPIDO para restaurante:', restauranteId);
         window.sseManager = new SSEManager(restauranteId);
         window.sseManager.connect();
         
-        // Reconexión rápida cuando la página vuelve a ser visible
+        // Reconexión cuando la página vuelve a ser visible
         document.addEventListener('visibilitychange', function() {
             if (!document.hidden && window.sseManager && !window.sseManager.isConnected) {
                 console.log('🔄 Página visible, reconectando SSE...');

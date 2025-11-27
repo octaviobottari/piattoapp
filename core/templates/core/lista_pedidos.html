@@ -439,28 +439,23 @@ $(document).ready(function() {
     const tiempoEstimado = $this.data('tiempo');
 
     $.ajax({
-      url: `/panel/pedidos/${pedidoId}/aceptar/`,
-      method: 'POST',
-      data: { tiempo_estimado: tiempoEstimado },
-      success: function(response) {
-        if (response.success) {
-          showNotification(`Pedido #${pedidoId} aceptado`, "success");
-          // ✅ NO llamar refreshAllColumns - SSE se encarga
-        } else {
-          showNotification(`Error al aceptar el pedido: ${response.error || 'Error desconocido'}`, "error");
+        url: `/panel/pedidos/${pedidoId}/aceptar/`,
+        method: 'POST',
+        data: { tiempo_estimado: tiempoEstimado },
+        success: function(response) {
+            handleAjaxResponse(response, pedidoId, "aceptado");
+        },
+        error: function(xhr) {
+            showNotification(`Error al aceptar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
+        },
+        complete: function() {
+            enableButton($this);
         }
-      },
-      error: function(xhr) {
-        showNotification(`Error al aceptar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-      },
-      complete: function() {
-        enableButton($this);
-      }
     });
-  });
+});
 
-  // Mover de "En Preparación" a "Listos para Entregar"
-  $(document).on('click', '.mover-a-listo', function(e) {
+// Mover a listo - ACTUALIZADO
+$(document).on('click', '.mover-a-listo', function(e) {
     e.preventDefault();
     e.stopPropagation();
     const $this = $(this);
@@ -470,28 +465,23 @@ $(document).ready(function() {
     const pedidoId = $this.data('pedido-id');
 
     $.ajax({
-      url: `/panel/pedidos/${pedidoId}/actualizar_estado/`,
-      method: 'POST',
-      data: { estado: 'listo' },
-      success: function(response) {
-        if (response.success) {
-          showNotification(`Pedido #${pedidoId} movido a Listo`, "success");
-          // ✅ NO llamar refreshAllColumns - SSE se encarga
-        } else {
-          showNotification(`Error al mover el pedido: ${response.error || 'Error desconocido'}`, "error");
+        url: `/panel/pedidos/${pedidoId}/actualizar_estado/`,
+        method: 'POST',
+        data: { estado: 'listo' },
+        success: function(response) {
+            handleAjaxResponse(response, pedidoId, "movido a Listo");
+        },
+        error: function(xhr) {
+            showNotification(`Error al mover el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
+        },
+        complete: function() {
+            enableButton($this);
         }
-      },
-      error: function(xhr) {
-        showNotification(`Error al mover el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-      },
-      complete: function() {
-        enableButton($this);
-      }
     });
-  });
+});
 
-  // Rechazar pedido
-  $(document).on('click', '.rechazar-pedido', function(e) {
+// Rechazar pedido - ACTUALIZADO
+$(document).on('click', '.rechazar-pedido', function(e) {
     e.preventDefault();
     e.stopPropagation();
     const $this = $(this);
@@ -502,25 +492,20 @@ $(document).ready(function() {
     const motivo = $this.data('motivo');
 
     $.ajax({
-      url: `/panel/pedidos/${pedidoId}/rechazar/`,
-      method: 'POST',
-      data: { motivo: motivo },
-      success: function(response) {
-        if (response.success) {
-          showNotification(`Pedido #${pedidoId} cancelado`, "success");
-          // ✅ NO llamar refreshAllColumns - SSE se encarga
-        } else {
-          showNotification(`Error al rechazar el pedido: ${response.error || 'Error desconocido'}`, "error");
+        url: `/panel/pedidos/${pedidoId}/rechazar/`,
+        method: 'POST',
+        data: { motivo: motivo },
+        success: function(response) {
+            handleAjaxResponse(response, pedidoId, "cancelado");
+        },
+        error: function(xhr) {
+            showNotification(`Error al rechazar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
+        },
+        complete: function() {
+            enableButton($this);
         }
-      },
-      error: function(xhr) {
-        showNotification(`Error al rechazar el pedido: ${xhr.responseJSON?.error || xhr.statusText || 'Error en la solicitud'}`, "error");
-      },
-      complete: function() {
-        enableButton($this);
-      }
     });
-  });
+});
 
   // Marcar como "En Entrega"
   $(document).on('click', '.marcar-en-entrega', function(e) {
@@ -831,5 +816,50 @@ setInterval(() => {
         }
     }
 }, 15000);
+
+function startFallbackPolling() {
+    setInterval(() => {
+        // Verificar si SSE está conectado
+        if (!window.sseManager || !window.sseManager.isConnected) {
+            console.log('🔄 SSE desconectado, usando polling de fallback...');
+            if (window.sseManager) {
+                window.sseManager.recargarTodasLasColumnas();
+            }
+        }
+        
+        // Verificar si hay pedidos visibles
+        const pedidosVisibles = document.querySelectorAll('.order-card').length;
+        if (pedidosVisibles === 0) {
+            console.log('🔄 No hay pedidos visibles, forzando recarga...');
+            if (window.sseManager) {
+                window.sseManager.recargarTodasLasColumnas();
+            }
+        }
+    }, 5000); // 5 segundos
+}
+
+// Iniciar polling cuando la página cargue
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(startFallbackPolling, 10000); // Iniciar después de 10 segundos
+});
+
+// ✅ MEJORAR: Función para manejar respuestas AJAX
+function handleAjaxResponse(response, pedidoId, action) {
+    if (response.success) {
+        showNotification(`Pedido #${pedidoId} ${action} correctamente`, "success");
+        console.log(`✅ Pedido #${pedidoId} ${action} - Esperando actualización SSE...`);
+        
+        // ✅ FORZAR ACTUALIZACIÓN INMEDIATA
+        setTimeout(() => {
+            if (window.sseManager) {
+                console.log(`🔄 Forzando actualización SSE después de ${action}...`);
+                window.sseManager.recargarTodasLasColumnas();
+            }
+        }, 500);
+        
+    } else {
+        showNotification(`Error al ${action} el pedido: ${response.error || 'Error desconocido'}`, "error");
+    }
+}
 </script>
 {% endblock %}

@@ -1163,9 +1163,9 @@ def eliminar_pedido(request, pedido_id):
         return JsonResponse({'success': False, 'error': f'Error al eliminar el pedido: {str(e)}'}, status=500)
 
 @login_required
+@require_POST
 @never_cache
 @no_cache_view
-@require_POST
 def marcar_en_entrega(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     if pedido.estado != 'listo':
@@ -1175,16 +1175,20 @@ def marcar_en_entrega(request, pedido_id):
     pedido.fecha_en_entrega = timezone.now()
     pedido.save()
     
-    # ✅ ACTUALIZACIÓN INMEDIATA
+    # ✅ ACTUALIZACIÓN INMEDIATA CON CONFIRMACIÓN
     print(f"⚡ Pedido #{pedido.numero_pedido} marcado como EN ENTREGA, ACTUALIZACIÓN INMEDIATA...")
     actualizar_cache_pedidos(request.user.id)
+    
+    # ✅ NUEVO: Esperar un momento para asegurar la actualización
+    import time
+    time.sleep(0.1)
     
     return JsonResponse({'success': True})
 
 @login_required
+@require_POST
 @never_cache
 @no_cache_view
-@require_POST
 def archivar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     if pedido.estado not in ['listo', 'en_entrega']:
@@ -1193,16 +1197,20 @@ def archivar_pedido(request, pedido_id):
     pedido.estado = 'archivado'
     pedido.save()
     
-    # ✅ ACTUALIZACIÓN INMEDIATA
+    # ✅ ACTUALIZACIÓN INMEDIATA CON CONFIRMACIÓN
     print(f"⚡ Pedido #{pedido.numero_pedido} ARCHIVADO, ACTUALIZACIÓN INMEDIATA...")
     actualizar_cache_pedidos(request.user.id)
+    
+    # ✅ NUEVO: Esperar un momento para asegurar la actualización
+    import time
+    time.sleep(0.1)
     
     return JsonResponse({'success': True})
 
 @login_required
+@require_POST
 @never_cache
 @no_cache_view
-@require_POST
 def actualizar_estado(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     estado = request.POST.get('estado')
@@ -1212,9 +1220,13 @@ def actualizar_estado(request, pedido_id):
     pedido.estado = estado
     pedido.save()
     
-    # ✅ ACTUALIZACIÓN INMEDIATA
+    # ✅ ACTUALIZACIÓN INMEDIATA CON CONFIRMACIÓN
     print(f"⚡ Pedido #{pedido.numero_pedido} actualizado a {estado.upper()}, ACTUALIZACIÓN INMEDIATA...")
     actualizar_cache_pedidos(request.user.id)
+    
+    # ✅ NUEVO: Esperar un momento para asegurar la actualización
+    import time
+    time.sleep(0.1)
     
     return JsonResponse({'success': True})
 
@@ -1282,9 +1294,9 @@ def todos_pedidos(request):
     })
 
 @login_required
+@require_POST
 @never_cache
 @no_cache_view
-@require_POST
 def aceptar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     if pedido.estado != 'pendiente':
@@ -1298,16 +1310,20 @@ def aceptar_pedido(request, pedido_id):
     pedido.tiempo_estimado = tiempo_estimado
     pedido.save()
     
-    # ✅ ACTUALIZACIÓN ULTRA-RÁPIDA
+    # ✅ ACTUALIZACIÓN ULTRA-RÁPIDA CON CONFIRMACIÓN
     print(f"⚡ Pedido #{pedido.numero_pedido} ACEPTADO - Actualizando cache...")
     actualizar_cache_pedidos(request.user.id)
+    
+    # ✅ NUEVO: Esperar un momento para asegurar la actualización
+    import time
+    time.sleep(0.1)
     
     return JsonResponse({'success': True})
 
 @login_required
+@require_POST
 @never_cache
 @no_cache_view
-@require_POST
 def rechazar_pedido(request, pedido_id):
     pedido = get_object_or_404(Pedido, id=pedido_id, restaurante=request.user)
     motivo = request.POST.get('motivo')
@@ -1319,9 +1335,13 @@ def rechazar_pedido(request, pedido_id):
     pedido.fecha_cancelado = timezone.now()
     pedido.save()
     
-    # ✅ ACTUALIZAR CACHE INMEDIATAMENTE
+    # ✅ ACTUALIZAR CACHE INMEDIATAMENTE CON CONFIRMACIÓN
     print(f"🔄 Pedido #{pedido.numero_pedido} rechazado, actualizando cache...")
     actualizar_cache_pedidos(request.user.id)
+    
+    # ✅ NUEVO: Esperar un momento para asegurar la actualización
+    import time
+    time.sleep(0.1)
     
     return JsonResponse({'success': True})
 
